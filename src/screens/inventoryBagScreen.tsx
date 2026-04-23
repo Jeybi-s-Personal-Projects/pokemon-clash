@@ -105,9 +105,9 @@ export default function InventoryBagScreen({
       setSaving(true);
       await savePokemon(pokemon, user.id);
 
-      Alert.alert("Added!", `${pokemon.name} was added to your team.`, [
-        { text: "OK", onPress: () => navigation.navigate("Dashboard") },
-      ]);
+      // Alert.alert("Added!", `${pokemon.name} was added to your team.`, [
+      //   { text: "OK", onPress: () => navigation.navigate("Dashboard") },
+      // ]);
     } catch (e) {
       Alert.alert("Error", "Could not save Pokémon. Try again.");
     } finally {

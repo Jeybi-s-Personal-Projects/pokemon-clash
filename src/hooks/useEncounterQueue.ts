@@ -44,11 +44,17 @@ function hydrateEntry(entry: QueueEntry): EncounterPokemon {
   const image = entry.isShiny
     ? `${baseUrl}/shiny/${entry.id}.gif`
     : `${baseUrl}/${entry.id}.gif`;
+
+  const backImage = entry.isShiny
+    ? `${baseUrl}/back/shiny/${entry.id}.gif`
+    : `${baseUrl}/back/${entry.id}.gif`;
+
   return {
     id: entry.id,
     name: local?.name ?? `pokemon-${entry.id}`,
     types: local?.types ?? ["normal"],
     image: image,
+    backImage: backImage,
     level: entry.level,
     isShiny: entry.isShiny,
     baseStats: entry.rawData.baseStats,

@@ -35,7 +35,7 @@ function mapEncounterToPokemon(
     ),
     speed: calculateStat(encounter.baseStats.speed, encounter.level),
     frontImage: encounter.image,
-    backImage: encounter.image,
+    backImage: encounter.backImage,
     isShiny: encounter.isShiny,
     moves: moveDetails.map((detail) => ({
       name: detail.name,
@@ -76,7 +76,6 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       }
 
       async function loadMoveDetails() {
-        setIsLoadingMoves(true);
         try {
           const moveDetails = await fetchMoveBatch(currentEncounter.moves);
           const enemy = mapEncounterToPokemon(currentEncounter, moveDetails);
@@ -136,7 +135,9 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
-        onBagPress={() => navigation.navigate("InventoryBag", { pokemon: fullyLoadedEnemy })}
+        onBagPress={() =>
+          navigation.navigate("InventoryBag", { pokemon: fullyLoadedEnemy })
+        }
       />
     </View>
   );

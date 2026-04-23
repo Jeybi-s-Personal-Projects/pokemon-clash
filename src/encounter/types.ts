@@ -57,6 +57,7 @@ export type EncounterPokemon = {
   name: string;
   types: string[];
   image: string;
+  backImage: string;
   level: number;
   isShiny: boolean;
   baseStats: BaseStats;
