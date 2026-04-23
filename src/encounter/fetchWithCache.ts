@@ -61,6 +61,8 @@ export function buildMoveFallback(name: string): MoveDetail {
     damageClass: "physical",
     effectChance: null,
     statChanges: [],
+    description: "",
+    priority: -7,
   };
 }
 
@@ -81,6 +83,9 @@ function parseStats(apiStats: any[]): BaseStats {
 }
 
 function parseMoveDetail(data: any): MoveDetail {
+  const englishEffect = data.effect_entries.find(
+    (e: any) => e.language.name === "en",
+  );
   return {
     name: data.name,
     power: data.power,
@@ -93,6 +98,8 @@ function parseMoveDetail(data: any): MoveDetail {
       stat: sc.stat.name,
       change: sc.change,
     })),
+    description: englishEffect?.short_effect ?? null,
+    priority: data.priority,
   };
 }
 

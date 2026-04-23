@@ -31,7 +31,12 @@ export async function savePokemon(pokemon: Pokemon, userId: string) {
     pokemon_id: data.id,
     move_name: move.name,
     move_power: move.power,
-    move_type: move.type,
+    move_type: move.type ?? "normal",
+    move_damageClass: move.damageClass,
+    move_accuracy: move.accuracy,
+    move_statChanges: move.statChanges ?? "none",
+    move_description: move.description,
+    move_priority: move.priority,
   }));
 
   const { error: movesError } = await supabase

@@ -24,6 +24,8 @@ export async function getPokemon(
     type: detail.type,
     accuracy: detail.accuracy,
     statChanges: detail.statChanges,
+    description: detail.description,
+    priority: detail.priority,
   }));
 
   const getBaseStat = (statName: string) =>

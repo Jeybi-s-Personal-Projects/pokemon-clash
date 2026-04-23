@@ -154,7 +154,8 @@ export default function SignupScreen({ navigation }: any) {
             style={styles.loginLink}
           >
             <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginHighlight}>Log In</Text>
+              Already have an account?{" "}
+              <Text style={styles.loginHighlight}>Log In</Text>
             </Text>
           </TouchableOpacity>
         </View>

@@ -44,6 +44,8 @@ function mapEncounterToPokemon(
       type: detail.type,
       accuracy: detail.accuracy,
       statChanges: detail.statChanges,
+      description: detail.description,
+      priority: detail.priority,
     })),
     cry: `https://play.pokemonshowdown.com/audio/cries/${encounter.name.toLowerCase().replace(/[^a-z]/g, "")}.mp3`,
   };

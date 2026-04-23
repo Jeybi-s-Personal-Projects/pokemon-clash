@@ -28,6 +28,8 @@ export type MoveDetail = {
   damageClass: "physical" | "special" | "status";
   effectChance: number | null;
   statChanges: { stat: string; change: number }[];
+  description: string | null;
+  priority: number;
 };
 
 export type SelectedMove = {
