@@ -2,11 +2,16 @@ import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { useMemo, useState } from "react";
 import {
-  FlatList, Image, StyleSheet,
+  Alert,
+  FlatList,
+  Image,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
+import { savePokemon } from "../hooks/savePokemon";
 import { colors } from "../theme/color";
 import { InventoryBagScreenProps } from "../types/navigation";
 
@@ -62,8 +67,12 @@ const TABS: { key: BagCategory; label: string }[] = [
 
 export default function InventoryBagScreen({
   navigation,
+  route,
 }: InventoryBagScreenProps) {
+  const { pokemon } = route.params;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
+  const { user } = useAuth();
+  const [saving, setSaving] = useState(false);
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -80,9 +89,30 @@ export default function InventoryBagScreen({
 
   const handleUseItem = (item: BagItem) => {
     playClick();
-
+    catchPokemon();
     // return to battle screen
     navigation.goBack();
+  };
+
+  //catching pokemon
+  const catchPokemon = async () => {
+    if (!user) {
+      Alert.alert("Error", "You must be logged in.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await savePokemon(pokemon, user.id);
+
+      Alert.alert("Added!", `${pokemon.name} was added to your team.`, [
+        { text: "OK", onPress: () => navigation.navigate("Dashboard") },
+      ]);
+    } catch (e) {
+      Alert.alert("Error", "Could not save Pokémon. Try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

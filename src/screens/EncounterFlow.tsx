@@ -136,7 +136,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
-        onBagPress={() => navigation.navigate("InventoryBag")}
+        onBagPress={() => navigation.navigate("InventoryBag", { pokemon: fullyLoadedEnemy })}
       />
     </View>
   );

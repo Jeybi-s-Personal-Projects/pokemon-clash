@@ -203,7 +203,7 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
         setTimeout(() => navigation.goBack(), 2000);
       }}
       onRun={onRun}
-      onBagPress={() => navigation.navigate("InventoryBag")}
+      onBagPress={() => navigation.navigate("InventoryBag", { pokemon: enemy })}
     />
   );
 }
