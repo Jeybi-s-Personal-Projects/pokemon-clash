@@ -67,7 +67,7 @@ export function Battle({
     await delay(400); // Animation duration
     setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
 
-    const newEnemyHp = dealDamage(state.enemy.hp, move);
+    const newEnemyHp = dealDamage(state.enemy.hp, move, state.enemy.type);
     const afterPlayerAttack: BattleState = {
       ...state,
       enemy: { ...state.enemy, hp: newEnemyHp },
@@ -107,7 +107,11 @@ export function Battle({
     await delay(400);
     setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
 
-    const newPlayerHp = dealDamage(state.player.hp, enemyMove);
+    const newPlayerHp = dealDamage(
+      state.player.hp,
+      enemyMove,
+      state.player.type,
+    );
     const afterEnemyAttack: BattleState = {
       ...afterPlayerAttack,
       player: { ...state.player, hp: newPlayerHp },
@@ -182,6 +186,7 @@ export function Battle({
       {/* Battle Actions Menu */}
       <BattleActions
         moves={state.player.moves}
+        enemyTypes={state.enemy.type}
         onMovePress={attack}
         onBagPress={onBagPress}
         onRun={onRun}
