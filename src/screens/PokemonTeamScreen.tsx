@@ -87,7 +87,6 @@ export default function PokemonTeamScreen({
   };
 
   const handleSave = async () => {
-    playClick("medium");
     setIsSaving(true);
 
     try {
@@ -99,7 +98,7 @@ export default function PokemonTeamScreen({
       const firstError = results.find((r) => r.error)?.error;
       if (firstError) throw firstError;
 
-      playClick("success");
+      playClick("medium");
       setStatusMessage("Team order saved successfully!");
       setStatusType("success");
       setStatusVisible(true);

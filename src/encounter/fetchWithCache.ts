@@ -1,4 +1,8 @@
-import type { BaseStats, MoveDetail, PokemonRawData } from "@/src/encounter/types";
+import type {
+  BaseStats,
+  MoveDetail,
+  PokemonRawData,
+} from "@/src/encounter/types";
 import { parseRawMoves } from "@/src/utils/moveSelector";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -50,13 +54,15 @@ export function buildFallback(): PokemonRawData {
 export function buildMoveFallback(name: string): MoveDetail {
   return {
     name,
-    power: 40,
+    power: 0,
     accuracy: 100,
     pp: 35,
     type: "normal",
     damageClass: "physical",
     effectChance: null,
     statChanges: [],
+    description: "",
+    priority: -7,
   };
 }
 
@@ -77,6 +83,9 @@ function parseStats(apiStats: any[]): BaseStats {
 }
 
 function parseMoveDetail(data: any): MoveDetail {
+  const englishEffect = data.effect_entries.find(
+    (e: any) => e.language.name === "en",
+  );
   return {
     name: data.name,
     power: data.power,
@@ -89,6 +98,8 @@ function parseMoveDetail(data: any): MoveDetail {
       stat: sc.stat.name,
       change: sc.change,
     })),
+    description: englishEffect?.short_effect ?? null,
+    priority: data.priority,
   };
 }
 
@@ -120,7 +131,10 @@ async function attemptFetch(id: number): Promise<PokemonRawData> {
   }
 }
 
-async function attemptMoveFetch(url: string, name: string): Promise<MoveDetail> {
+async function attemptMoveFetch(
+  url: string,
+  name: string,
+): Promise<MoveDetail> {
   if (!url) return buildMoveFallback(name);
 
   const controller = new AbortController();

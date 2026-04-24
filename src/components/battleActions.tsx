@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { getTypeMultiplier, PokemonType } from "../battle/typeChart";
 import BattleButton from "./battleButton";
 
 type Move = {
@@ -12,6 +13,7 @@ type Move = {
 
 type Props = {
   moves: Move[];
+  enemyTypes: string[];
   onMovePress: (index: number) => void;
   onBagPress?: () => void;
   onRun?: () => void;
@@ -42,8 +44,10 @@ const ACTION_CONFIG = [
     accent: "#4FC3F7",
   },
 ];
+
 export default function BattleActions({
   moves,
+  enemyTypes,
   onMovePress,
   onBagPress,
   onRun,
@@ -54,7 +58,6 @@ export default function BattleActions({
   if (menu === "main") {
     return (
       <View style={styles.container}>
-        {/* Scanline overlay hint */}
         <View style={styles.header}>
           <Text style={styles.headerText}>▶ WHAT WILL</Text>
           <Text style={styles.headerTextBold}>PLAYER DO?</Text>
@@ -64,7 +67,7 @@ export default function BattleActions({
             <BattleButton
               key={action.label}
               label={action.label}
-              icon={action.icon} // pass icon as a prop
+              icon={action.icon}
               onPress={() => {
                 if (action.label === "Fight") setMenu("fight");
                 else if (action.label === "Bag" && onBagPress) onBagPress();
@@ -86,18 +89,31 @@ export default function BattleActions({
         <Text style={styles.headerTextBold}>MOVE</Text>
       </View>
       <View style={styles.grid}>
-        {moves.map((move, i) => (
-          <BattleButton
-            key={i}
-            label={move.name}
-            subLabel={`PWR ${move.power}  PP ${move.pp ?? "—"}/${move.maxPp ?? "—"}`}
-            moveType={move.type}
-            onPress={() => onMovePress(i)}
-            disabled={disabled}
-            variant="move"
-            height="40%"
-          />
-        ))}
+        {moves.map((move, i) => {
+          const moveType = (move.type || "normal") as PokemonType;
+          const effectiveness = getTypeMultiplier(
+            moveType,
+            enemyTypes as PokemonType[],
+          );
+          const power = move.power ?? 0;
+          const effectiveMove = effectiveness ?? 1;
+          const effectivePower = power * effectiveMove;
+
+          return (
+            <BattleButton
+              key={i}
+              label={move.name}
+              // subLabel={`PWR ${move.power}  PP ${move.pp ?? "—"}/${move.maxPp ?? "—"}`}
+              subLabel={`PWR ${effectivePower} PP ${move.pp ?? "—"}/${move.maxPp ?? "—"}`}
+              moveType={move.type}
+              effectiveness={effectiveness}
+              onPress={() => onMovePress(i)}
+              disabled={disabled}
+              variant="move"
+              height="40%"
+            />
+          );
+        })}
         <BattleButton
           label="← Back"
           onPress={() => setMenu("main")}

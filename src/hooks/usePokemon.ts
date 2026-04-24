@@ -19,11 +19,13 @@ export async function getPokemon(
   // 3. Map to final Move format
   const moves = moveDetails.map((detail) => ({
     name: detail.name,
-    power: detail.power ?? 10,
+    power: detail.power ?? 0,
     damageClass: detail.damageClass,
     type: detail.type,
     accuracy: detail.accuracy,
     statChanges: detail.statChanges,
+    description: detail.description,
+    priority: detail.priority,
   }));
 
   const getBaseStat = (statName: string) =>

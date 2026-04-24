@@ -5,6 +5,8 @@ export type Move = {
   type?: string;
   accuracy?: number | null;
   statChanges?: { stat: string; change: number }[];
+  description?: string | null;
+  priority?: number | null;
 };
 export type Pokemon = {
   id?: number | string;

@@ -1,14 +1,13 @@
-import type { Area, Region } from "@/src/encounter/batchGenerator";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { EncounterPokemon, MoveDetail } from "../encounter/types";
 import { fetchMoveBatch } from "../encounter/fetchWithCache";
+import { EncounterPokemon, MoveDetail } from "../encounter/types";
 import { useEncounterQueue } from "../hooks/useEncounterQueue";
+import { EncounterFlowProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { Battle } from "./BattleScreen";
 import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
-import { EncounterFlowProps } from "../types/navigation";
 
 type Screen = "transition" | "battle";
 
@@ -36,15 +35,17 @@ function mapEncounterToPokemon(
     ),
     speed: calculateStat(encounter.baseStats.speed, encounter.level),
     frontImage: encounter.image,
-    backImage: encounter.image,
+    backImage: encounter.backImage,
     isShiny: encounter.isShiny,
     moves: moveDetails.map((detail) => ({
       name: detail.name,
-      power: detail.power ?? 10,
+      power: detail.power ?? 0,
       damageClass: detail.damageClass,
       type: detail.type,
       accuracy: detail.accuracy,
       statChanges: detail.statChanges,
+      description: detail.description,
+      priority: detail.priority,
     })),
     cry: `https://play.pokemonshowdown.com/audio/cries/${encounter.name.toLowerCase().replace(/[^a-z]/g, "")}.mp3`,
   };
@@ -68,12 +69,15 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   useEffect(() => {
     if (currentEncounter && isReady) {
       // Prevent re-fetching if we already have the fully loaded enemy for THIS encounter
-      if (fullyLoadedEnemy && fullyLoadedEnemy.id === currentEncounter.id && fullyLoadedEnemy.level === currentEncounter.level) {
+      if (
+        fullyLoadedEnemy &&
+        fullyLoadedEnemy.id === currentEncounter.id &&
+        fullyLoadedEnemy.level === currentEncounter.level
+      ) {
         return;
       }
 
       async function loadMoveDetails() {
-        setIsLoadingMoves(true);
         try {
           const moveDetails = await fetchMoveBatch(currentEncounter.moves);
           const enemy = mapEncounterToPokemon(currentEncounter, moveDetails);
@@ -116,7 +120,9 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       <EncounterTransitionScreen
         region={region}
         area={area}
-        isDataReady={!isInitialLoading && isReady && !!fullyLoadedEnemy && !isLoadingMoves}
+        isDataReady={
+          !isInitialLoading && isReady && !!fullyLoadedEnemy && !isLoadingMoves
+        }
         onReady={handleTransitionReady}
       />
     );
@@ -131,7 +137,9 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
-        onBagPress={() => navigation.navigate("InventoryBag")}
+        onBagPress={() =>
+          navigation.navigate("InventoryBag", { pokemon: fullyLoadedEnemy })
+        }
       />
     </View>
   );

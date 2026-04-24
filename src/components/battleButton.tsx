@@ -29,6 +29,7 @@ export default function BattleButton({
   label,
   subLabel,
   moveType,
+  effectiveness,
   icon,
   onPress,
   disabled,
@@ -50,6 +51,20 @@ export default function BattleButton({
     : null;
   const accentColor = typeColor ?? (variant === "back" ? "#546E7A" : "#4299b7");
 
+  const getEffectivenessLabel = () => {
+    if (effectiveness === 0) return { text: "NO EFFECT", color: "#9E9E9E" };
+    if (effectiveness === 0.25)
+      return { text: "NOT VERY EFFECTIVE", color: "#4469ef" };
+    if (effectiveness === 0.5)
+      return { text: "NOT EFFECTIVE", color: "#EF4444" };
+    if (effectiveness === 2) return { text: "EFFECTIVE", color: "#22C55E" };
+    if (effectiveness === 4)
+      return { text: "SUPER EFFECTIVE", color: "#d5ef44" };
+    return null;
+  };
+
+  const effLabel = getEffectivenessLabel();
+
   return (
     <TouchableOpacity
       onPress={handlePress}
@@ -66,6 +81,23 @@ export default function BattleButton({
         },
       ]}
     >
+      {/* Effectiveness indicator */}
+      {effLabel && (
+        <View
+          style={[
+            styles.effBadge,
+            {
+              backgroundColor: effLabel.color + "44",
+              borderColor: effLabel.color,
+            },
+          ]}
+        >
+          <Text style={[styles.effText, { color: effLabel.color }]}>
+            {effLabel.text}
+          </Text>
+        </View>
+      )}
+
       {/* Pixel corner accents */}
       <View
         style={[
@@ -167,6 +199,21 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: "bold",
     letterSpacing: 0.5,
+  },
+  effBadge: {
+    position: "absolute",
+    top: 5,
+    left: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  effText: {
+    fontFamily: "monospace",
+    fontSize: 6.5,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
   // Pixel corner accents
   corner: {

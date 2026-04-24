@@ -28,6 +28,8 @@ export type MoveDetail = {
   damageClass: "physical" | "special" | "status";
   effectChance: number | null;
   statChanges: { stat: string; change: number }[];
+  description: string | null;
+  priority: number;
 };
 
 export type SelectedMove = {
@@ -57,6 +59,7 @@ export type EncounterPokemon = {
   name: string;
   types: string[];
   image: string;
+  backImage: string;
   level: number;
   isShiny: boolean;
   baseStats: BaseStats;

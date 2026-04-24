@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import StatusModal from "../components/statusModal";
 import { supabase } from "../lib/supabase";
@@ -251,7 +251,7 @@ export default function PokemonStatsScreen({
         onClose={() => {
           setStatusVisible(false);
           if (statusType === "success") {
-            navigation.popToTop(); // Go back to Dashboard
+            navigation.goBack();
           }
         }}
       />
