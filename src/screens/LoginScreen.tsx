@@ -16,7 +16,6 @@ import {
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
-import { colors } from "../theme/color";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 const logo = require("../../assets/images/icon.png");
@@ -142,7 +141,8 @@ export default function LoginScreen({ navigation }: any) {
             style={styles.signupLink}
           >
             <Text style={styles.signupText}>
-              Don't have an account? <Text style={styles.signupHighlight}>Sign Up</Text>
+              Don't have an account?{" "}
+              <Text style={styles.signupHighlight}>Sign Up</Text>
             </Text>
           </TouchableOpacity>
         </View>

@@ -37,7 +37,6 @@ export async function getPokemon(
   return {
     name: data.name,
     level,
-    base_experience,
     type: data.types.map((t: any) => t.type.name),
     hp,
     maxHp: hp,

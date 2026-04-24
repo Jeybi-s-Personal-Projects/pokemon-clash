@@ -12,7 +12,6 @@ export type Pokemon = {
   id?: number | string;
   pk_order?: number;
   name: string;
-  base_experience: number;
   level: number;
   type: string[];
   hp: number;
