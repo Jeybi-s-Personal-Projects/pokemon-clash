@@ -1,7 +1,7 @@
 import type { EncounterTable } from "../types";
 
 export const gen2Cave: EncounterTable = [
-  { id: 163, rate: 0.3, levels: { min: 5, max: 10 } }, // Hoothoot
+  { id: 231, rate: 0.3, levels: { min: 5, max: 10 } }, // Phanpy
   { id: 201, rate: 0.2, levels: { min: 8, max: 14 } }, // Unown
   { id: 204, rate: 0.2, levels: { min: 6, max: 12 } }, // Pineco
   { id: 185, rate: 0.15, levels: { min: 10, max: 16 } }, // Sudowoodo
