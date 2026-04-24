@@ -53,9 +53,13 @@ export default function BattleButton({
 
   const getEffectivenessLabel = () => {
     if (effectiveness === 0) return { text: "NO EFFECT", color: "#9E9E9E" };
-    if (effectiveness > 1) return { text: "EFFECTIVE", color: "#22C55E" };
-    if (effectiveness > 3) return { text: "SUPER EFFECTIVE", color: "#b8c522" };
-    if (effectiveness < 1) return { text: "NOT VERY", color: "#EF4444" };
+    if (effectiveness === 0.25)
+      return { text: "NOT VERY EFFECTIVE", color: "#4469ef" };
+    if (effectiveness === 0.5)
+      return { text: "NOT EFFECTIVE", color: "#EF4444" };
+    if (effectiveness === 2) return { text: "EFFECTIVE", color: "#22C55E" };
+    if (effectiveness === 4)
+      return { text: "SUPER EFFECTIVE", color: "#d5ef44" };
     return null;
   };
 
