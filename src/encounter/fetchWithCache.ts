@@ -1,8 +1,26 @@
+/**
+ * fetchWithCache.ts  (upgraded — SQLite-backed)
+ *
+ * Three-layer cache for every PokeAPI resource:
+ *
+ *   L1 — in-memory Map  (instant, lost on app close)
+ *   L2 — SQLite DB      (fast, survives app restarts)
+ *   L3 — PokeAPI        (network, last resort)
+ *
+ * Public API is identical to the original file — nothing upstream changes.
+ */
+
 import type {
   BaseStats,
   MoveDetail,
   PokemonRawData,
 } from "@/src/encounter/types";
+import {
+  getMoveFromDb,
+  getPokemonFromDb,
+  saveMoveToDb,
+  savePokemonToDb,
+} from "@/src/lib/pokemonDb";
 import { parseRawMoves } from "@/src/utils/moveSelector";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -12,31 +30,18 @@ const FETCH_TIMEOUT_MS = 3000;
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [500, 1000, 2000];
 
-// ─── Cache layer ──────────────────────────────────────────────────────────────
+// ─── L1 — in-memory cache ─────────────────────────────────────────────────────
 
-/** Permanent store: id → resolved raw data */
+/** Session-level L1: avoids even a SQLite read for repeated same-session hits */
 const pokemonCache = new Map<number, PokemonRawData>();
-
-/** Permanent store: moveUrl → resolved move detail */
 const moveCache = new Map<string, MoveDetail>();
 
-/**
- * Promise registry: id → in-flight promise.
- * Any concurrent call for the same id joins this promise
- * instead of firing a new network request.
- */
+/** In-flight deduplication — same promise joined by concurrent callers */
 const pendingFetches = new Map<number, Promise<PokemonRawData>>();
-
-/** Promise registry for move details */
 const pendingMoveFetches = new Map<string, Promise<MoveDetail>>();
 
 // ─── Fallback data ────────────────────────────────────────────────────────────
 
-/**
- * Used when all retries are exhausted.
- * Produces a minimal valid PokemonRawData so the battle screen
- * never receives undefined. Stats are deliberately weak/neutral.
- */
 export function buildFallback(): PokemonRawData {
   return {
     baseStats: {
@@ -66,7 +71,7 @@ export function buildMoveFallback(name: string): MoveDetail {
   };
 }
 
-// ─── Internal helpers ─────────────────────────────────────────────────────────
+// ─── Internal parsers ─────────────────────────────────────────────────────────
 
 function parseStats(apiStats: any[]): BaseStats {
   const get = (name: string) =>
@@ -103,10 +108,8 @@ function parseMoveDetail(data: any): MoveDetail {
   };
 }
 
-/**
- * Single fetch attempt with AbortController timeout.
- * Throws on network error, non-200 response, or timeout.
- */
+// ─── Network helpers ──────────────────────────────────────────────────────────
+
 async function attemptFetch(id: number): Promise<PokemonRawData> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -116,12 +119,9 @@ async function attemptFetch(id: number): Promise<PokemonRawData> {
       signal: controller.signal,
     });
 
-    if (!res.ok) {
-      throw new Error(`PokeAPI returned ${res.status} for id ${id}`);
-    }
+    if (!res.ok) throw new Error(`PokeAPI returned ${res.status} for id ${id}`);
 
     const data = await res.json();
-
     return {
       baseStats: parseStats(data.stats),
       rawMoves: parseRawMoves(data.moves),
@@ -141,13 +141,9 @@ async function attemptMoveFetch(
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok)
       throw new Error(`PokeAPI returned ${res.status} for move url ${url}`);
-    }
 
     const data = await res.json();
     return parseMoveDetail(data);
@@ -156,23 +152,15 @@ async function attemptMoveFetch(
   }
 }
 
-/**
- * Retries up to MAX_RETRIES times with exponential-ish backoff.
- * Falls back to buildFallback() if all attempts fail.
- */
 async function fetchWithRetry(id: number): Promise<PokemonRawData> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       return await attemptFetch(id);
-    } catch (err) {
-      const isLast = attempt === MAX_RETRIES - 1;
-      if (isLast) break;
-
-      const delay = RETRY_DELAYS_MS[attempt] ?? 2000;
-      await new Promise((r) => setTimeout(r, delay));
+    } catch {
+      if (attempt === MAX_RETRIES - 1) break;
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt] ?? 2000));
     }
   }
-
   console.warn(
     `[fetchWithCache] All retries exhausted for id ${id}. Using fallback.`,
   );
@@ -186,15 +174,11 @@ async function fetchMoveWithRetry(
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       return await attemptMoveFetch(url, name);
-    } catch (err) {
-      const isLast = attempt === MAX_RETRIES - 1;
-      if (isLast) break;
-
-      const delay = RETRY_DELAYS_MS[attempt] ?? 2000;
-      await new Promise((r) => setTimeout(r, delay));
+    } catch {
+      if (attempt === MAX_RETRIES - 1) break;
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt] ?? 2000));
     }
   }
-
   console.warn(
     `[fetchWithCache] All retries exhausted for move ${name}. Using fallback.`,
   );
@@ -204,64 +188,92 @@ async function fetchMoveWithRetry(
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * The main cache-aware fetch function.
+ * Fetches PokemonRawData for a given id.
+ *
+ * Resolution order:
+ *   1. L1 in-memory Map  → return immediately
+ *   2. L2 SQLite DB      → populate L1, return
+ *   3. L3 PokeAPI        → persist to L2, populate L1, return
  */
 export async function fetchWithCache(id: number): Promise<PokemonRawData> {
-  // 1. Cache hit
+  // L1 hit
   if (pokemonCache.has(id)) return pokemonCache.get(id)!;
 
-  // 2. In-flight hit — join the existing promise
+  // In-flight deduplication
   if (pendingFetches.has(id)) return pendingFetches.get(id)!;
 
-  // 3. New fetch — register BEFORE awaiting
-  const fetchPromise = fetchWithRetry(id)
-    .then((data) => {
-      pokemonCache.set(id, data);
-      return data;
-    })
-    .finally(() => {
-      // Clean up registry whether success or fallback
-      pendingFetches.delete(id);
-    });
+  const fetchPromise = (async (): Promise<PokemonRawData> => {
+    // L2 hit — SQLite
+    const cached = await getPokemonFromDb(id);
+    if (cached) {
+      pokemonCache.set(id, cached); // warm L1
+      return cached;
+    }
+
+    // L3 — network
+    const fresh = await fetchWithRetry(id);
+    pokemonCache.set(id, fresh);
+
+    // Persist to SQLite in the background — don't block the caller
+    savePokemonToDb(id, fresh).catch((err) =>
+      console.warn(`[fetchWithCache] SQLite write failed for id ${id}:`, err),
+    );
+
+    return fresh;
+  })().finally(() => pendingFetches.delete(id));
 
   pendingFetches.set(id, fetchPromise);
   return fetchPromise;
 }
 
 /**
- * Fetches detail for a single move with caching and deduplication.
+ * Fetches a MoveDetail for a given URL.
+ *
+ * Resolution order:
+ *   1. L1 in-memory Map
+ *   2. L2 SQLite DB
+ *   3. L3 PokeAPI
  */
 export async function fetchMoveWithCache(
   url: string,
   name: string,
 ): Promise<MoveDetail> {
-  // 1. Cache hit
+  // L1 hit
   if (moveCache.has(url)) return moveCache.get(url)!;
 
-  // 2. In-flight hit
+  // In-flight deduplication
   if (pendingMoveFetches.has(url)) return pendingMoveFetches.get(url)!;
 
-  // 3. New fetch
-  const fetchPromise = fetchMoveWithRetry(url, name)
-    .then((data) => {
-      moveCache.set(url, data);
-      return data;
-    })
-    .finally(() => {
-      pendingMoveFetches.delete(url);
-    });
+  const fetchPromise = (async (): Promise<MoveDetail> => {
+    // L2 hit — SQLite
+    const cached = await getMoveFromDb(url);
+    if (cached) {
+      moveCache.set(url, cached); // warm L1
+      return cached;
+    }
+
+    // L3 — network
+    const fresh = await fetchMoveWithRetry(url, name);
+    moveCache.set(url, fresh);
+
+    // Persist to SQLite in the background
+    saveMoveToDb(url, fresh).catch((err) =>
+      console.warn(
+        `[fetchWithCache] SQLite write failed for move ${name}:`,
+        err,
+      ),
+    );
+
+    return fresh;
+  })().finally(() => pendingMoveFetches.delete(url));
 
   pendingMoveFetches.set(url, fetchPromise);
   return fetchPromise;
 }
 
 /**
- * Fetches a batch of ids using Promise.allSettled so one failure
- * never kills the entire batch. Each id goes through fetchWithCache
- * independently — cache hits and in-flight deduplication apply per id.
- *
- * Returns one PokemonRawData per id in the same order.
- * Failed ids silently receive a fallback (already handled inside fetchWithRetry).
+ * Fetches a batch of ids — each goes through the full L1/L2/L3 chain.
+ * Uses Promise.allSettled so one failure never kills the batch.
  */
 export async function fetchBatch(
   ids: number[],
@@ -271,22 +283,16 @@ export async function fetchBatch(
   );
 
   const map = new Map<number, PokemonRawData>();
-
   for (const result of results) {
     if (result.status === "fulfilled") {
       map.set(result.value.id, result.value.data);
     }
-    // "rejected" should never happen because fetchWithRetry always returns fallback,
-    // but if it does somehow, that id simply won't appear in the map.
-    // The caller (batchGenerator) handles missing ids gracefully.
   }
-
   return map;
 }
 
 /**
  * Fetches full details for multiple moves in parallel.
- * Uses moveCache for efficiency.
  */
 export async function fetchMoveBatch(
   moves: { name: string; url: string }[],
@@ -301,12 +307,15 @@ export async function fetchMoveBatch(
   });
 }
 
-/** Expose cache size for debugging / dev tools */
+/** Returns combined L1 cache size (session only). */
 export function getCacheSize(): number {
   return pokemonCache.size + moveCache.size;
 }
 
-/** Clear cache — useful for testing */
+/**
+ * Clears L1 in-memory caches.
+ * To also clear L2 (SQLite), call clearDb() from pokemonDb.ts separately.
+ */
 export function clearCache(): void {
   pokemonCache.clear();
   moveCache.clear();
