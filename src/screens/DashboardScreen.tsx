@@ -45,7 +45,8 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       navigation.navigate("Battle", {
         player: playerPokemon,
         enemy,
-      });
+        onSave: refetch, // Pass refetch to update dashboard after swaps
+      } as any);
     } catch (e) {
       Alert.alert("Error", "Could not load battle. Try again.");
     }

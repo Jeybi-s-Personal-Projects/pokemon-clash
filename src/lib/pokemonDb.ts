@@ -1,261 +1,239 @@
 /**
  * pokemonDb.ts
  *
- * SQLite persistence layer for PokeAPI data.
- * Two tables:
- *   pokemon_cache  — keyed by numeric Pokémon id, stores BaseStats + RawMove[]
- *   move_cache     — keyed by move URL, stores full MoveDetail
+ * SQLite persistence layer for player-owned Pokémon.
  *
- * Both tables are append-only from the app's perspective (base stats and move
- * details don't change between sessions, so data never goes stale).
+ * Tables:
+ *   instance_cache — all Pokémon ever caught by the player
  *
- * Usage: call initDb() once at app startup (e.g. in App.tsx), then the
- * read/write helpers are used internally by fetchWithCache.ts.
+ * Supabase is the source of truth for battle stats/images.
+ * SQLite tracks ownership, moveset, level, experience, and box/team status.
+ *
+ * in_team = 1 → active roster (max 6, mirrored to Supabase)
+ * in_team = 0 → box (SQLite only)
  */
-import type { MoveDetail, PokemonRawData } from "@/src/encounter/types";
-// import * as FileSystem from "expo-file-system";
-// import { Paths } from "expo-file-system";
+import type { Pokemon } from "@/src/types/pokemon";
 import * as SQLite from "expo-sqlite";
 
 // ─── Singleton DB handle ──────────────────────────────────────────────────────
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
-/**
- * Opens (or returns the already-open) database and ensures the schema exists.
- * Safe to call multiple times — subsequent calls return the cached handle instantly.
- */
 export async function initDb(): Promise<SQLite.SQLiteDatabase> {
   if (_db) return _db;
 
-  // 🔥 TEMP: wipe DB once
-  // await FileSystem.deleteAsync(Paths.document + "SQLite/pokemon_cache.db", {
-  //   idempotent: true,
-  // });
-
   const db = await SQLite.openDatabaseAsync("pokemon_cache.db");
 
-  // WAL mode: faster concurrent reads, safer writes
-  await db.execAsync("PRAGMA journal_mode = WAL;");
-
   await db.execAsync(`
-  PRAGMA journal_mode = WAL;
+    PRAGMA journal_mode = WAL;
 
-  -- 🟦 POKEDEX / GLOBAL DATA
-  CREATE TABLE IF NOT EXISTS species_cache (
-    id INTEGER PRIMARY KEY,
+    -- Drop old schema to apply column changes
+    DROP TABLE IF EXISTS instance_cache;
 
-    name TEXT NOT NULL,
-    types TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS instance_cache (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
 
-    base_stats TEXT NOT NULL,
-    abilities TEXT,
+      species_id INTEGER,
+      name TEXT NOT NULL,
 
-    evolution_chain TEXT,
-    genus TEXT,
-    flavor_texts TEXT,
+      level INTEGER NOT NULL DEFAULT 0,
+      experience INTEGER NOT NULL DEFAULT 0,
 
-    sprite_default TEXT,
-    sprite_shiny TEXT,
+      moveset TEXT NOT NULL DEFAULT '[]',
 
-    height_m REAL,
-    weight_kg REAL,
+      in_team INTEGER NOT NULL DEFAULT 0,
 
-    capture_rate INTEGER,
-    encounter_rate INTEGER,
-
-    last_updated INTEGER
-  );
-
-  -- 🟨 PLAYER OWNED POKEMON
-  CREATE TABLE IF NOT EXISTS instance_cache (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-
-    species_id INTEGER NOT NULL,
-
-    nickname TEXT,
-    level INTEGER NOT NULL DEFAULT 5,
-    xp INTEGER DEFAULT 0,
-
-    is_shiny INTEGER DEFAULT 0,
-
-    hp_current INTEGER NOT NULL,
-    hp_max INTEGER NOT NULL,
-
-    attack INTEGER NOT NULL,
-    defense INTEGER NOT NULL,
-    sp_attack INTEGER NOT NULL,
-    sp_defense INTEGER NOT NULL,
-    speed INTEGER NOT NULL,
-
-    moveset TEXT,
-    held_item TEXT,
-
-    status TEXT,
-
-    team_slot INTEGER,
-    in_team INTEGER DEFAULT 0,
-
-    created_at INTEGER DEFAULT (strftime('%s','now'))
-  );
-
-  -- ⚔️ MOVES (UNCHANGED)
-  CREATE TABLE IF NOT EXISTS move_cache (
-    url TEXT PRIMARY KEY,
-    detail TEXT NOT NULL
-  );
-`);
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
 
   _db = db;
   return db;
 }
 
-// ─── Pokémon helpers ──────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-/**
- * Reads a PokemonRawData from SQLite by Pokémon id.
- * Returns null on miss or corrupted JSON (triggers a re-fetch upstream).
- */
+export type InstanceRow = {
+  id: string;
+  user_id: string;
+  species_id: number | null;
+  name: string;
+  level: number;
+  experience: number;
+  moveset: string;
+  in_team: number;
+  created_at: number;
+};
 
-export async function getSpeciesFromDb(id: number): Promise<
-  | (PokemonRawData & {
-      name: string;
-      types: string[];
-      abilities: string[];
-      flavor_texts: string[];
-      height_m: number;
-      weight_kg: number;
-    })
-  | null
-> {
-  const db = await initDb();
+export type BoxEntry = {
+  id: string;
+  name: string;
+  species_id: number | null;
+  level: number;
+  experience: number;
+  moves: Pokemon["moves"];
+  inTeam: boolean;
+};
 
-  const row = await db.getFirstAsync<{
-    base_stats: string;
-    types: string;
-    name: string;
-    abilities: string;
-    flavor_texts: string;
-    height_m: number;
-    weight_kg: number;
-  }>(
-    `SELECT base_stats, types, name, abilities, flavor_texts, height_m, weight_kg
-     FROM species_cache
-     WHERE id = ?`,
-    [id],
-  );
+// ─── Internal ─────────────────────────────────────────────────────────────────
 
-  if (!row) return null;
-
-  try {
-    return {
-      name: row.name,
-      types: JSON.parse(row.types),
-      abilities: JSON.parse(row.abilities),
-      flavor_texts: JSON.parse(row.flavor_texts),
-      height_m: row.height_m,
-      weight_kg: row.weight_kg,
-      baseStats: JSON.parse(row.base_stats),
-      rawMoves: [], // moves handled separately now
-    };
-  } catch {
-    return null;
-  }
+function rowToBoxEntry(row: InstanceRow): BoxEntry {
+  return {
+    id: row.id,
+    name: row.name,
+    species_id: row.species_id,
+    level: row.level,
+    experience: row.experience,
+    moves: JSON.parse(row.moveset ?? "[]"),
+    inTeam: row.in_team === 1,
+  };
 }
+
+// ─── Write helpers ────────────────────────────────────────────────────────────
+
 /**
- * Writes a PokemonRawData to SQLite.
- * INSERT OR REPLACE is idempotent — safe to call even if the row already exists.
+ * Saves a newly caught Pokémon to SQLite.
+ * inTeam=true  → goes straight into the active roster
+ * inTeam=false → goes to the box
  */
-export async function saveSpeciesToDb(
-  id: number,
-  data: PokemonRawData,
-  extra?: {
-    name?: string;
-    types?: string[];
-  },
+export async function saveInstanceToDb(
+  supabaseId: string,
+  userId: string,
+  pokemon: Pokemon,
+  inTeam: boolean = false,
 ): Promise<void> {
   const db = await initDb();
 
   await db.runAsync(
-    `INSERT OR REPLACE INTO species_cache
-   (id, name, types, base_stats, abilities, height_m, weight_kg)
-   VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO instance_cache
+      (id, user_id, species_id, name, level, experience, moveset, in_team)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      id,
-      extra?.name ?? data.name ?? `pokemon-${id}`,
-      JSON.stringify(extra?.types ?? data.types ?? ["normal"]),
-      JSON.stringify(data.baseStats),
-      JSON.stringify(data.abilities ?? []),
-      data.height_m ?? null,
-      data.weight_kg ?? null,
+      supabaseId,
+      userId,
+      null,
+      pokemon.name,
+      pokemon.level ?? 0,
+      0,
+      JSON.stringify(pokemon.moves),
+      inTeam ? 1 : 0,
     ],
   );
 }
 
-// ─── Move helpers ─────────────────────────────────────────────────────────────
-
 /**
- * Reads a MoveDetail from SQLite by move URL.
- * Returns null on miss or corrupted JSON.
+ * Flips a Pokémon's in_team flag.
+ * Bench: setInTeamDb(id, false)
+ * Recall: setInTeamDb(id, true)
  */
-export async function getMoveFromDb(url: string): Promise<MoveDetail | null> {
+export async function setInTeamDb(
+  supabaseId: string,
+  inTeam: boolean,
+): Promise<void> {
   const db = await initDb();
-
-  const row = await db.getFirstAsync<{ detail: string }>(
-    "SELECT detail FROM move_cache WHERE url = ?",
-    [url],
-  );
-
-  if (!row) return null;
-
-  try {
-    return JSON.parse(row.detail) as MoveDetail;
-  } catch {
-    return null;
-  }
+  await db.runAsync(`UPDATE instance_cache SET in_team = ? WHERE id = ?`, [
+    inTeam ? 1 : 0,
+    supabaseId,
+  ]);
 }
 
 /**
- * Writes a MoveDetail to SQLite keyed by its URL.
- * INSERT OR REPLACE is idempotent.
+ * Hard deletes a Pokémon from SQLite.
+ * Only call this if also deleting from Supabase.
  */
-export async function saveMoveToDb(
-  url: string,
-  detail: MoveDetail,
-): Promise<void> {
+export async function deleteInstanceFromDb(supabaseId: string): Promise<void> {
   const db = await initDb();
+  await db.runAsync(`DELETE FROM instance_cache WHERE id = ?`, [supabaseId]);
+}
 
-  await db.runAsync(
-    `INSERT OR REPLACE INTO move_cache (url, detail) VALUES (?, ?)`,
-    [url, JSON.stringify(detail)],
+// ─── Read helpers ─────────────────────────────────────────────────────────────
+
+/** All Pokémon ever caught — team + box combined. */
+export async function getAllInstancesFromDb(
+  userId: string,
+): Promise<BoxEntry[]> {
+  const db = await initDb();
+  const rows = await db.getAllAsync<InstanceRow>(
+    `SELECT * FROM instance_cache WHERE user_id = ? ORDER BY created_at ASC`,
+    [userId],
   );
+  return rows.map(rowToBoxEntry);
+}
+
+/** Only the active roster (in_team = 1). */
+export async function getTeamFromDb(userId: string): Promise<BoxEntry[]> {
+  const db = await initDb();
+  const rows = await db.getAllAsync<InstanceRow>(
+    `SELECT * FROM instance_cache
+     WHERE user_id = ? AND in_team = 1
+     ORDER BY created_at ASC`,
+    [userId],
+  );
+  return rows.map(rowToBoxEntry);
+}
+
+/** Only boxed Pokémon (in_team = 0). */
+export async function getBoxFromDb(userId: string): Promise<BoxEntry[]> {
+  const db = await initDb();
+  const rows = await db.getAllAsync<InstanceRow>(
+    `SELECT * FROM instance_cache
+     WHERE user_id = ? AND in_team = 0
+     ORDER BY created_at ASC`,
+    [userId],
+  );
+  return rows.map(rowToBoxEntry);
+}
+
+/**
+ * Set of all caught Pokémon names for a user (lowercased).
+ * Cheap lookup for the "already caught" pokeball badge on wild encounters.
+ */
+export async function getCaughtNamesFromDb(
+  userId: string,
+): Promise<Set<string>> {
+  const db = await initDb();
+  const rows = await db.getAllAsync<{ name: string }>(
+    `SELECT name FROM instance_cache WHERE user_id = ?`,
+    [userId],
+  );
+  return new Set(rows.map((r) => r.name.toLowerCase()));
+}
+
+/** How many Pokémon are currently in the active roster. */
+export async function getTeamCountFromDb(userId: string): Promise<number> {
+  const db = await initDb();
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM instance_cache
+     WHERE user_id = ? AND in_team = 1`,
+    [userId],
+  );
+  return row?.count ?? 0;
 }
 
 // ─── Debug helpers ────────────────────────────────────────────────────────────
 
-/** Returns row counts for both tables — handy for a dev/settings screen. */
 export async function getDbStats(): Promise<{
-  pokemonRows: number;
-  moveRows: number;
+  teamRows: number;
+  boxRows: number;
+  totalRows: number;
 }> {
   const db = await initDb();
 
-  const pkRow = await db.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM pokemon_cache",
+  const totalRow = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM instance_cache",
   );
-  const mvRow = await db.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM move_cache",
+  const teamRow = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM instance_cache WHERE in_team = 1",
   );
 
-  return {
-    pokemonRows: pkRow?.count ?? 0,
-    moveRows: mvRow?.count ?? 0,
-  };
+  const total = totalRow?.count ?? 0;
+  const team = teamRow?.count ?? 0;
+
+  return { teamRows: team, boxRows: total - team, totalRows: total };
 }
 
-/** Wipes all cached rows — useful for a "clear cache" option. */
 export async function clearDb(): Promise<void> {
   const db = await initDb();
-  await db.execAsync("DELETE FROM pokemon_cache; DELETE FROM move_cache;");
+  await db.execAsync("DELETE FROM instance_cache;");
 }

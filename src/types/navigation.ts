@@ -7,7 +7,19 @@ export type RootStackParamList = {
   Signup: undefined;
   Dashboard: undefined;
   SelectPokemon: { team: Pokemon[] };
-  Battle: { player: Pokemon; enemy: Pokemon };
+  Battle: {
+    player: Pokemon;
+    enemy: Pokemon;
+    onRun?: () => void;
+    onSave?: () => void;
+    catchResult?:
+      | {
+          caught: boolean;
+          caughtPokemon: { id: string } & Pokemon;
+          teamFull: boolean;
+        }
+      | undefined; // ← undefined so setParams({ catchResult: undefined }) is valid
+  };
   RegionSelect: { player: Pokemon };
   AreaSelect: { region: Region; player: Pokemon };
   EncounterFlow: {
@@ -23,7 +35,14 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
-  InventoryBag: { pokemon: Pokemon };
+  InventoryBag: {
+    pokemon: Pokemon;
+    onCatchResult: (result: {
+      caught: boolean;
+      caughtPokemon: { id: string } & Pokemon;
+      teamFull: boolean;
+    }) => void;
+  };
 };
 
 export type InventoryBagScreenProps = NativeStackScreenProps<

@@ -21,6 +21,8 @@ export function useTeam(userId: string) {
       .from("pokemon")
       .select(`*, pokemon_moves(*)`)
       .eq("user_id", userId)
+      .not("pk_order", "is", null)
+      .neq("pk_order", 0)
       .order("pk_order", { ascending: true })
       .order("created_at", { ascending: true });
 

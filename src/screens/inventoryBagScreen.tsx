@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon } from "../hooks/savePokemon";
 import { colors } from "../theme/color";
@@ -69,10 +70,15 @@ export default function InventoryBagScreen({
   navigation,
   route,
 }: InventoryBagScreenProps) {
-  const { pokemon } = route.params;
+  const { pokemon, onCatchResult } = route.params;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+
+  // Status Modal State
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [catchResult, setCatchResult] = useState<any>(null);
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -87,15 +93,8 @@ export default function InventoryBagScreen({
     return [];
   }, [category]);
 
-  const handleUseItem = (item: BagItem) => {
+  const handleUseItem = async (item: BagItem) => {
     playClick();
-    catchPokemon();
-    // return to battle screen
-    navigation.goBack();
-  };
-
-  //catching pokemon
-  const catchPokemon = async () => {
     if (!user) {
       Alert.alert("Error", "You must be logged in.");
       return;
@@ -103,15 +102,47 @@ export default function InventoryBagScreen({
 
     try {
       setSaving(true);
-      await savePokemon(pokemon, user.id);
+      const { data, teamFull } = await savePokemon(pokemon, user.id);
 
-      // Alert.alert("Added!", `${pokemon.name} was added to your team.`, [
-      //   { text: "OK", onPress: () => navigation.navigate("Dashboard") },
-      // ]);
+      const result = {
+        caught: true,
+        caughtPokemon: { ...pokemon, id: data.id },
+        teamFull,
+      };
+
+      if (teamFull) {
+        setStatusMessage(
+          `Gotcha! ${pokemon.name} was caught!\n\nYour team is full, so it was sent to the PC.`
+        );
+        setCatchResult(result);
+        setStatusVisible(true);
+      } else {
+        // Use a helper to send result safely
+        sendCatchResult(result);
+        navigation.goBack();
+      }
     } catch (e) {
-      Alert.alert("Error", "Could not save Pokémon. Try again.");
+      console.error("Catch Error:", e);
+      Alert.alert("Error", `Could not save Pokémon: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const sendCatchResult = (result: any) => {
+    if (typeof onCatchResult === 'function') {
+      onCatchResult(result);
+    } else {
+      console.warn("onCatchResult not provided in route.params, using setParams fallback");
+      navigation.setParams({ catchResult: result } as any);
+    }
+  };
+
+  const handleCloseStatus = () => {
+    setStatusVisible(false);
+    if (catchResult) {
+      sendCatchResult(catchResult);
+      navigation.goBack();
     }
   };
 
@@ -152,6 +183,7 @@ export default function InventoryBagScreen({
           <TouchableOpacity
             style={styles.card}
             onPress={() => handleUseItem(item)}
+            disabled={saving}
           >
             <Image
               source={item.sprite}
@@ -168,9 +200,16 @@ export default function InventoryBagScreen({
               </Text>
             </View>
 
-            <Text style={styles.useText}>USE</Text>
+            <Text style={styles.useText}>{saving ? "..." : "USE"}</Text>
           </TouchableOpacity>
         )}
+      />
+
+      <StatusModal
+        visible={statusVisible}
+        message={statusMessage}
+        type="success"
+        onClose={handleCloseStatus}
       />
     </View>
   );
@@ -188,13 +227,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-
   tabRow: {
     flexDirection: "row",
     padding: 12,
     gap: 8,
   },
-
   tabButton: {
     flex: 1,
     backgroundColor: colors.bgCard,
@@ -204,22 +241,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-
   tabButtonActive: {
     borderColor: colors.accent,
     backgroundColor: colors.accent + "22",
   },
-
   tabText: {
     color: colors.textMuted,
     fontWeight: "bold",
     fontSize: 12,
   },
-
   tabTextActive: {
     color: colors.accent,
   },
-
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -239,26 +272,22 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
   },
-
   itemName: {
     color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
   },
-
   itemDesc: {
     color: colors.textMuted,
     fontSize: 12,
     marginTop: 2,
   },
-
   catchPreview: {
     color: colors.accent,
     fontSize: 12,
     marginTop: 6,
     fontWeight: "bold",
   },
-
   useText: {
     color: colors.accent,
     fontWeight: "bold",

@@ -138,7 +138,13 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
         onBagPress={() =>
-          navigation.navigate("InventoryBag", { pokemon: fullyLoadedEnemy })
+          navigation.navigate("InventoryBag", {
+            pokemon: fullyLoadedEnemy,
+            onCatchResult: (result) => {
+              // We'll handle this in an effect or similar to show swap modal if needed
+              navigation.setParams({ catchResult: result } as any);
+            },
+          })
         }
       />
     </View>
