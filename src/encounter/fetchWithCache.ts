@@ -195,7 +195,10 @@ async function fetchMoveWithRetry(
  *   2. L2 SQLite DB      → populate L1, return
  *   3. L3 PokeAPI        → persist to L2, populate L1, return
  */
-export async function fetchWithCache(id: number): Promise<PokemonRawData> {
+export async function fetchWithCache(
+  id: number,
+  extra?: { name?: string; types?: string[] },
+): Promise<PokemonRawData> {
   // L1 hit
   // if (pokemonCache.has(id)) return pokemonCache.get(id)!;
 
@@ -227,7 +230,7 @@ export async function fetchWithCache(id: number): Promise<PokemonRawData> {
     pokemonCache.set(id, fresh);
 
     // Persist to SQLite in the background — don't block the caller
-    saveSpeciesToDb(id, fresh).catch((err) =>
+    saveSpeciesToDb(id, fresh, extra).catch((err) =>
       console.warn(`[fetchWithCache] SQLite write failed for id ${id}:`, err),
     );
 
@@ -279,7 +282,7 @@ export async function fetchMoveWithCache(
     return fresh;
   })().finally(() => pendingMoveFetches.delete(url));
 
-  pendingMoveFetches.set(url, fetchPromise);
+  pendingMoveFetches.set(id, fetchPromise);
   return fetchPromise;
 }
 
@@ -288,10 +291,14 @@ export async function fetchMoveWithCache(
  * Uses Promise.allSettled so one failure never kills the batch.
  */
 export async function fetchBatch(
-  ids: number[],
+  items: { id: number; name?: string; types?: string[] }[],
 ): Promise<Map<number, PokemonRawData>> {
   const results = await Promise.allSettled(
-    ids.map((id) => fetchWithCache(id).then((data) => ({ id, data }))),
+    items.map((item) =>
+      fetchWithCache(item.id, { name: item.name, types: item.types }).then(
+        (data) => ({ id: item.id, data }),
+      ),
+    ),
   );
 
   const map = new Map<number, PokemonRawData>();

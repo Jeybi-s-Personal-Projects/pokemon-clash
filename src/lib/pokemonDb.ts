@@ -120,7 +120,7 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
 
 export async function getSpeciesFromDb(
   id: number,
-): Promise<PokemonRawData | null> {
+): Promise<(PokemonRawData & { name: string; types: string[] }) | null> {
   const db = await initDb();
 
   const row = await db.getFirstAsync<{
@@ -133,6 +133,8 @@ export async function getSpeciesFromDb(
 
   try {
     return {
+      name: row.name,
+      types: JSON.parse(row.types),
       baseStats: JSON.parse(row.base_stats),
       rawMoves: [], // moves handled separately now
     };
