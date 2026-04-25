@@ -12,6 +12,7 @@
  */
 
 import { MOVES } from "@/src/data/pokemon/moves/moves";
+import { SPECIES } from "@/src/data/pokemon/species/species";
 import type {
   BaseStats,
   MoveDetail,
@@ -202,6 +203,12 @@ export async function fetchWithCache(
   id: number,
   extra?: { name?: string; types?: string[] },
 ): Promise<PokemonRawData> {
+  // L0 — static species data, zero cost
+  if (SPECIES[id]) {
+    console.log(`[Cache] L0 hit (static) — Pokémon Species #${id}`);
+    return SPECIES[id];
+  }
+  // L1 — in-memory
   if (pokemonCache.has(id)) {
     console.log(`[Cache] L1 hit — Pokémon #${id}`);
     return pokemonCache.get(id)!;
