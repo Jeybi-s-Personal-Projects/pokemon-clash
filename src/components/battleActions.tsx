@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import { getTypeMultiplier, PokemonType } from "../battle/typeChart";
 import BattleButton from "./battleButton";
 
@@ -18,6 +18,7 @@ type Props = {
   onBagPress?: () => void;
   onRun?: () => void;
   disabled: boolean;
+  currentLog?: string | null;
 };
 
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
@@ -52,8 +53,44 @@ export default function BattleActions({
   onBagPress,
   onRun,
   disabled,
+  currentLog,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
+  const cursorOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (currentLog) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(cursorOpacity, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cursorOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
+      ).start();
+    } else {
+      cursorOpacity.setValue(1);
+    }
+  }, [currentLog]);
+
+  if (currentLog) {
+    return (
+      <View style={styles.containerText}>
+        <View style={styles.logBox}>
+          <Text style={styles.logText}>{currentLog}</Text>
+          <Animated.View
+            style={[styles.cursorArrow, { opacity: cursorOpacity }]}
+          />
+        </View>
+      </View>
+    );
+  }
 
   if (menu === "main") {
     return (
@@ -135,6 +172,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: "#6bdae233",
   },
+  containerText: {
+    width: "100%",
+    height: 280,
+    backgroundColor: "#080B14",
+    borderTopWidth: 2,
+    borderTopColor: "#6bdae233",
+    paddingBottom: 36,
+  },
   header: {
     flexDirection: "row",
     alignItems: "baseline",
@@ -165,5 +210,61 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignContent: "space-between",
     flex: 1,
+  },
+  logContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // logText: {
+  //   color: "#E2C96B",
+  //   fontFamily: "monospace",
+  //   fontSize: 1,
+  //   fontWeight: "900",
+  //   letterSpacing: 1,
+  //   lineHeight: 28,
+  //   textTransform: "uppercase",
+  //   textAlign: "center",
+  // },
+  cursor: {
+    width: 12,
+    height: 12,
+    backgroundColor: "#E2C96B",
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    transform: [{ rotate: "45deg" }],
+  },
+  logBox: {
+    flex: 1,
+    margin: 28,
+    borderWidth: 2,
+    borderColor: "#6bdae244",
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  logText: {
+    fontFamily: "monospace",
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#E2C96B",
+    letterSpacing: 2,
+    lineHeight: 24,
+    textTransform: "uppercase",
+    textAlign: "center",
+  },
+  cursorArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#6bdae2",
+    alignSelf: "flex-end",
   },
 });

@@ -60,25 +60,21 @@ export function Battle({
     hitSide: null,
   });
 
+  const [currentMessage, setCurrentMessage] = useState<string | null>(null);
+
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
   const attack = async (index: number) => {
-    if (state.attackingSide || state.winner) return;
+    if (state.attackingSide || state.winner || currentMessage) return;
 
     // 1. Player Turn
     const move = state.player.moves[index];
 
+    setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
     await delay(1500);
 
-    setState((s) => ({
-      ...s,
-      log: [...s.log, `Player used ${move.name}!`],
-    }));
-
-    await delay(1500);
     setState((s) => ({ ...s, attackingSide: "player" }));
-
     await delay(400);
     setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
 
@@ -91,28 +87,23 @@ export function Battle({
     };
 
     const winnerAfterPlayer = isGameOver(afterPlayerAttack);
-    if (winnerAfterPlayer) {
-      setState({ ...afterPlayerAttack, winner: winnerAfterPlayer });
-      if (onBattleEnd) onBattleEnd(winnerAfterPlayer);
+    if (winnerAfterPlayer === "player") {
+      setState({ ...afterPlayerAttack, winner: "player" });
+      await delay(1200); // Wait for HP bar animation
+      setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+      if (onBattleEnd) onBattleEnd("player");
       return;
     }
 
     setState(afterPlayerAttack);
-
-    // 2. Enemy Turn
-    await delay(1500);
+    await delay(1000); // Wait for HP bar to show progress before enemy turn starts
     const enemyMove = getRandomMove(state.enemy);
 
     setState((s) => ({ ...s, turn: "enemy" }));
+    setCurrentMessage(`Wild ${state.enemy.name.toUpperCase()} used ${enemyMove.name.toUpperCase()}!`);
     await delay(1500);
-    setState((s) => ({
-      ...s,
-      log: [...s.log, `Enemy used ${enemyMove.name}!`],
-    }));
 
-    await delay(1500);
     setState((s) => ({ ...s, attackingSide: "enemy" }));
-
     await delay(400);
     setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
 
@@ -130,8 +121,18 @@ export function Battle({
     };
 
     const winnerAfterEnemy = isGameOver(afterEnemyAttack);
-    setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
-    if (winnerAfterEnemy && onBattleEnd) onBattleEnd(winnerAfterEnemy);
+    if (winnerAfterEnemy) {
+        setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
+        if (winnerAfterEnemy === 'enemy') {
+            setCurrentMessage(`${state.player.name.toUpperCase()} fainted!`);
+        } else {
+            setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+        }
+        if (onBattleEnd) onBattleEnd(winnerAfterEnemy);
+    } else {
+        setState(afterEnemyAttack);
+        setCurrentMessage(null); // Clear message to show buttons again
+    }
   };
 
   return (
@@ -152,36 +153,8 @@ export function Battle({
           isHit={state.hitSide === "enemy"}
         />
 
-        {/* Battle Log */}
-        <View
-          style={{ height: 50, justifyContent: "center", marginVertical: 40 }}
-        >
-          {state.log.slice(-2).map((l, i) => (
-            <Text
-              key={i}
-              style={{
-                textAlign: "center",
-                fontWeight: "bold",
-                color: "white",
-              }}
-            >
-              {l}
-            </Text>
-          ))}
-
-          {state.winner && (
-            <Text
-              style={{
-                textAlign: "center",
-                fontSize: 24,
-                fontWeight: "bold",
-                color: state.winner === "player" ? "#4CAF50" : "#F44336",
-              }}
-            >
-              {state.winner === "player" ? "YOU WIN!" : "YOU LOSE!"}
-            </Text>
-          )}
-        </View>
+        {/* Spacing between cards */}
+        <View style={{ height: 100 }} />
 
         {/* Player */}
         <PokemonCard
@@ -199,7 +172,8 @@ export function Battle({
         onMovePress={attack}
         onBagPress={onBagPress}
         onRun={onRun}
-        disabled={!!state.attackingSide || !!state.winner}
+        disabled={!!state.attackingSide || !!state.winner || !!currentMessage}
+        currentLog={currentMessage}
       />
     </View>
   );
