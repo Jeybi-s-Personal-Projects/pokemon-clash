@@ -1,29 +1,23 @@
 /**
  * savePokemon.ts
  *
- * Saves a caught Pokémon to both Supabase and SQLite.
+ * Saves a caught Pokémon to Supabase.
  *
  * Supabase — stores all battle-relevant data (stats, images, moves)
- * SQLite   — stores ownership, level, experience, moveset, in_team flag
  *
  * Team cap logic:
- *   - If roster < 6 → save to Supabase + SQLite with in_team = true
- *   - If roster = 6 → save to Supabase, SQLite with in_team = false (box)
+ *   - If roster < 6 → save to Supabase with a pk_order (active)
+ *   - If roster = 6 → save to Supabase with pk_order = null (boxed)
  *                      caller must handle the swap modal and call swapIntoTeam()
  *                      if the player wants this Pokémon on the team
  */
-import {
-  getTeamCountFromDb,
-  saveInstanceToDb,
-  setInTeamDb,
-} from "@/src/lib/pokemonDb";
 import { supabase } from "../lib/supabase";
 import { Pokemon } from "../types/pokemon";
 
 // ─── Save ─────────────────────────────────────────────────────────────────────
 
 /**
- * Saves a caught Pokémon to Supabase and SQLite.
+ * Saves a caught Pokémon to Supabase.
  *
  * Returns:
  *   { data, teamFull: false } — Pokémon added to active roster
@@ -52,6 +46,7 @@ export async function savePokemon(
       pk_front_image: pokemon.frontImage,
       pk_back_image: pokemon.backImage,
       pk_cry: pokemon.cry,
+      pk_order: null, // Initially null
     })
     .select()
     .single();
@@ -77,11 +72,20 @@ export async function savePokemon(
 
   if (movesError) throw movesError;
 
-  // ── Step 3: Check team size and mirror to SQLite ──
-  const teamCount = await getTeamCountFromDb(userId);
+  // ── Step 3: Check team size from Supabase ──
+  const { count, error: countError } = await supabase
+    .from("pokemon")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .not("pk_order", "is", null)
+    .neq("pk_order", 0);
+
+  if (countError) throw countError;
+
+  const teamCount = count ?? 0;
   const teamFull = teamCount >= 6;
 
-  // ── Step 4: Update pk_order in Supabase if not full ──
+  // ── Step 4: Update pk_order if not full ──
   if (!teamFull) {
     const { error: orderError } = await supabase
       .from("pokemon")
@@ -89,15 +93,7 @@ export async function savePokemon(
       .eq("id", data.id);
     
     if (orderError) console.error("Error setting pk_order:", orderError);
-  } else {
-    // Ensure it's null if full (though default is 0, user said use order numbers for team)
-    await supabase
-      .from("pokemon")
-      .update({ pk_order: null })
-      .eq("id", data.id);
   }
-
-  await saveInstanceToDb(data.id, userId, pokemon, !teamFull);
 
   return { data, teamFull };
 }
@@ -127,13 +123,7 @@ export async function swapIntoTeam(
 
   const targetOrder = benchedPk?.pk_order ?? 1;
 
-  // 2. Flip flags in SQLite
-  await Promise.all([
-    setInTeamDb(newPokemonId, true),
-    setInTeamDb(replacedId, false),
-  ]);
-
-  // 3. Update Supabase: 
+  // 2. Update Supabase: 
   // - New pokemon takes the order of the benched one
   // - Benched pokemon order becomes null
   const { error: newPkError } = await supabase

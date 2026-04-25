@@ -16,11 +16,18 @@ import { dealDamage, isGameOver } from "../battle/battleEngine";
 import { BattleState } from "../battle/battleTypes";
 import { useAuth } from "../context/AuthContext";
 import { swapIntoTeam } from "../hooks/savePokemon";
-import { BoxEntry, getTeamMembersFromDb } from "../lib/pokemonDb";
+import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 
 import { setAudioModeAsync } from "expo-audio";
+
+// We'll define a simple type for the swap list
+type TeamMemberForSwap = {
+  id: string;
+  name: string;
+  level: number;
+};
 
 // ─── Inner Battle component (unchanged) ──────────────────────────────────────
 
@@ -207,8 +214,8 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
 
   const { user } = useAuth();
 
-  // BoxEntry has: id, name, level — enough for the swap list
-  const [teamMembers, setTeamMembers] = useState<BoxEntry[]>([]);
+  // Simple list for the swap modal
+  const [teamMembers, setTeamMembers] = useState<TeamMemberForSwap[]>([]);
 
   // Only the Supabase id of the newly caught Pokémon is needed for the swap
   const [pendingCaughtId, setPendingCaughtId] = useState<string | null>(null);
@@ -230,7 +237,22 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
   const loadTeamForSwap = async (caughtId: string) => {
     if (!user) return;
     try {
-      const members = await getTeamMembersFromDb(user.id);
+      const { data, error } = await supabase
+        .from("pokemon")
+        .select("id, pk_name, pk_level")
+        .eq("user_id", user.id)
+        .not("pk_order", "is", null)
+        .neq("pk_order", 0)
+        .order("pk_order", { ascending: true });
+
+      if (error) throw error;
+
+      const members: TeamMemberForSwap[] = data.map((p: any) => ({
+        id: p.id,
+        name: p.pk_name,
+        level: p.pk_level,
+      }));
+
       setTeamMembers(members);
       setPendingCaughtId(caughtId);
       setSwapModalVisible(true);
