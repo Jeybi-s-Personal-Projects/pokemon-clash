@@ -45,7 +45,6 @@
       ],
       "expo-audio",
       "expo-font",
-      "expo-sqlite",
       "expo-image",
       "expo-web-browser",
       [
