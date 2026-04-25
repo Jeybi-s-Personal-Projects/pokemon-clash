@@ -1,15 +1,17 @@
 /**
- * fetchWithCache.ts  (upgraded — SQLite-backed)
+ * fetchWithCache.ts  (upgraded — static move data + SQLite-backed)
  *
- * Three-layer cache for every PokeAPI resource:
+ * Four-layer cache for every PokeAPI resource:
  *
- *   L1 — in-memory Map  (instant, lost on app close)
- *   L2 — SQLite DB      (fast, survives app restarts)
- *   L3 — PokeAPI        (network, last resort)
+ *   L0 — static hardcoded moves (zero cost, instant, no network ever)
+ *   L1 — in-memory Map          (instant, lost on app close)
+ *   L2 — SQLite DB              (fast, survives app restarts)
+ *   L3 — PokeAPI                (network, last resort)
  *
  * Public API is identical to the original file — nothing upstream changes.
  */
 
+import { MOVES } from "@/src/data/pokemon/moves/moves";
 import type {
   BaseStats,
   MoveDetail,
@@ -32,11 +34,9 @@ const RETRY_DELAYS_MS = [500, 1000, 2000];
 
 // ─── L1 — in-memory cache ─────────────────────────────────────────────────────
 
-/** Session-level L1: avoids even a SQLite read for repeated same-session hits */
 const pokemonCache = new Map<number, PokemonRawData>();
 const moveCache = new Map<string, MoveDetail>();
 
-/** In-flight deduplication — same promise joined by concurrent callers */
 const pendingFetches = new Map<number, Promise<PokemonRawData>>();
 const pendingMoveFetches = new Map<string, Promise<MoveDetail>>();
 
@@ -125,6 +125,9 @@ async function attemptFetch(id: number): Promise<PokemonRawData> {
     return {
       baseStats: parseStats(data.stats),
       rawMoves: parseRawMoves(data.moves),
+      abilities: data.abilities.map((a: any) => a.ability.name),
+      height_m: data.height / 10,
+      weight_kg: data.weight / 10,
     };
   } finally {
     clearTimeout(timer);
@@ -199,37 +202,25 @@ export async function fetchWithCache(
   id: number,
   extra?: { name?: string; types?: string[] },
 ): Promise<PokemonRawData> {
-  // L1 hit
-  // if (pokemonCache.has(id)) return pokemonCache.get(id)!;
-
   if (pokemonCache.has(id)) {
     console.log(`[Cache] L1 hit — Pokémon #${id}`);
     return pokemonCache.get(id)!;
   }
 
-  // In-flight deduplication
   if (pendingFetches.has(id)) return pendingFetches.get(id)!;
 
   const fetchPromise = (async (): Promise<PokemonRawData> => {
-    // L2 hit — SQLite
     const cached = await getSpeciesFromDb(id);
-    // if (cached) {
-    //   pokemonCache.set(id, cached); // warm L1
-    //   return cached;
-    // }
-
     if (cached) {
       console.log(`[Cache] L2 hit (SQLite) — Pokémon #${id}`);
       pokemonCache.set(id, cached);
       return cached;
     }
 
-    // L3 — network
     console.log(`[Cache] L3 miss — fetching Pokémon #${id} from PokeAPI`);
     const fresh = await fetchWithRetry(id);
     pokemonCache.set(id, fresh);
 
-    // Persist to SQLite in the background — don't block the caller
     saveSpeciesToDb(id, fresh, extra).catch((err) =>
       console.warn(`[fetchWithCache] SQLite write failed for id ${id}:`, err),
     );
@@ -242,17 +233,24 @@ export async function fetchWithCache(
 }
 
 /**
- * Fetches a MoveDetail for a given URL.
+ * Fetches a MoveDetail for a given move name + URL.
  *
  * Resolution order:
- *   1. L1 in-memory Map
- *   2. L2 SQLite DB
- *   3. L3 PokeAPI
+ *   L0 — static MOVES map    (instant, no I/O at all)
+ *   L1 — in-memory Map
+ *   L2 — SQLite DB
+ *   L3 — PokeAPI
  */
 export async function fetchMoveWithCache(
   url: string,
   name: string,
 ): Promise<MoveDetail> {
+  // L0 — static data, zero cost
+  if (MOVES[name]) {
+    console.log(`[Cache] L0 hit (static) — move "${name}"`);
+    return MOVES[name];
+  }
+
   // L1 hit
   if (moveCache.has(url)) return moveCache.get(url)!;
 
@@ -263,7 +261,7 @@ export async function fetchMoveWithCache(
     // L2 hit — SQLite
     const cached = await getMoveFromDb(url);
     if (cached) {
-      moveCache.set(url, cached); // warm L1
+      moveCache.set(url, cached);
       return cached;
     }
 
@@ -271,7 +269,6 @@ export async function fetchMoveWithCache(
     const fresh = await fetchMoveWithRetry(url, name);
     moveCache.set(url, fresh);
 
-    // Persist to SQLite in the background
     saveMoveToDb(url, fresh).catch((err) =>
       console.warn(
         `[fetchWithCache] SQLite write failed for move ${name}:`,
@@ -282,13 +279,12 @@ export async function fetchMoveWithCache(
     return fresh;
   })().finally(() => pendingMoveFetches.delete(url));
 
-  pendingMoveFetches.set(id, fetchPromise);
+  pendingMoveFetches.set(url, fetchPromise);
   return fetchPromise;
 }
 
 /**
  * Fetches a batch of ids — each goes through the full L1/L2/L3 chain.
- * Uses Promise.allSettled so one failure never kills the batch.
  */
 export async function fetchBatch(
   items: { id: number; name?: string; types?: string[] }[],
@@ -312,6 +308,7 @@ export async function fetchBatch(
 
 /**
  * Fetches full details for multiple moves in parallel.
+ * With static MOVES data, most of these resolve instantly at L0.
  */
 export async function fetchMoveBatch(
   moves: { name: string; url: string }[],
@@ -326,15 +323,10 @@ export async function fetchMoveBatch(
   });
 }
 
-/** Returns combined L1 cache size (session only). */
 export function getCacheSize(): number {
   return pokemonCache.size + moveCache.size;
 }
 
-/**
- * Clears L1 in-memory caches.
- * To also clear L2 (SQLite), call clearDb() from pokemonDb.ts separately.
- */
 export function clearCache(): void {
   pokemonCache.clear();
   moveCache.clear();

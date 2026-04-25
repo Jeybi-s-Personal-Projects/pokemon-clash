@@ -51,8 +51,11 @@ export type BaseStats = {
 export type PokemonRawData = {
   baseStats: BaseStats;
   rawMoves: RawMove[];
-  name?: string;
-  types?: string[];
+  name?: string; // Local name
+  types?: string[]; // Local types
+  abilities?: any[]; // From /pokemon/{id}
+  height_m?: number; // From /pokemon/{id}
+  weight_kg?: number; // From /pokemon/{id}
 };
 
 // What the battle screen receives — constructed at dequeue time, never cached

@@ -118,16 +118,33 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
  * Returns null on miss or corrupted JSON (triggers a re-fetch upstream).
  */
 
-export async function getSpeciesFromDb(
-  id: number,
-): Promise<(PokemonRawData & { name: string; types: string[] }) | null> {
+export async function getSpeciesFromDb(id: number): Promise<
+  | (PokemonRawData & {
+      name: string;
+      types: string[];
+      abilities: string[];
+      flavor_texts: string[];
+      height_m: number;
+      weight_kg: number;
+    })
+  | null
+> {
   const db = await initDb();
 
   const row = await db.getFirstAsync<{
     base_stats: string;
     types: string;
     name: string;
-  }>(`SELECT base_stats, types, name FROM species_cache WHERE id = ?`, [id]);
+    abilities: string;
+    flavor_texts: string;
+    height_m: number;
+    weight_kg: number;
+  }>(
+    `SELECT base_stats, types, name, abilities, flavor_texts, height_m, weight_kg
+     FROM species_cache
+     WHERE id = ?`,
+    [id],
+  );
 
   if (!row) return null;
 
@@ -135,6 +152,10 @@ export async function getSpeciesFromDb(
     return {
       name: row.name,
       types: JSON.parse(row.types),
+      abilities: JSON.parse(row.abilities),
+      flavor_texts: JSON.parse(row.flavor_texts),
+      height_m: row.height_m,
+      weight_kg: row.weight_kg,
       baseStats: JSON.parse(row.base_stats),
       rawMoves: [], // moves handled separately now
     };
@@ -158,13 +179,16 @@ export async function saveSpeciesToDb(
 
   await db.runAsync(
     `INSERT OR REPLACE INTO species_cache
-     (id, name, types, base_stats)
-     VALUES (?, ?, ?, ?)`,
+   (id, name, types, base_stats, abilities, height_m, weight_kg)
+   VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
-      extra?.name ?? `pokemon-${id}`,
-      JSON.stringify(extra?.types ?? ["normal"]),
+      extra?.name ?? data.name ?? `pokemon-${id}`,
+      JSON.stringify(extra?.types ?? data.types ?? ["normal"]),
       JSON.stringify(data.baseStats),
+      JSON.stringify(data.abilities ?? []),
+      data.height_m ?? null,
+      data.weight_kg ?? null,
     ],
   );
 }
