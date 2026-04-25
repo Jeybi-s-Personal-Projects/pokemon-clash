@@ -12,14 +12,10 @@
  * Usage: call initDb() once at app startup (e.g. in App.tsx), then the
  * read/write helpers are used internally by fetchWithCache.ts.
  */
-
+import type { MoveDetail, PokemonRawData } from "@/src/encounter/types";
+// import * as FileSystem from "expo-file-system";
+// import { Paths } from "expo-file-system";
 import * as SQLite from "expo-sqlite";
-import type {
-  BaseStats,
-  MoveDetail,
-  PokemonRawData,
-  RawMove,
-} from "@/src/encounter/types";
 
 // ─── Singleton DB handle ──────────────────────────────────────────────────────
 
@@ -32,23 +28,84 @@ let _db: SQLite.SQLiteDatabase | null = null;
 export async function initDb(): Promise<SQLite.SQLiteDatabase> {
   if (_db) return _db;
 
+  // 🔥 TEMP: wipe DB once
+  // await FileSystem.deleteAsync(Paths.document + "SQLite/pokemon_cache.db", {
+  //   idempotent: true,
+  // });
+
   const db = await SQLite.openDatabaseAsync("pokemon_cache.db");
 
   // WAL mode: faster concurrent reads, safer writes
   await db.execAsync("PRAGMA journal_mode = WAL;");
 
   await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS pokemon_cache (
-      id         INTEGER PRIMARY KEY,
-      base_stats TEXT    NOT NULL,
-      raw_moves  TEXT    NOT NULL
-    );
+  PRAGMA journal_mode = WAL;
 
-    CREATE TABLE IF NOT EXISTS move_cache (
-      url    TEXT PRIMARY KEY,
-      detail TEXT NOT NULL
-    );
-  `);
+  -- 🟦 POKEDEX / GLOBAL DATA
+  CREATE TABLE IF NOT EXISTS species_cache (
+    id INTEGER PRIMARY KEY,
+
+    name TEXT NOT NULL,
+    types TEXT NOT NULL,
+
+    base_stats TEXT NOT NULL,
+    abilities TEXT,
+
+    evolution_chain TEXT,
+    genus TEXT,
+    flavor_texts TEXT,
+
+    sprite_default TEXT,
+    sprite_shiny TEXT,
+
+    height_m REAL,
+    weight_kg REAL,
+
+    capture_rate INTEGER,
+    encounter_rate INTEGER,
+
+    last_updated INTEGER
+  );
+
+  -- 🟨 PLAYER OWNED POKEMON
+  CREATE TABLE IF NOT EXISTS instance_cache (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+
+    species_id INTEGER NOT NULL,
+
+    nickname TEXT,
+    level INTEGER NOT NULL DEFAULT 5,
+    xp INTEGER DEFAULT 0,
+
+    is_shiny INTEGER DEFAULT 0,
+
+    hp_current INTEGER NOT NULL,
+    hp_max INTEGER NOT NULL,
+
+    attack INTEGER NOT NULL,
+    defense INTEGER NOT NULL,
+    sp_attack INTEGER NOT NULL,
+    sp_defense INTEGER NOT NULL,
+    speed INTEGER NOT NULL,
+
+    moveset TEXT,
+    held_item TEXT,
+
+    status TEXT,
+
+    team_slot INTEGER,
+    in_team INTEGER DEFAULT 0,
+
+    created_at INTEGER DEFAULT (strftime('%s','now'))
+  );
+
+  -- ⚔️ MOVES (UNCHANGED)
+  CREATE TABLE IF NOT EXISTS move_cache (
+    url TEXT PRIMARY KEY,
+    detail TEXT NOT NULL
+  );
+`);
 
   _db = db;
   return db;
@@ -60,43 +117,53 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
  * Reads a PokemonRawData from SQLite by Pokémon id.
  * Returns null on miss or corrupted JSON (triggers a re-fetch upstream).
  */
-export async function getPokemonFromDb(
+
+export async function getSpeciesFromDb(
   id: number,
 ): Promise<PokemonRawData | null> {
   const db = await initDb();
 
   const row = await db.getFirstAsync<{
     base_stats: string;
-    raw_moves: string;
-  }>("SELECT base_stats, raw_moves FROM pokemon_cache WHERE id = ?", [id]);
+    types: string;
+    name: string;
+  }>(`SELECT base_stats, types, name FROM species_cache WHERE id = ?`, [id]);
 
   if (!row) return null;
 
   try {
     return {
-      baseStats: JSON.parse(row.base_stats) as BaseStats,
-      rawMoves: JSON.parse(row.raw_moves) as RawMove[],
+      baseStats: JSON.parse(row.base_stats),
+      rawMoves: [], // moves handled separately now
     };
   } catch {
-    // Corrupted row — treat as miss so the caller re-fetches and overwrites
     return null;
   }
 }
-
 /**
  * Writes a PokemonRawData to SQLite.
  * INSERT OR REPLACE is idempotent — safe to call even if the row already exists.
  */
-export async function savePokemonToDb(
+export async function saveSpeciesToDb(
   id: number,
   data: PokemonRawData,
+  extra?: {
+    name?: string;
+    types?: string[];
+  },
 ): Promise<void> {
   const db = await initDb();
 
   await db.runAsync(
-    `INSERT OR REPLACE INTO pokemon_cache (id, base_stats, raw_moves)
-     VALUES (?, ?, ?)`,
-    [id, JSON.stringify(data.baseStats), JSON.stringify(data.rawMoves)],
+    `INSERT OR REPLACE INTO species_cache
+     (id, name, types, base_stats)
+     VALUES (?, ?, ?, ?)`,
+    [
+      id,
+      extra?.name ?? `pokemon-${id}`,
+      JSON.stringify(extra?.types ?? ["normal"]),
+      JSON.stringify(data.baseStats),
+    ],
   );
 }
 

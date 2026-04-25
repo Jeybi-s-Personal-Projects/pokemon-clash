@@ -7,6 +7,7 @@ export default function RootLayout() {
   useEffect(() => {
     initDb().catch(console.error);
   }, []);
+
   return (
     <AuthProvider>
       <Slot />

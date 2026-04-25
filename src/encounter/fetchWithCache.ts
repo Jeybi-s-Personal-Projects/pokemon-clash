@@ -17,9 +17,9 @@ import type {
 } from "@/src/encounter/types";
 import {
   getMoveFromDb,
-  getPokemonFromDb,
+  getSpeciesFromDb,
   saveMoveToDb,
-  savePokemonToDb,
+  saveSpeciesToDb,
 } from "@/src/lib/pokemonDb";
 import { parseRawMoves } from "@/src/utils/moveSelector";
 
@@ -197,25 +197,37 @@ async function fetchMoveWithRetry(
  */
 export async function fetchWithCache(id: number): Promise<PokemonRawData> {
   // L1 hit
-  if (pokemonCache.has(id)) return pokemonCache.get(id)!;
+  // if (pokemonCache.has(id)) return pokemonCache.get(id)!;
+
+  if (pokemonCache.has(id)) {
+    console.log(`[Cache] L1 hit — Pokémon #${id}`);
+    return pokemonCache.get(id)!;
+  }
 
   // In-flight deduplication
   if (pendingFetches.has(id)) return pendingFetches.get(id)!;
 
   const fetchPromise = (async (): Promise<PokemonRawData> => {
     // L2 hit — SQLite
-    const cached = await getPokemonFromDb(id);
+    const cached = await getSpeciesFromDb(id);
+    // if (cached) {
+    //   pokemonCache.set(id, cached); // warm L1
+    //   return cached;
+    // }
+
     if (cached) {
-      pokemonCache.set(id, cached); // warm L1
+      console.log(`[Cache] L2 hit (SQLite) — Pokémon #${id}`);
+      pokemonCache.set(id, cached);
       return cached;
     }
 
     // L3 — network
+    console.log(`[Cache] L3 miss — fetching Pokémon #${id} from PokeAPI`);
     const fresh = await fetchWithRetry(id);
     pokemonCache.set(id, fresh);
 
     // Persist to SQLite in the background — don't block the caller
-    savePokemonToDb(id, fresh).catch((err) =>
+    saveSpeciesToDb(id, fresh).catch((err) =>
       console.warn(`[fetchWithCache] SQLite write failed for id ${id}:`, err),
     );
 
