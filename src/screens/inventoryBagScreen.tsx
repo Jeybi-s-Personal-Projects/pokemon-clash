@@ -10,9 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
-import { savePokemon } from "../hooks/savePokemon";
 import { colors } from "../theme/color";
 import { InventoryBagScreenProps } from "../types/navigation";
 
@@ -70,15 +68,9 @@ export default function InventoryBagScreen({
   navigation,
   route,
 }: InventoryBagScreenProps) {
-  const { pokemon, onCatchResult } = route.params;
+  const { pokemon, fromScreen } = route.params;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
-  const [saving, setSaving] = useState(false);
-
-  // Status Modal State
-  const [statusVisible, setStatusVisible] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [catchResult, setCatchResult] = useState<any>(null);
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -93,57 +85,23 @@ export default function InventoryBagScreen({
     return [];
   }, [category]);
 
-  const handleUseItem = async (item: BagItem) => {
+  const handleUseItem = (item: BagItem) => {
     playClick();
     if (!user) {
       Alert.alert("Error", "You must be logged in.");
       return;
     }
 
-    try {
-      setSaving(true);
-      const { data, teamFull } = await savePokemon(pokemon, user.id);
-
-      const result = {
-        caught: true,
-        caughtPokemon: { ...pokemon, id: data.id },
-        teamFull,
-      };
-
-      if (teamFull) {
-        setStatusMessage(
-          `Gotcha! ${pokemon.name} was caught!\n\nYour team is full, so it was sent to the PC.`
-        );
-        setCatchResult(result);
-        setStatusVisible(true);
-      } else {
-        // Use a helper to send result safely
-        sendCatchResult(result);
-        navigation.goBack();
-      }
-    } catch (e) {
-      console.error("Catch Error:", e);
-      Alert.alert("Error", `Could not save Pokémon: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const sendCatchResult = (result: any) => {
-    if (typeof onCatchResult === 'function') {
-      onCatchResult(result);
-    } else {
-      console.warn("onCatchResult not provided in route.params, using setParams fallback");
-      navigation.setParams({ catchResult: result } as any);
-    }
-  };
-
-  const handleCloseStatus = () => {
-    setStatusVisible(false);
-    if (catchResult) {
-      sendCatchResult(catchResult);
-      navigation.goBack();
-    }
+    // Immediately navigate back and signal catch attempt
+    navigation.navigate({
+      name: fromScreen as any,
+      params: { 
+        catchPending: { 
+          item: { id: item.id, name: item.name, catchRate: item.catchRate } 
+        } 
+      },
+      merge: true,
+    } as any);
   };
 
   return (
@@ -183,7 +141,6 @@ export default function InventoryBagScreen({
           <TouchableOpacity
             style={styles.card}
             onPress={() => handleUseItem(item)}
-            disabled={saving}
           >
             <Image
               source={item.sprite}
@@ -200,16 +157,9 @@ export default function InventoryBagScreen({
               </Text>
             </View>
 
-            <Text style={styles.useText}>{saving ? "..." : "USE"}</Text>
+            <Text style={styles.useText}>USE</Text>
           </TouchableOpacity>
         )}
-      />
-
-      <StatusModal
-        visible={statusVisible}
-        message={statusMessage}
-        type="success"
-        onClose={handleCloseStatus}
       />
     </View>
   );
@@ -266,11 +216,6 @@ const styles = StyleSheet.create({
   ballSprite: {
     width: 36,
     height: 36,
-  },
-  ballIndicator: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
   },
   itemName: {
     color: colors.textPrimary,

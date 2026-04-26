@@ -55,7 +55,7 @@ function mapEncounterToPokemon(
  * EncounterFlow orchestrates the full region → area → battle loop.
  */
 export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
-  const { region, area, player, onExit } = route.params;
+  const { region, area, player } = route.params;
   const [screen, setScreen] = useState<Screen>("transition");
   const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
     null,
@@ -112,8 +112,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const handleExit = useCallback(() => {
     reset();
-    onExit();
-  }, [reset, onExit]);
+    navigation.popToTop();
+  }, [reset, navigation]);
 
   if (screen === "transition") {
     return (
@@ -140,12 +140,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         onBagPress={() =>
           navigation.navigate("InventoryBag", {
             pokemon: fullyLoadedEnemy,
-            onCatchResult: (result) => {
-              // We'll handle this in an effect or similar to show swap modal if needed
-              navigation.setParams({ catchResult: result } as any);
-            },
+            fromScreen: "EncounterFlow",
           })
         }
+        catchPending={(route.params as any).catchPending}
       />
     </View>
   );

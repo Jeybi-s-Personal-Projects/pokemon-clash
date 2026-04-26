@@ -12,13 +12,14 @@ export type RootStackParamList = {
     enemy: Pokemon;
     onRun?: () => void;
     onSave?: () => void;
-    catchResult?:
-      | {
-          caught: boolean;
-          caughtPokemon: { id: string } & Pokemon;
-          teamFull: boolean;
-        }
-      | undefined; // ← undefined so setParams({ catchResult: undefined }) is valid
+    catchResult?: {
+      caught: boolean;
+      caughtPokemon: { id: string } & Pokemon;
+      teamFull: boolean;
+    };
+    catchPending?: {
+      item: { id: string; name: string; catchRate: number };
+    };
   };
   RegionSelect: { player: Pokemon };
   AreaSelect: { region: Region; player: Pokemon };
@@ -26,7 +27,14 @@ export type RootStackParamList = {
     region: Region;
     area: Area;
     player: Pokemon;
-    onExit: () => void;
+    catchResult?: {
+      caught: boolean;
+      caughtPokemon: { id: string } & Pokemon;
+      teamFull: boolean;
+    };
+    catchPending?: {
+      item: { id: string; name: string; catchRate: number };
+    };
   };
   PokemonList: {
     mode?: "view" | "explore";
@@ -37,11 +45,7 @@ export type RootStackParamList = {
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
   InventoryBag: {
     pokemon: Pokemon;
-    onCatchResult: (result: {
-      caught: boolean;
-      caughtPokemon: { id: string } & Pokemon;
-      teamFull: boolean;
-    }) => void;
+    fromScreen: "Battle" | "EncounterFlow";
   };
 };
 

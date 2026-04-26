@@ -4,16 +4,14 @@ import * as Haptics from "expo-haptics";
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
-import { getPokemon } from "../hooks/usePokemon";
 import { useTeam } from "../hooks/useTeam";
 import { colors } from "../theme/color";
 import { DashboardScreenProps } from "../types/navigation";
@@ -30,26 +28,6 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const playClick = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     player.play();
-  };
-
-  const handleBattle = async () => {
-    playClick();
-    if (team.length === 0) {
-      Alert.alert("No Pokémon", "Add a Pokémon to your team first!");
-      return;
-    }
-    try {
-      // The first pokemon in the sorted list is our starter
-      const playerPokemon = team[0];
-      const enemy = await getPokemon("Blastoise", 40);
-      navigation.navigate("Battle", {
-        player: playerPokemon,
-        enemy,
-        onSave: refetch, // Pass refetch to update dashboard after swaps
-      } as any);
-    } catch (e) {
-      Alert.alert("Error", "Could not load battle. Try again.");
-    }
   };
 
   if (loading)
@@ -207,15 +185,6 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       )}
       <View style={styles.actionDock}>
         <TouchableOpacity
-          style={[styles.battleButton, team.length === 0 && styles.disabled]}
-          onPress={handleBattle}
-          disabled={team.length === 0}
-        >
-          <Ionicons name="flash" size={18} color="white" />
-          <Text style={styles.actionText}>Battle</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[styles.exploreButton, team.length === 0 && styles.disabled]}
           onPress={() => {
             playClick();
@@ -353,16 +322,6 @@ const styles = StyleSheet.create({
     borderTopColor: "#1F2937",
     flexDirection: "row",
     gap: 10,
-  },
-
-  battleButtonDisabled: {
-    backgroundColor: "#374151",
-  },
-  battleButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 18,
-    letterSpacing: 1,
   },
 
   logoutButton: {

@@ -10,12 +10,13 @@ import {
 
 import BattleActions from "../components/battleActions";
 import PokemonCard from "../components/pokemonCard";
+import StatusModal from "../components/statusModal";
 
 import { getRandomMove } from "../battle/ai";
 import { dealDamage, isGameOver } from "../battle/battleEngine";
 import { BattleState } from "../battle/battleTypes";
 import { useAuth } from "../context/AuthContext";
-import { swapIntoTeam } from "../hooks/savePokemon";
+import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
@@ -29,7 +30,7 @@ type TeamMemberForSwap = {
   level: number;
 };
 
-// ─── Inner Battle component (unchanged) ──────────────────────────────────────
+// ─── Inner Battle component ──────────────────────────────────────────────────
 
 interface BattleProps {
   player: Pokemon;
@@ -37,6 +38,8 @@ interface BattleProps {
   onBattleEnd?: (winner: "player" | "enemy") => void;
   onRun?: () => void;
   onBagPress?: () => void;
+  catchPending?: { item: { id: string; name: string; catchRate: number } };
+  onSave?: () => void;
 }
 
 export function Battle({
@@ -45,11 +48,10 @@ export function Battle({
   onBattleEnd,
   onRun,
   onBagPress,
+  catchPending,
+  onSave,
 }: BattleProps) {
-  useEffect(() => {
-    setAudioModeAsync({ playsInSilentMode: true });
-  }, []);
-
+  const { user } = useAuth();
   const [state, setState] = useState<BattleState>({
     player,
     enemy,
@@ -62,151 +64,66 @@ export function Battle({
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
 
+  // Status Modal & Swap State
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [swapModalVisible, setSwapModalVisible] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberForSwap[]>([]);
+  const [pendingCaughtId, setPendingCaughtId] = useState<string | null>(null);
+  const [finalCatchResult, setFinalCatchResult] = useState<any>(null);
+
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true });
+  }, []);
+
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  const attack = async (index: number) => {
-    if (state.attackingSide || state.winner || currentMessage) return;
-
-    // 1. Player Turn
-    const move = state.player.moves[index];
-
-    setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
-    await delay(1500);
-
-    setState((s) => ({ ...s, attackingSide: "player" }));
-    await delay(400);
-    setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
-
-    const newEnemyHp = dealDamage(state.enemy.hp, move, state.enemy.type);
-    const afterPlayerAttack: BattleState = {
-      ...state,
-      enemy: { ...state.enemy, hp: newEnemyHp },
-      hitSide: null,
-      attackingSide: null,
-    };
-
-    const winnerAfterPlayer = isGameOver(afterPlayerAttack);
-    if (winnerAfterPlayer === "player") {
-      setState({ ...afterPlayerAttack, winner: "player" });
-      await delay(1200); // Wait for HP bar animation
-      setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
-      if (onBattleEnd) onBattleEnd("player");
-      return;
-    }
-
-    setState(afterPlayerAttack);
-    await delay(1000); // Wait for HP bar to show progress before enemy turn starts
-    const enemyMove = getRandomMove(state.enemy);
-
-    setState((s) => ({ ...s, turn: "enemy" }));
-    setCurrentMessage(`Wild ${state.enemy.name.toUpperCase()} used ${enemyMove.name.toUpperCase()}!`);
-    await delay(1500);
-
-    setState((s) => ({ ...s, attackingSide: "enemy" }));
-    await delay(400);
-    setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
-
-    const newPlayerHp = dealDamage(
-      state.player.hp,
-      enemyMove,
-      state.player.type,
-    );
-    const afterEnemyAttack: BattleState = {
-      ...afterPlayerAttack,
-      player: { ...state.player, hp: newPlayerHp },
-      turn: "player",
-      hitSide: null,
-      attackingSide: null,
-    };
-
-    const winnerAfterEnemy = isGameOver(afterEnemyAttack);
-    if (winnerAfterEnemy) {
-        setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
-        if (winnerAfterEnemy === 'enemy') {
-            setCurrentMessage(`${state.player.name.toUpperCase()} fainted!`);
-        } else {
-            setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
-        }
-        if (onBattleEnd) onBattleEnd(winnerAfterEnemy);
-    } else {
-        setState(afterEnemyAttack);
-        setCurrentMessage(null); // Clear message to show buttons again
-    }
-  };
-
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "space-between",
-        backgroundColor: "#1F2937",
-      }}
-    >
-      <View
-        style={{ flex: 1, justifyContent: "center", paddingHorizontal: 10 }}
-      >
-        {/* Enemy */}
-        <PokemonCard
-          pokemon={state.enemy}
-          isAttacking={state.attackingSide === "enemy"}
-          isHit={state.hitSide === "enemy"}
-        />
-
-        {/* Spacing between cards */}
-        <View style={{ height: 100 }} />
-
-        {/* Player */}
-        <PokemonCard
-          pokemon={state.player}
-          isBack={true}
-          isAttacking={state.attackingSide === "player"}
-          isHit={state.hitSide === "player"}
-        />
-      </View>
-
-      {/* Battle Actions Menu */}
-      <BattleActions
-        moves={state.player.moves}
-        enemyTypes={state.enemy.type}
-        onMovePress={attack}
-        onBagPress={onBagPress}
-        onRun={onRun}
-        disabled={!!state.attackingSide || !!state.winner || !!currentMessage}
-        currentLog={currentMessage}
-      />
-    </View>
-  );
-}
-
-// ─── BattleScreen (route wrapper + swap modal) ────────────────────────────────
-
-export default function BattleScreen({ route, navigation }: BattleScreenProps) {
-  const { player, enemy, onRun } = route.params;
-  const catchResult = route.params.catchResult;
-  const onSave = (route.params as any).onSave;
-
-  const { user } = useAuth();
-
-  // Simple list for the swap modal
-  const [teamMembers, setTeamMembers] = useState<TeamMemberForSwap[]>([]);
-
-  // Only the Supabase id of the newly caught Pokémon is needed for the swap
-  const [pendingCaughtId, setPendingCaughtId] = useState<string | null>(null);
-
-  const [swapModalVisible, setSwapModalVisible] = useState(false);
-
-  // ── React to catchResult coming back from InventoryBagScreen ──
+  // ── Handle Catch from Bag ──
   useEffect(() => {
-    if (!catchResult?.caught) return;
+    if (!catchPending || !user) return;
 
-    if (catchResult.teamFull) {
-      loadTeamForSwap(catchResult.caughtPokemon.id);
-    }
+    const handleCatchSequence = async () => {
+      // 1. Return to battle, show "Used ball" message
+      setCurrentMessage(`PLAYER USED ${catchPending.item.name.toUpperCase()}...`);
+      
+      // 2. The "Shaking" Delay
+      await delay(2500);
 
-    // Clear the param so catching again later re-triggers this effect cleanly
-    navigation.setParams({ catchResult: undefined });
-  }, [catchResult]);
+      try {
+        // 3. Perform the actual save
+        const { data, teamFull } = await savePokemon(enemy, user.id);
+        const result = {
+          caught: true,
+          caughtPokemon: { ...enemy, id: data.id },
+          teamFull,
+        };
+        setFinalCatchResult(result);
+        setPendingCaughtId(data.id);
+
+        // 4. GOTCHA message
+        setCurrentMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
+        await delay(1500);
+
+        // 5. Success Modal
+        if (teamFull) {
+          setStatusMessage(
+            `Gotcha! ${enemy.name.toUpperCase()} was caught!\n\nYour team is full, so it was sent to the PC.`
+          );
+        } else {
+          setStatusMessage(`Gotcha! ${enemy.name.toUpperCase()} was caught!`);
+        }
+        setStatusVisible(true);
+      } catch (e) {
+        console.error("Catch Error:", e);
+        setCurrentMessage(`OH NO! The Pokémon broke free!`);
+        await delay(1500);
+        setCurrentMessage(null);
+      }
+    };
+
+    handleCatchSequence();
+  }, [catchPending, user]);
 
   const loadTeamForSwap = async (caughtId: string) => {
     if (!user) return;
@@ -235,42 +152,147 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
     }
   };
 
+  const handleStatusClose = () => {
+    setStatusVisible(false);
+    if (finalCatchResult?.teamFull) {
+      loadTeamForSwap(pendingCaughtId!);
+    } else {
+      if (onSave) onSave();
+      if (onBattleEnd) onBattleEnd("player");
+    }
+  };
+
   const handleSwap = async (replacedId: string) => {
-    if (!pendingCaughtId) return;
     try {
-      await swapIntoTeam(pendingCaughtId, replacedId);
+      await swapIntoTeam(pendingCaughtId!, replacedId);
       setSwapModalVisible(false);
-      setPendingCaughtId(null);
-      if (onSave) onSave(); // Trigger refetch on dashboard
+      if (onSave) onSave();
+      if (onBattleEnd) onBattleEnd("player");
     } catch (e) {
-      Alert.alert("Error", "Swap failed. Try again.");
+      Alert.alert("Error", "Swap failed.");
     }
   };
 
   const handleDismissSwap = () => {
-    // Player chose to keep their current team — newly caught goes to box
     setSwapModalVisible(false);
-    setPendingCaughtId(null);
+    if (onSave) onSave();
+    if (onBattleEnd) onBattleEnd("player");
+  };
+
+  const attack = async (index: number) => {
+    if (state.attackingSide || state.winner || currentMessage) return;
+
+    // 1. Player Turn
+    const move = state.player.moves[index];
+    setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
+    await delay(1500);
+
+    setState((s) => ({ ...s, attackingSide: "player" }));
+    await delay(400);
+    setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
+
+    const newEnemyHp = dealDamage(state.enemy.hp, move, state.enemy.type);
+    const afterPlayerAttack: BattleState = {
+      ...state,
+      enemy: { ...state.enemy, hp: newEnemyHp },
+      hitSide: null,
+      attackingSide: null,
+    };
+
+    const winnerAfterPlayer = isGameOver(afterPlayerAttack);
+    if (winnerAfterPlayer === "player") {
+      setState({ ...afterPlayerAttack, winner: "player" });
+      await delay(1200);
+      setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+      if (onBattleEnd) onBattleEnd("player");
+      return;
+    }
+
+    setState(afterPlayerAttack);
+    await delay(1000);
+
+    // 2. Enemy Turn
+    const enemyMove = getRandomMove(state.enemy);
+    setState((s) => ({ ...s, turn: "enemy" }));
+    setCurrentMessage(
+      `Wild ${state.enemy.name.toUpperCase()} used ${enemyMove.name.toUpperCase()}!`,
+    );
+    await delay(1500);
+
+    setState((s) => ({ ...s, attackingSide: "enemy" }));
+    await delay(400);
+    setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
+
+    const newPlayerHp = dealDamage(
+      state.player.hp,
+      enemyMove,
+      state.player.type,
+    );
+    const afterEnemyAttack: BattleState = {
+      ...afterPlayerAttack,
+      player: { ...state.player, hp: newPlayerHp },
+      turn: "player",
+      hitSide: null,
+      attackingSide: null,
+    };
+
+    const winnerAfterEnemy = isGameOver(afterEnemyAttack);
+    if (winnerAfterEnemy) {
+      setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
+      setCurrentMessage(
+        winnerAfterEnemy === "enemy"
+          ? `${state.player.name.toUpperCase()} fainted!`
+          : `The wild ${state.enemy.name.toUpperCase()} fainted!`,
+      );
+      if (onBattleEnd) onBattleEnd(winnerAfterEnemy);
+    } else {
+      setState(afterEnemyAttack);
+      setCurrentMessage(null);
+    }
   };
 
   return (
-    <>
-      <Battle
-        player={player}
-        enemy={enemy}
-        onBattleEnd={() => setTimeout(() => navigation.goBack(), 2000)}
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "space-between",
+        backgroundColor: "#1F2937",
+      }}
+    >
+      <View
+        style={{ flex: 1, justifyContent: "center", paddingHorizontal: 10 }}
+      >
+        <PokemonCard
+          pokemon={state.enemy}
+          isAttacking={state.attackingSide === "enemy"}
+          isHit={state.hitSide === "enemy"}
+        />
+        <View style={{ height: 100 }} />
+        <PokemonCard
+          pokemon={state.player}
+          isBack={true}
+          isAttacking={state.attackingSide === "player"}
+          isHit={state.hitSide === "player"}
+        />
+      </View>
+
+      <BattleActions
+        moves={state.player.moves}
+        enemyTypes={state.enemy.type}
+        onMovePress={attack}
+        onBagPress={onBagPress}
         onRun={onRun}
-        onBagPress={() =>
-          navigation.navigate("InventoryBag", {
-            pokemon: enemy,
-            onCatchResult: (result) => {
-              navigation.setParams({ catchResult: result });
-            },
-          })
-        }
+        disabled={!!state.attackingSide || !!state.winner || !!currentMessage}
+        currentLog={currentMessage}
       />
 
-      {/* Swap Modal — shown when team is full after a catch */}
+      <StatusModal
+        visible={statusVisible}
+        message={statusMessage}
+        type="success"
+        onClose={handleStatusClose}
+      />
+
       <Modal visible={swapModalVisible} transparent animationType="slide">
         <View
           style={{
@@ -301,7 +323,6 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
             <Text style={{ color: "#9CA3AF", marginBottom: 16 }}>
               Choose a Pokémon to send to the box:
             </Text>
-
             <FlatList
               data={teamMembers}
               keyExtractor={(p) => p.id}
@@ -327,7 +348,6 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
                 </TouchableOpacity>
               )}
             />
-
             <TouchableOpacity
               onPress={handleDismissSwap}
               style={{ marginTop: 16, alignItems: "center" }}
@@ -337,6 +357,31 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
           </View>
         </View>
       </Modal>
-    </>
+    </View>
+  );
+}
+
+// ─── BattleScreen Wrapper ──────────────────────────────────────────────────
+
+export default function BattleScreen({ route, navigation }: BattleScreenProps) {
+  const { player, enemy, onRun } = route.params;
+  const catchPending = route.params.catchPending;
+  const onSave = (route.params as any).onSave;
+
+  return (
+    <Battle
+      player={player}
+      enemy={enemy}
+      catchPending={catchPending}
+      onSave={onSave}
+      onBattleEnd={() => setTimeout(() => navigation.goBack(), 2000)}
+      onRun={onRun}
+      onBagPress={() =>
+        navigation.navigate("InventoryBag", {
+          pokemon: enemy,
+          fromScreen: "Battle",
+        })
+      }
+    />
   );
 }
