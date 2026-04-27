@@ -92,8 +92,8 @@ export default function InventoryBagScreen({
       return;
     }
 
-    // Navigate to dedicated Catching Screen
-    navigation.navigate("CatchingScreen", {
+    // Replace the Bag screen with the dedicated Catching Screen
+    navigation.replace("CatchingScreen", {
       player: playerObj,
       enemy: pokemon,
       item: { id: item.id, name: item.name, catchRate: item.catchRate },

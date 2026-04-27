@@ -89,12 +89,11 @@ export default function CatchingScreen({
   const handleCloseModal = () => {
     setStatusVisible(false);
     if (isSuccess) {
-      // Go to Dashboard or List
-      navigation.navigate("Dashboard");
+      // Clear the entire battle stack and return to Dashboard
+      navigation.popToTop();
     } else {
-      // Go back to Bag, then Bag will go back to Battle?
-      // Better: pop back to the actual battle screen
-      navigation.pop(2);
+      // Go back to the battle screen directly (skipping the Bag)
+      navigation.pop(1);
     }
   };
 
@@ -145,6 +144,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
+    backgroundColor: "#1F2937",
   },
   logBox: {
     borderTopWidth: 2,
