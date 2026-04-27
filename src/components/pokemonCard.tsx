@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
 import { Pokemon } from "../types/pokemon";
@@ -91,9 +92,19 @@ export default function PokemonCard({
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
             {pokemon.name.toUpperCase()}
+            {pokemon.isShiny && (
+              <View>
+                <Ionicons
+                  name="star"
+                  size={12}
+                  color="#facc15"
+                  style={{ marginLeft: 5 }}
+                />
+              </View>
+            )}{" "}
           </Text>
+
           <Text style={{ fontSize: 14, color: "white" }}>
-            {" "}
             lvl {pokemon.level}
           </Text>
         </View>

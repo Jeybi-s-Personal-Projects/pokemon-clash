@@ -47,9 +47,7 @@ export default function CatchingScreen({
       await delay(1000);
 
       // 2. Logic (Simulate or actual)
-      // For prototype, we usually catch or use a random chance
-      // Let's use a simple formula: (catchRate * 100) / 255 chance?
-      // Or for now, 70% success if not Master Ball
+
       const chance = item.id === "master-ball" ? 1.0 : 0.7;
       const success = Math.random() < chance;
 
