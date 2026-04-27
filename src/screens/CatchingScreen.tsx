@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import PokemonCard from "../components/pokemonCard";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
@@ -23,10 +23,28 @@ export default function CatchingScreen({
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
+  const cursorOpacity = useRef(new Animated.Value(1)).current;
+
+  Animated.loop(
+    Animated.sequence([
+      Animated.timing(cursorOpacity, {
+        toValue: 0,
+        duration: 450,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cursorOpacity, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }),
+    ]),
+    { resetBeforeIteration: true },
+  ).start();
+
   useEffect(() => {
     async function runSequence() {
       // 1. Initial Shake delay
-      await delay(2500);
+      await delay(1000);
 
       // 2. Logic (Simulate or actual)
       // For prototype, we usually catch or use a random chance
@@ -94,8 +112,17 @@ export default function CatchingScreen({
       </View>
 
       {/* Message Box (Mimic BattleActions style) */}
-      <View style={styles.messageBox}>
-        <Text style={styles.messageText}>{message}</Text>
+      <View style={styles.logBox}>
+        <View style={styles.messageBox}>
+          <Text style={styles.messageText}>
+            {message}
+            <View style={styles.arrowContainer}>
+              <Animated.View
+                style={[styles.cursorArrow, { opacity: cursorOpacity }]}
+              />
+            </View>
+          </Text>
+        </View>
       </View>
 
       <StatusModal
@@ -111,25 +138,51 @@ export default function CatchingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1F2937",
+    width: "100%",
+    backgroundColor: "#080B14",
   },
   battleArena: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  messageBox: {
-    backgroundColor: "#111827",
-    borderTopWidth: 4,
-    borderColor: "#374151",
+  logBox: {
+    borderTopWidth: 2,
+    borderTopColor: "#6bdae233",
     padding: 24,
-    minHeight: 120,
+    height: 280,
+    width: "100%",
+  },
+  messageBox: {
+    borderWidth: 2,
+    height: "80%",
+    width: "100%",
+    borderColor: "#6bdae244",
+    borderRadius: 12,
+    backgroundColor: "#111827",
     justifyContent: "center",
   },
   messageText: {
-    color: "white",
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
+    color: "#E2C96B",
+  },
+  arrowContainer: {
+    height: 20,
+    width: 30,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
+  cursorArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#6bdae2",
   },
 });

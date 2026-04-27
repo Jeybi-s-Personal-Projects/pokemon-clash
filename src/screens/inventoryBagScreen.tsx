@@ -29,7 +29,7 @@ type BagItem = {
 const POKEBALL_ITEMS: BagItem[] = [
   {
     id: "poke-ball",
-    name: "Poké Ball",
+    name: "Pokéball",
     description: "A standard Poké Ball",
     catchRate: 1,
     sprite: require("../../assets/items/pokeball.png"),
