@@ -68,7 +68,7 @@ export default function InventoryBagScreen({
   navigation,
   route,
 }: InventoryBagScreenProps) {
-  const { pokemon, fromScreen } = route.params;
+  const { pokemon, fromScreen, player: playerObj } = route.params as any;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
 
@@ -92,16 +92,13 @@ export default function InventoryBagScreen({
       return;
     }
 
-    // Immediately navigate back and signal catch attempt
-    navigation.navigate({
-      name: fromScreen as any,
-      params: { 
-        catchPending: { 
-          item: { id: item.id, name: item.name, catchRate: item.catchRate } 
-        } 
-      },
-      merge: true,
-    } as any);
+    // Navigate to dedicated Catching Screen
+    navigation.navigate("CatchingScreen", {
+      player: playerObj,
+      enemy: pokemon,
+      item: { id: item.id, name: item.name, catchRate: item.catchRate },
+      fromScreen: fromScreen,
+    });
   };
 
   return (

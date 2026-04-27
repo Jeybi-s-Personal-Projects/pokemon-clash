@@ -37,7 +37,7 @@ interface BattleProps {
   enemy: Pokemon;
   onBattleEnd?: (winner: "player" | "enemy") => void;
   onRun?: () => void;
-  onBagPress?: () => void;
+  onBagPress?: (player: Pokemon, currentEnemy: Pokemon) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
 }
@@ -85,8 +85,10 @@ export function Battle({
 
     const handleCatchSequence = async () => {
       // 1. Return to battle, show "Used ball" message
-      setCurrentMessage(`PLAYER USED ${catchPending.item.name.toUpperCase()}...`);
-      
+      setCurrentMessage(
+        `PLAYER USED ${catchPending.item.name.toUpperCase()}...`,
+      );
+
       // 2. The "Shaking" Delay
       await delay(2500);
 
@@ -108,7 +110,7 @@ export function Battle({
         // 5. Success Modal
         if (teamFull) {
           setStatusMessage(
-            `Gotcha! ${enemy.name.toUpperCase()} was caught!\n\nYour team is full, so it was sent to the PC.`
+            `Gotcha! ${enemy.name.toUpperCase()} was caught!\n\nYour team is full, so it was sent to the PC.`,
           );
         } else {
           setStatusMessage(`Gotcha! ${enemy.name.toUpperCase()} was caught!`);
@@ -280,7 +282,7 @@ export function Battle({
         moves={state.player.moves}
         enemyTypes={state.enemy.type}
         onMovePress={attack}
-        onBagPress={onBagPress}
+        onBagPress={() => onBagPress?.(state.player, state.enemy)}
         onRun={onRun}
         disabled={!!state.attackingSide || !!state.winner || !!currentMessage}
         currentLog={currentMessage}
@@ -368,6 +370,17 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
   const catchPending = route.params.catchPending;
   const onSave = (route.params as any).onSave;
 
+  // Clear catchPending after it's been "consumed" by the state
+  useEffect(() => {
+    if (catchPending) {
+      // Small timeout to ensure it propagates once before clearing
+      const timer = setTimeout(() => {
+        navigation.setParams({ catchPending: undefined } as any);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [catchPending]);
+
   return (
     <Battle
       player={player}
@@ -376,11 +389,12 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
       onSave={onSave}
       onBattleEnd={() => setTimeout(() => navigation.goBack(), 2000)}
       onRun={onRun}
-      onBagPress={() =>
+      onBagPress={(p, e) =>
         navigation.navigate("InventoryBag", {
-          pokemon: enemy,
+          player: p,
+          pokemon: e,
           fromScreen: "Battle",
-        })
+        } as any)
       }
     />
   );

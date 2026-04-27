@@ -56,6 +56,20 @@ function mapEncounterToPokemon(
  */
 export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const { region, area, player } = route.params;
+
+  // Clear catchPending after it's been "consumed" by the state
+  useEffect(() => {
+    if (route.params.catchPending) {
+      // If we are catching, we MUST be in the battle screen, not transition
+      setScreen("battle");
+      
+      const timer = setTimeout(() => {
+        navigation.setParams({ catchPending: undefined } as any);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [route.params.catchPending, navigation]);
+
   const [screen, setScreen] = useState<Screen>("transition");
   const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
     null,
@@ -137,13 +151,14 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
-        onBagPress={() =>
+        onBagPress={(p, e) =>
           navigation.navigate("InventoryBag", {
-            pokemon: fullyLoadedEnemy,
+            player: p,
+            pokemon: e,
             fromScreen: "EncounterFlow",
-          })
+          } as any)
         }
-        catchPending={(route.params as any).catchPending}
+        catchPending={route.params.catchPending}
       />
     </View>
   );

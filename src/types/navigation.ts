@@ -47,7 +47,18 @@ export type RootStackParamList = {
     pokemon: Pokemon;
     fromScreen: "Battle" | "EncounterFlow";
   };
+  CatchingScreen: {
+    player: Pokemon;
+    enemy: Pokemon;
+    item: { id: string; name: string; catchRate: number };
+    fromScreen: "Battle" | "EncounterFlow";
+  };
 };
+
+export type CatchingScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "CatchingScreen"
+>;
 
 export type InventoryBagScreenProps = NativeStackScreenProps<
   RootStackParamList,
