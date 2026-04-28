@@ -22,23 +22,23 @@ const getStatMultiplier = (stage: number) => {
 const StatIndicator = ({ label, stage }: { label: string; stage: number }) => {
   if (stage === 0) return null;
   const multiplier = getStatMultiplier(stage);
+  const formattedMultiplier = parseFloat(multiplier.toFixed(2));
   const color = stage > 0 ? "#60A5FA" : "#F87171"; // Blue for buff, Red for debuff
 
   return (
     <View
       style={{
-        backgroundColor: color + "33",
-        paddingHorizontal: 4,
+        backgroundColor: color + "22",
+        paddingHorizontal: 3,
         paddingVertical: 1,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: color + "66",
-        marginRight: 4,
-        marginBottom: 2,
+        borderRadius: 3,
+        borderWidth: 0.5,
+        borderColor: color + "44",
+        marginRight: 3,
       }}
     >
-      <Text style={{ fontSize: 8, fontWeight: "bold", color: color }}>
-        {label} {multiplier}x
+      <Text style={{ fontSize: 7, fontWeight: "bold", color: color }}>
+        {label} {formattedMultiplier}x
       </Text>
     </View>
   );
@@ -172,25 +172,47 @@ export default function PokemonCard({
           </Text>
         </View>
 
-        <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} />
+        <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} hideRatio />
 
-        {/* Stat Stages Indicators */}
-        {stages && (
-          <View
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: isBack ? "flex-start" : "flex-end",
+            marginTop: -2,
+          }}
+        >
+          {/* HP Ratio Text */}
+          <Text
             style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              marginTop: 0,
-              justifyContent: isBack ? "flex-start" : "flex-end",
+              color: "white",
+              fontSize: 10,
+              marginRight: isBack ? 8 : 0,
+              marginLeft: isBack ? 0 : 8,
+              order: isBack ? -1 : 1, // Put text on left for player, right for enemy
             }}
           >
-            <StatIndicator label="ATK" stage={stages.attack} />
-            <StatIndicator label="DEF" stage={stages.defense} />
-            <StatIndicator label="SP.ATK" stage={stages.specialAttack} />
-            <StatIndicator label="SP.DEF" stage={stages.specialDefense} />
-            <StatIndicator label="SPD" stage={stages.speed} />
-          </View>
-        )}
+            {Math.round(pokemon.hp)} / {pokemon.maxHp}
+          </Text>
+
+          {/* Stat Stages Indicators */}
+          {stages && (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: isBack ? "flex-start" : "flex-end",
+                flex: 1,
+              }}
+            >
+              <StatIndicator label="ATK" stage={stages.attack} />
+              <StatIndicator label="DEF" stage={stages.defense} />
+              <StatIndicator label="SP.A" stage={stages.specialAttack} />
+              <StatIndicator label="SP.D" stage={stages.specialDefense} />
+              <StatIndicator label="SPD" stage={stages.speed} />
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Independent Animated Sprite */}

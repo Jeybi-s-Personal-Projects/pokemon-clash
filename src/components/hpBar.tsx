@@ -4,9 +4,10 @@ import { Animated, Text, View } from "react-native";
 type Props = {
   hp: number;
   maxHp: number;
+  hideRatio?: boolean;
 };
 
-export default function HpBar({ hp, maxHp }: Props) {
+export default function HpBar({ hp, maxHp, hideRatio }: Props) {
   const percent = (hp / maxHp) * 100;
   const animatedWidth = useRef(new Animated.Value(percent)).current;
 
@@ -45,9 +46,11 @@ export default function HpBar({ hp, maxHp }: Props) {
         />
       </View>
 
-      <Text style={{ color: "white" }}>
-        {Math.round(hp)} / {maxHp}
-      </Text>
+      {!hideRatio && (
+        <Text style={{ color: "white" }}>
+          {Math.round(hp)} / {maxHp}
+        </Text>
+      )}
     </View>
   );
 }
