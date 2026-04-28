@@ -59,6 +59,7 @@ export function Battle({
     log: [],
     winner: null,
     attackingSide: null,
+    dancingSide: null,
     hitSide: null,
   });
 
@@ -182,16 +183,28 @@ export function Battle({
   };
 
   const attack = async (index: number) => {
-    if (state.attackingSide || state.winner || currentMessage) return;
+    if (
+      state.attackingSide ||
+      state.dancingSide ||
+      state.winner ||
+      currentMessage
+    )
+      return;
 
     // 1. Player Turn
     const move = state.player.moves[index];
     setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
     await delay(1500);
 
-    setState((s) => ({ ...s, attackingSide: "player" }));
-    await delay(400);
-    setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
+    if (move.power === 0) {
+      setState((s) => ({ ...s, dancingSide: "player" }));
+      await delay(600);
+      setState((s) => ({ ...s, dancingSide: null }));
+    } else {
+      setState((s) => ({ ...s, attackingSide: "player" }));
+      await delay(400);
+      setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
+    }
 
     const newEnemyHp = dealDamage(state.enemy.hp, move, state.enemy.type);
     const afterPlayerAttack: BattleState = {
@@ -199,6 +212,7 @@ export function Battle({
       enemy: { ...state.enemy, hp: newEnemyHp },
       hitSide: null,
       attackingSide: null,
+      dancingSide: null,
     };
 
     const winnerAfterPlayer = isGameOver(afterPlayerAttack);
@@ -221,9 +235,15 @@ export function Battle({
     );
     await delay(1500);
 
-    setState((s) => ({ ...s, attackingSide: "enemy" }));
-    await delay(400);
-    setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
+    if (enemyMove.power === 0) {
+      setState((s) => ({ ...s, dancingSide: "enemy" }));
+      await delay(600);
+      setState((s) => ({ ...s, dancingSide: null }));
+    } else {
+      setState((s) => ({ ...s, attackingSide: "enemy" }));
+      await delay(400);
+      setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
+    }
 
     const newPlayerHp = dealDamage(
       state.player.hp,
@@ -236,6 +256,7 @@ export function Battle({
       turn: "player",
       hitSide: null,
       attackingSide: null,
+      dancingSide: null,
     };
 
     const winnerAfterEnemy = isGameOver(afterEnemyAttack);
@@ -267,6 +288,7 @@ export function Battle({
         <PokemonCard
           pokemon={state.enemy}
           isAttacking={state.attackingSide === "enemy"}
+          isDancing={state.dancingSide === "enemy"}
           isHit={state.hitSide === "enemy"}
         />
         <View style={{ height: 100 }} />
@@ -274,6 +296,7 @@ export function Battle({
           pokemon={state.player}
           isBack={true}
           isAttacking={state.attackingSide === "player"}
+          isDancing={state.dancingSide === "player"}
           isHit={state.hitSide === "player"}
         />
       </View>
@@ -284,7 +307,12 @@ export function Battle({
         onMovePress={attack}
         onBagPress={() => onBagPress?.(state.player, state.enemy)}
         onRun={onRun}
-        disabled={!!state.attackingSide || !!state.winner || !!currentMessage}
+        disabled={
+          !!state.attackingSide ||
+          !!state.dancingSide ||
+          !!state.winner ||
+          !!currentMessage
+        }
         currentLog={currentMessage}
       />
 

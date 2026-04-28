@@ -8,6 +8,7 @@ type Props = {
   pokemon: Pokemon;
   isBack?: boolean;
   isAttacking?: boolean;
+  isDancing?: boolean;
   isHit?: boolean;
 };
 
@@ -15,6 +16,7 @@ export default function PokemonCard({
   pokemon,
   isBack,
   isAttacking,
+  isDancing,
   isHit,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
@@ -25,7 +27,7 @@ export default function PokemonCard({
 
   useEffect(() => {
     if (isAttacking) {
-      // Move toward opponent (up for back/player, down for front/enemy)
+      // Normal attack: Move toward opponent
       Animated.sequence([
         Animated.timing(moveAnim, {
           toValue: isBack ? -50 : 50,
@@ -40,6 +42,34 @@ export default function PokemonCard({
       ]).start();
     }
   }, [isAttacking]);
+
+  useEffect(() => {
+    if (isDancing) {
+      // Dance animation: Move side to side
+      Animated.sequence([
+        Animated.timing(shakeAnim, {
+          toValue: 20,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: -20,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: 20,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isDancing]);
 
   useEffect(() => {
     if (isHit) {

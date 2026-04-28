@@ -7,5 +7,6 @@ export type BattleState = {
   log: string[];
   winner: "player" | "enemy" | null;
   attackingSide: "player" | "enemy" | null;
+  dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
 };
