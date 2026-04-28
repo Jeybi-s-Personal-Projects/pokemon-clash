@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { getTypeMultiplier, PokemonType } from "../battle/typeChart";
+import { Move } from "../types/pokemon";
 import BattleButton from "./battleButton";
-
-type Move = {
-  name: string;
-  power: number;
-  type?: string;
-  pp?: number;
-  maxPp?: number;
-};
 
 type Props = {
   moves: Move[];
@@ -56,6 +55,7 @@ export default function BattleActions({
   currentLog,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
+  const [isExpanded, setIsExpanded] = useState(false);
   const cursorOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -120,12 +120,28 @@ export default function BattleActions({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isExpanded && { height: 300 }]}>
+      {/* Expand Toggle */}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setIsExpanded(!isExpanded)}
+        style={styles.expandToggle}
+      >
+        <Ionicons
+          name={isExpanded ? "chevron-down" : "chevron-up"}
+          size={18}
+          color="#6bdae2"
+        />
+        <Text style={styles.expandToggleText}>
+          {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+        </Text>
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Text style={styles.headerText}>▶ CHOOSE A</Text>
         <Text style={styles.headerTextBold}>MOVE</Text>
       </View>
-      <View style={styles.grid}>
+      <View style={[styles.grid]}>
         {moves.map((move, i) => {
           const moveType = (move.type || "normal") as PokemonType;
           const effectiveness = getTypeMultiplier(
@@ -141,22 +157,27 @@ export default function BattleActions({
               key={i}
               label={move.name}
               subLabel={`PWR ${effectivePower} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
+              description={move.description}
+              isExpanded={isExpanded}
               moveType={move.type}
               effectiveness={effectiveness}
               onPress={() => onMovePress(i)}
               disabled={disabled || (move.pp ?? 0) <= 0}
               variant="move"
-              height="40%"
+              height={"40%"}
             />
           );
         })}
         <BattleButton
           label="← Back"
-          onPress={() => setMenu("main")}
+          onPress={() => {
+            setMenu("main");
+            setIsExpanded(false);
+          }}
           disabled={disabled}
           variant="back"
           width="98%"
-          height="18%"
+          height={isExpanded ? "20%" : "18%"}
         />
       </View>
     </View>
@@ -215,16 +236,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  // logText: {
-  //   color: "#E2C96B",
-  //   fontFamily: "monospace",
-  //   fontSize: 1,
-  //   fontWeight: "900",
-  //   letterSpacing: 1,
-  //   lineHeight: 28,
-  //   textTransform: "uppercase",
-  //   textAlign: "center",
-  // },
+
   cursor: {
     width: 12,
     height: 12,
@@ -265,5 +277,28 @@ const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderTopColor: "#6bdae2",
     alignSelf: "flex-end",
+  },
+  expandToggle: {
+    height: 24,
+    width: 120,
+    backgroundColor: "#080B14",
+    borderWidth: 1.5,
+    borderColor: "#6bdae233",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    position: "absolute",
+    top: -24,
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    zIndex: 10,
+  },
+  expandToggleText: {
+    color: "#6bdae2",
+    fontFamily: "monospace",
+    fontSize: 8,
+    fontWeight: "bold",
   },
 });

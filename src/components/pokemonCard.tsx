@@ -182,18 +182,12 @@ export default function PokemonCard({
             marginTop: -2,
           }}
         >
-          {/* HP Ratio Text */}
-          <Text
-            style={{
-              color: "white",
-              fontSize: 10,
-              marginRight: isBack ? 8 : 0,
-              marginLeft: isBack ? 0 : 8,
-              order: isBack ? -1 : 1, // Put text on left for player, right for enemy
-            }}
-          >
-            {Math.round(pokemon.hp)} / {pokemon.maxHp}
-          </Text>
+          {/* Player HP Ratio (Left) */}
+          {isBack && (
+            <Text style={{ color: "white", fontSize: 10, marginRight: 8 }}>
+              {Math.round(pokemon.hp)} / {pokemon.maxHp}
+            </Text>
+          )}
 
           {/* Stat Stages Indicators */}
           {stages && (
@@ -211,6 +205,13 @@ export default function PokemonCard({
               <StatIndicator label="SP.D" stage={stages.specialDefense} />
               <StatIndicator label="SPD" stage={stages.speed} />
             </View>
+          )}
+
+          {/* Enemy HP Ratio (Right) */}
+          {!isBack && (
+            <Text style={{ color: "white", fontSize: 10, marginLeft: 8 }}>
+              {Math.round(pokemon.hp)} / {pokemon.maxHp}
+            </Text>
           )}
         </View>
       </View>

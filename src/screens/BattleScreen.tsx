@@ -303,7 +303,6 @@ export function Battle({
 
       for (const log of logs) {
         setCurrentMessage(null);
-        await delay(50);
         setCurrentMessage(log);
         await delay(1200);
       }
@@ -383,7 +382,6 @@ export function Battle({
 
       for (const log of logs) {
         setCurrentMessage(null);
-        await delay(50);
         setCurrentMessage(log);
         await delay(1200);
       }

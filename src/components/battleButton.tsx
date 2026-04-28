@@ -28,6 +28,8 @@ const TYPE_COLORS: Record<string, string> = {
 export default function BattleButton({
   label,
   subLabel,
+  description,
+  isExpanded,
   moveType,
   effectiveness,
   icon,
@@ -143,13 +145,35 @@ export default function BattleButton({
       )}
 
       {icon && <View style={{ marginBottom: 4 }}>{icon}</View>}
-      <Text style={[styles.label, { color: disabled ? "#555" : "white" }]}>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: disabled ? "#555" : "white",
+            fontSize: isExpanded ? 14 : 16,
+          },
+        ]}
+      >
         {label.toUpperCase()}
       </Text>
 
       {subLabel && (
-        <Text style={[styles.subLabel, { color: accentColor }]}>
+        <Text
+          style={[
+            styles.subLabel,
+            { color: accentColor, fontSize: isExpanded ? 9 : 10 },
+          ]}
+        >
           {subLabel}
+        </Text>
+      )}
+
+      {isExpanded && description && (
+        <Text
+          style={[styles.description, { color: "#9CA3AF" }]}
+          numberOfLines={3}
+        >
+          {description}
         </Text>
       )}
     </TouchableOpacity>
@@ -225,4 +249,13 @@ const styles = StyleSheet.create({
   topRight: { top: -1, right: -1 },
   bottomLeft: { bottom: -1, left: -1 },
   bottomRight: { bottom: -1, right: -1 },
+  description: {
+    fontFamily: "monospace",
+    fontSize: 7.5,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 6,
+    paddingHorizontal: 4,
+    lineHeight: 10,
+  },
 });
