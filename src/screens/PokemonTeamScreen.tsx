@@ -91,7 +91,7 @@ export default function PokemonTeamScreen({
 
     try {
       const updatePromises = team.map((p, index) =>
-        supabase.from("pokemon").update({ pk_order: index }).eq("id", p.id),
+        supabase.from("pokemon").update({ pk_order: index + 1 }).eq("id", p.id),
       );
 
       const results = await Promise.all(updatePromises);
