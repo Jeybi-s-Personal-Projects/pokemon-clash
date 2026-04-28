@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
+import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
 import HpBar from "./hpBar";
 
@@ -10,6 +11,37 @@ type Props = {
   isAttacking?: boolean;
   isDancing?: boolean;
   isHit?: boolean;
+  stages?: StatStages;
+};
+
+const getStatMultiplier = (stage: number) => {
+  if (stage >= 0) return (2 + stage) / 2;
+  return 2 / (2 + Math.abs(stage));
+};
+
+const StatIndicator = ({ label, stage }: { label: string; stage: number }) => {
+  if (stage === 0) return null;
+  const multiplier = getStatMultiplier(stage);
+  const color = stage > 0 ? "#60A5FA" : "#F87171"; // Blue for buff, Red for debuff
+
+  return (
+    <View
+      style={{
+        backgroundColor: color + "33",
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: color + "66",
+        marginRight: 4,
+        marginBottom: 2,
+      }}
+    >
+      <Text style={{ fontSize: 8, fontWeight: "bold", color: color }}>
+        {label} {multiplier}x
+      </Text>
+    </View>
+  );
 };
 
 export default function PokemonCard({
@@ -18,6 +50,7 @@ export default function PokemonCard({
   isAttacking,
   isDancing,
   isHit,
+  stages,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
 
@@ -140,6 +173,24 @@ export default function PokemonCard({
         </View>
 
         <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} />
+
+        {/* Stat Stages Indicators */}
+        {stages && (
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              marginTop: 0,
+              justifyContent: isBack ? "flex-start" : "flex-end",
+            }}
+          >
+            <StatIndicator label="ATK" stage={stages.attack} />
+            <StatIndicator label="DEF" stage={stages.defense} />
+            <StatIndicator label="SP.ATK" stage={stages.specialAttack} />
+            <StatIndicator label="SP.DEF" stage={stages.specialDefense} />
+            <StatIndicator label="SPD" stage={stages.speed} />
+          </View>
+        )}
       </View>
 
       {/* Independent Animated Sprite */}

@@ -270,13 +270,25 @@ export function Battle({
 
     // Apply Stat Changes if any
     if (move.statChanges && move.statChanges.length > 0) {
+      const isDebuff = move.statChanges[0].change < 0;
+      const targetStages = isDebuff ? state.enemyStages : state.playerStages;
+      const targetName = isDebuff ? state.enemy.name : state.player.name;
+
       const { newStages, logs } = applyStatChanges(
-        state.playerStages,
+        targetStages,
         move.statChanges,
-        state.player.name,
+        targetName,
       );
-      nextPlayerStages = newStages;
+
+      if (isDebuff) {
+        nextEnemyStages = newStages;
+      } else {
+        nextPlayerStages = newStages;
+      }
+
       for (const log of logs) {
+        setCurrentMessage(null);
+        await delay(50);
         setCurrentMessage(log);
         await delay(1200);
       }
@@ -336,13 +348,25 @@ export function Battle({
     }
 
     if (enemyMove.statChanges && enemyMove.statChanges.length > 0) {
+      const isDebuff = enemyMove.statChanges[0].change < 0;
+      const targetStages = isDebuff ? nextPlayerStages : nextEnemyStages;
+      const targetName = isDebuff ? state.player.name : state.enemy.name;
+
       const { newStages, logs } = applyStatChanges(
-        nextEnemyStages,
+        targetStages,
         enemyMove.statChanges,
-        state.enemy.name,
+        targetName,
       );
-      nextEnemyStages_enemyTurn = newStages;
+
+      if (isDebuff) {
+        nextPlayerStages_enemyTurn = newStages;
+      } else {
+        nextEnemyStages_enemyTurn = newStages;
+      }
+
       for (const log of logs) {
+        setCurrentMessage(null);
+        await delay(50);
         setCurrentMessage(log);
         await delay(1200);
       }
@@ -387,6 +411,7 @@ export function Battle({
       >
         <PokemonCard
           pokemon={state.enemy}
+          stages={state.enemyStages}
           isAttacking={state.attackingSide === "enemy"}
           isDancing={state.dancingSide === "enemy"}
           isHit={state.hitSide === "enemy"}
@@ -394,6 +419,7 @@ export function Battle({
         <View style={{ height: 100 }} />
         <PokemonCard
           pokemon={state.player}
+          stages={state.playerStages}
           isBack={true}
           isAttacking={state.attackingSide === "player"}
           isDancing={state.dancingSide === "player"}
