@@ -140,12 +140,11 @@ export default function BattleActions({
             <BattleButton
               key={i}
               label={move.name}
-              // subLabel={`PWR ${move.power}  PP ${move.pp ?? "—"}/${move.maxPp ?? "—"}`}
-              subLabel={`PWR ${effectivePower} PP ${move.pp ?? "—"}/${move.maxPp ?? "—"}`}
+              subLabel={`PWR ${effectivePower} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
               moveType={move.type}
               effectiveness={effectiveness}
               onPress={() => onMovePress(i)}
-              disabled={disabled}
+              disabled={disabled || (move.pp ?? 0) <= 0}
               variant="move"
               height="40%"
             />

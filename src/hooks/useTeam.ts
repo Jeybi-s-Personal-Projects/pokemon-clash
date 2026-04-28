@@ -54,6 +54,8 @@ export function useTeam(userId: string) {
         return {
           name: m.move_name,
           power: detail.power ?? 0,
+          pp: m.move_pp ?? detail.pp ?? 0,
+          maxPp: detail.pp ?? 0,
           type: detail.type || m.move_type,
           damageClass: detail.damageClass,
           accuracy: detail.accuracy,

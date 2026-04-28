@@ -241,12 +241,27 @@ export function Battle({
 
     // 1. Player Turn
     const move = state.player.moves[index];
+
+    // Check PP
+    if (move.pp <= 0) {
+      setCurrentMessage("No PP left for this move!");
+      await delay(1000);
+      setCurrentMessage(null);
+      return;
+    }
+
+    // Decrement PP locally
+    const updatedMoves = [...state.player.moves];
+    updatedMoves[index] = { ...move, pp: move.pp - 1 };
+
     setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
     await delay(1500);
 
     let nextPlayerStages = state.playerStages;
     let nextEnemyStages = state.enemyStages;
     let nextEnemyHp = state.enemy.hp;
+
+    // ... damage logic ...
 
     // Handle Animations & Damage
     if (move.power === 0) {
@@ -296,8 +311,10 @@ export function Battle({
 
     const afterPlayerAttack: BattleState = {
       ...state,
+      player: { ...state.player, moves: updatedMoves },
       enemy: { ...state.enemy, hp: nextEnemyHp },
       playerStages: nextPlayerStages,
+      enemyStages: nextEnemyStages,
       hitSide: null,
       attackingSide: null,
       dancingSide: null,
@@ -374,7 +391,7 @@ export function Battle({
 
     const afterEnemyAttack: BattleState = {
       ...afterPlayerAttack,
-      player: { ...state.player, hp: nextPlayerHp },
+      player: { ...afterPlayerAttack.player, hp: nextPlayerHp },
       enemyStages: nextEnemyStages_enemyTurn,
       playerStages: nextPlayerStages_enemyTurn,
       turn: "player",

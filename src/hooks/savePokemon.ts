@@ -58,6 +58,7 @@ export async function savePokemon(
     pokemon_id: data.id,
     move_name: move.name,
     move_power: move.power,
+    move_pp: move.pp,
     move_type: move.type ?? "normal",
     move_damageClass: move.damageClass,
     move_accuracy: move.accuracy,
