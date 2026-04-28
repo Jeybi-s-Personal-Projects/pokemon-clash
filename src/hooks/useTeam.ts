@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MOVES } from "../data/pokemon/moves/moves";
 import { supabase } from "../lib/supabase";
 import { Pokemon } from "../types/pokemon";
 
@@ -48,11 +49,19 @@ export function useTeam(userId: string) {
       frontImage: p.pk_front_image,
       backImage: p.pk_back_image,
       cry: p.pk_cry,
-      moves: p.pokemon_moves.map((m: any) => ({
-        name: m.move_name,
-        power: m.move_power,
-        type: m.move_type,
-      })),
+      moves: p.pokemon_moves.map((m: any) => {
+        const detail = MOVES[m.move_name] || {};
+        return {
+          name: m.move_name,
+          power: detail.power ?? 0,
+          type: detail.type || m.move_type,
+          damageClass: detail.damageClass,
+          accuracy: detail.accuracy,
+          statChanges: detail.statChanges || [],
+          description: detail.description,
+          priority: detail.priority,
+        };
+      }),
     }));
 
     setTeam(mapped);

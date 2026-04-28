@@ -14,7 +14,7 @@ import StatusModal from "../components/statusModal";
 
 import { getRandomMove } from "../battle/ai";
 import { dealDamage, isGameOver } from "../battle/battleEngine";
-import { BattleState } from "../battle/battleTypes";
+import { BattleState, StatStages } from "../battle/battleTypes";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
@@ -28,6 +28,14 @@ type TeamMemberForSwap = {
   id: string;
   name: string;
   level: number;
+};
+
+const initialStages: StatStages = {
+  attack: 0,
+  defense: 0,
+  specialAttack: 0,
+  specialDefense: 0,
+  speed: 0,
 };
 
 // ─── Inner Battle component ──────────────────────────────────────────────────
@@ -61,6 +69,8 @@ export function Battle({
     attackingSide: null,
     dancingSide: null,
     hitSide: null,
+    playerStages: { ...initialStages },
+    enemyStages: { ...initialStages },
   });
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
@@ -182,6 +192,44 @@ export function Battle({
     if (onBattleEnd) onBattleEnd("player");
   };
 
+  const applyStatChanges = (
+    currentStages: StatStages,
+    changes: { stat: string; change: number }[],
+    targetName: string,
+  ) => {
+    const newStages = { ...currentStages };
+    let logs: string[] = [];
+
+    changes.forEach((c) => {
+      const statKey = c.stat as keyof StatStages;
+      if (newStages[statKey] !== undefined) {
+        const oldStage = newStages[statKey];
+        newStages[statKey] = Math.max(-6, Math.min(6, oldStage + c.change));
+
+        const currentStage = newStages[statKey];
+        const stageSign = currentStage > 0 ? "+" : "";
+
+        console.log(
+          `[StatChange] ${targetName}: ${statKey} ${oldStage} -> ${currentStage} (change: ${c.change})`,
+        );
+
+        if (currentStage === oldStage) {
+          logs.push(
+            `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} won't go any higher! (${stageSign}${currentStage})`,
+          );
+        } else {
+          const degree = Math.abs(c.change) >= 2 ? "sharply " : "";
+          const direction = c.change > 0 ? "rose" : "fell";
+          logs.push(
+            `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} ${degree}${direction}! (${stageSign}${currentStage})`,
+          );
+        }
+      }
+    });
+
+    return { newStages, logs };
+  };
+
   const attack = async (index: number) => {
     if (
       state.attackingSide ||
@@ -196,6 +244,11 @@ export function Battle({
     setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
     await delay(1500);
 
+    let nextPlayerStages = state.playerStages;
+    let nextEnemyStages = state.enemyStages;
+    let nextEnemyHp = state.enemy.hp;
+
+    // Handle Animations & Damage
     if (move.power === 0) {
       setState((s) => ({ ...s, dancingSide: "player" }));
       await delay(600);
@@ -204,12 +257,35 @@ export function Battle({
       setState((s) => ({ ...s, attackingSide: "player" }));
       await delay(400);
       setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
+
+      const damage = dealDamage(
+        state.player,
+        state.playerStages,
+        state.enemy,
+        state.enemyStages,
+        move,
+      );
+      nextEnemyHp = Math.max(0, state.enemy.hp - damage);
     }
 
-    const newEnemyHp = dealDamage(state.enemy.hp, move, state.enemy.type);
+    // Apply Stat Changes if any
+    if (move.statChanges && move.statChanges.length > 0) {
+      const { newStages, logs } = applyStatChanges(
+        state.playerStages,
+        move.statChanges,
+        state.player.name,
+      );
+      nextPlayerStages = newStages;
+      for (const log of logs) {
+        setCurrentMessage(log);
+        await delay(1200);
+      }
+    }
+
     const afterPlayerAttack: BattleState = {
       ...state,
-      enemy: { ...state.enemy, hp: newEnemyHp },
+      enemy: { ...state.enemy, hp: nextEnemyHp },
+      playerStages: nextPlayerStages,
       hitSide: null,
       attackingSide: null,
       dancingSide: null,
@@ -235,6 +311,11 @@ export function Battle({
     );
     await delay(1500);
 
+    let nextEnemyHp_enemyTurn = nextEnemyHp;
+    let nextPlayerHp = state.player.hp;
+    let nextEnemyStages_enemyTurn = nextEnemyStages;
+    let nextPlayerStages_enemyTurn = nextPlayerStages;
+
     if (enemyMove.power === 0) {
       setState((s) => ({ ...s, dancingSide: "enemy" }));
       await delay(600);
@@ -243,16 +324,35 @@ export function Battle({
       setState((s) => ({ ...s, attackingSide: "enemy" }));
       await delay(400);
       setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
+
+      const damage = dealDamage(
+        state.enemy,
+        nextEnemyStages,
+        state.player,
+        nextPlayerStages,
+        enemyMove,
+      );
+      nextPlayerHp = Math.max(0, state.player.hp - damage);
     }
 
-    const newPlayerHp = dealDamage(
-      state.player.hp,
-      enemyMove,
-      state.player.type,
-    );
+    if (enemyMove.statChanges && enemyMove.statChanges.length > 0) {
+      const { newStages, logs } = applyStatChanges(
+        nextEnemyStages,
+        enemyMove.statChanges,
+        state.enemy.name,
+      );
+      nextEnemyStages_enemyTurn = newStages;
+      for (const log of logs) {
+        setCurrentMessage(log);
+        await delay(1200);
+      }
+    }
+
     const afterEnemyAttack: BattleState = {
       ...afterPlayerAttack,
-      player: { ...state.player, hp: newPlayerHp },
+      player: { ...state.player, hp: nextPlayerHp },
+      enemyStages: nextEnemyStages_enemyTurn,
+      playerStages: nextPlayerStages_enemyTurn,
       turn: "player",
       hitSide: null,
       attackingSide: null,

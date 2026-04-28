@@ -1,5 +1,13 @@
 import { Pokemon } from "../types/pokemon";
 
+export type StatStages = {
+  attack: number;
+  defense: number;
+  specialAttack: number;
+  specialDefense: number;
+  speed: number;
+};
+
 export type BattleState = {
   player: Pokemon;
   enemy: Pokemon;
@@ -9,4 +17,6 @@ export type BattleState = {
   attackingSide: "player" | "enemy" | null;
   dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
+  playerStages: StatStages;
+  enemyStages: StatStages;
 };
