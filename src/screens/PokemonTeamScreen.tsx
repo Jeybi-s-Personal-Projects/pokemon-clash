@@ -14,10 +14,12 @@ import {
   View,
 } from "react-native";
 import StatusModal from "../components/statusModal";
+import ExpBar from "../components/expBar";
 import { supabase } from "../lib/supabase";
 import { colors } from "../theme/color";
 import { PokemonTeamScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
+import { getExpForLevel } from "../utils/experienceCalculator";
 
 // Enable LayoutAnimation for Android
 if (

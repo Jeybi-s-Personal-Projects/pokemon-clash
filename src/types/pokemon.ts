@@ -1,3 +1,5 @@
+import { GrowthRate } from "../data/level/growthRates";
+
 export type Move = {
   name: string;
   power: number;
@@ -10,11 +12,15 @@ export type Move = {
   description?: string | null;
   priority?: number | null;
 };
+
 export type Pokemon = {
   id?: number | string;
+  speciesId: number;
   pk_order?: number;
   name: string;
   level: number;
+  experience: number;
+  growthRate?: GrowthRate;
   type: string[];
   hp: number;
   maxHp: number;

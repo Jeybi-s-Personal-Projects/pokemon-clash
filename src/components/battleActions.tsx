@@ -120,7 +120,7 @@ export default function BattleActions({
   }
 
   return (
-    <View style={[styles.container, isExpanded && { height: 300 }]}>
+    <View style={[styles.container]}>
       {/* Expand Toggle */}
       <TouchableOpacity
         activeOpacity={0.8}
@@ -177,7 +177,7 @@ export default function BattleActions({
           disabled={disabled}
           variant="back"
           width="98%"
-          height={isExpanded ? "20%" : "18%"}
+          height="18%"
         />
       </View>
     </View>

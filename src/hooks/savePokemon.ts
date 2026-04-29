@@ -33,8 +33,10 @@ export async function savePokemon(
     .from("pokemon")
     .insert({
       user_id: userId,
+      pk_species_id: pokemon.speciesId,
       pk_name: pokemon.name,
       pk_level: pokemon.level,
+      pk_experience: pokemon.experience,
       pk_hp: pokemon.hp,
       pk_max_hp: pokemon.maxHp,
       pk_attack: pokemon.attack,

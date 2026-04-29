@@ -6,6 +6,10 @@ import { useEncounterQueue } from "../hooks/useEncounterQueue";
 import { EncounterFlowProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
+import {
+  getExpForLevel,
+  getGrowthRate,
+} from "../utils/experienceCalculator";
 import { Battle } from "./BattleScreen";
 import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
 
@@ -19,10 +23,16 @@ function mapEncounterToPokemon(
   moveDetails: MoveDetail[],
 ): Pokemon {
   const hp = calculateHp(encounter.baseStats.hp, encounter.level);
+  const speciesId = encounter.id;
+  const growthRate = getGrowthRate(speciesId);
+  const experience = getExpForLevel(encounter.level, growthRate);
+
   return {
-    id: encounter.id,
+    speciesId,
     name: encounter.name,
     level: encounter.level,
+    experience,
+    growthRate,
     type: encounter.types,
     hp: hp,
     maxHp: hp,
@@ -40,6 +50,8 @@ function mapEncounterToPokemon(
     moves: moveDetails.map((detail) => ({
       name: detail.name,
       power: detail.power ?? 0,
+      pp: detail.pp ?? 0,
+      maxPp: detail.pp ?? 0,
       damageClass: detail.damageClass,
       type: detail.type,
       accuracy: detail.accuracy,

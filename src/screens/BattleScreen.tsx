@@ -20,6 +20,11 @@ import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
+import {
+  calculateExpGain,
+  checkLevelUp,
+  getExpForLevel,
+} from "../utils/experienceCalculator";
 
 import { setAudioModeAsync } from "expo-audio";
 
@@ -89,6 +94,30 @@ export function Battle({
 
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+
+  const syncPokemonProgress = async (updatedPokemon: Pokemon) => {
+    if (!user || !updatedPokemon.id) return;
+    try {
+      const { error } = await supabase
+        .from("pokemon")
+        .update({
+          pk_level: updatedPokemon.level,
+          pk_experience: updatedPokemon.experience,
+          pk_hp: updatedPokemon.hp,
+          pk_max_hp: updatedPokemon.maxHp,
+          pk_attack: updatedPokemon.attack,
+          pk_defense: updatedPokemon.defense,
+          pk_special_attack: updatedPokemon.specialAttack,
+          pk_special_defense: updatedPokemon.specialDefense,
+          pk_speed: updatedPokemon.speed,
+        })
+        .eq("id", updatedPokemon.id);
+
+      if (error) console.error("Error syncing pokemon progress:", error);
+    } catch (e) {
+      console.error("Failed to sync pokemon progress", e);
+    }
+  };
 
   // ── Handle Catch from Bag ──
   useEffect(() => {
@@ -324,6 +353,66 @@ export function Battle({
       setState({ ...afterPlayerAttack, winner: "player" });
       await delay(1200);
       setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+
+      const expGain = calculateExpGain(
+        state.enemy.level,
+        state.enemy.speciesId,
+        true,
+      );
+      await delay(1200);
+      setCurrentMessage(
+        `${state.player.name.toUpperCase()} gained ${expGain} EXP!`,
+      );
+
+      const levelUp = checkLevelUp(state.player, expGain);
+      let updatedPlayer = { ...state.player };
+
+      if (levelUp) {
+        await delay(1200);
+        setCurrentMessage(
+          `${state.player.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
+        );
+
+        updatedPlayer = {
+          ...state.player,
+          level: levelUp.newLevel,
+          experience: levelUp.totalExp,
+          ...levelUp.stats,
+        };
+
+        // Handle new moves
+        if (levelUp.newMoves.length > 0) {
+          for (const move of levelUp.newMoves) {
+            await delay(1200);
+            setCurrentMessage(
+              `${state.player.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+            );
+            if (updatedPlayer.moves.length < 4) {
+              updatedPlayer.moves = [...updatedPlayer.moves, move];
+              // Save move to DB
+              await supabase.from("pokemon_moves").insert({
+                pokemon_id: updatedPlayer.id,
+                move_name: move.name,
+                move_power: move.power,
+                move_pp: move.pp,
+                move_type: move.type ?? "normal",
+                move_damageClass: move.damageClass,
+                move_accuracy: move.accuracy,
+                move_statChanges: JSON.stringify(move.statChanges),
+                move_description: move.description,
+                move_priority: move.priority,
+              });
+            }
+          }
+        }
+      } else {
+        updatedPlayer.experience += expGain;
+      }
+
+      setState((s) => ({ ...s, player: updatedPlayer }));
+      await syncPokemonProgress(updatedPlayer);
+
+      await delay(1500);
       if (onBattleEnd) onBattleEnd("player");
       return;
     }
@@ -438,9 +527,23 @@ export function Battle({
           isAttacking={state.attackingSide === "player"}
           isDancing={state.dancingSide === "player"}
           isHit={state.hitSide === "player"}
-          // TODO: replace with real exp values once EXP system is wired up
-          exp={65}
-          maxExp={100}
+          exp={
+            state.player.experience -
+            getExpForLevel(
+              state.player.level,
+              state.player.growthRate || "medium-fast",
+            )
+          }
+          maxExp={
+            getExpForLevel(
+              state.player.level + 1,
+              state.player.growthRate || "medium-fast",
+            ) -
+            getExpForLevel(
+              state.player.level,
+              state.player.growthRate || "medium-fast",
+            )
+          }
         />
       </View>
 

@@ -51,6 +51,7 @@ export default function BattleButton({
   const typeColor = moveType
     ? (TYPE_COLORS[moveType.toLowerCase()] ?? "#9E9E9E")
     : null;
+
   const accentColor = typeColor ?? (variant === "back" ? "#546E7A" : "#4299b7");
 
   const getEffectivenessLabel = () => {
@@ -157,7 +158,7 @@ export default function BattleButton({
         {label.toUpperCase()}
       </Text>
 
-      {subLabel && (
+      {/* {subLabel && (
         <Text
           style={[
             styles.subLabel,
@@ -166,8 +167,8 @@ export default function BattleButton({
         >
           {subLabel}
         </Text>
-      )}
-
+      )} */}
+      {/* 
       {isExpanded && description && (
         <Text
           style={[styles.description, { color: "#9CA3AF" }]}
@@ -175,7 +176,23 @@ export default function BattleButton({
         >
           {description}
         </Text>
-      )}
+      )} */}
+      {isExpanded && subLabel ?
+        <Text
+          style={[styles.description, { color: "#9CA3AF" }]}
+          numberOfLines={3}
+        >
+          {description}
+        </Text>
+        :
+        <Text
+          style={[
+            styles.subLabel,
+            { color: accentColor, fontSize: isExpanded ? 9 : 10 },
+          ]}
+        >
+          {subLabel}
+        </Text>}
     </TouchableOpacity>
   );
 }
