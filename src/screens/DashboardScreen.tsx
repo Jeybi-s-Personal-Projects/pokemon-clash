@@ -177,7 +177,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
               pokemon={item}
               onPress={() => {
                 playClick();
-                navigation.navigate("PokemonStats", { pokemon: item });
+                navigation.navigate("PokemonStats", { pokemon: item, onRelease: refetch });
               }}
             />
           )}

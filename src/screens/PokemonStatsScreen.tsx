@@ -42,7 +42,7 @@ export default function PokemonStatsScreen({
   route,
   navigation,
 }: PokemonStatsScreenProps) {
-  const { pokemon } = route.params;
+  const { pokemon, onRelease } = route.params;
   const primaryType = pokemon.type[0];
   const accentColor = TYPE_COLORS[primaryType] ?? "#888";
 
@@ -251,6 +251,7 @@ export default function PokemonStatsScreen({
         onClose={() => {
           setStatusVisible(false);
           if (statusType === "success") {
+            onRelease?.();
             navigation.goBack();
           }
         }}
