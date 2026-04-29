@@ -1,6 +1,8 @@
 export type Move = {
   name: string;
   power: number;
+  pp: number;
+  maxPp: number;
   damageClass?: string;
   type?: string;
   accuracy?: number | null;

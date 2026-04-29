@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { colors } from "../theme/color";
 
 interface Props {
   visible: boolean;
@@ -21,8 +22,9 @@ export default function StatusModal({
           <Text
             style={[
               styles.title,
-              type === "success" && { color: "green" },
-              type === "error" && { color: "red" },
+              type === "success" && { color: colors.success },
+              type === "error" && { color: colors.danger },
+              type === "info" && { color: colors.accent },
             ]}
           >
             {type.toUpperCase()}
@@ -42,34 +44,40 @@ export default function StatusModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
   },
   modal: {
     width: "80%",
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: colors.bgCard,
+    padding: 24,
+    borderRadius: 20,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   message: {
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 22,
   },
   button: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });

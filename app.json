@@ -18,7 +18,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -45,7 +44,25 @@
         }
       ],
       "expo-audio",
-      "expo-font"
+      "expo-font",
+      "expo-image",
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": true,
+            "ndkVersion": "26.1.10909125",
+            "externalNativeBuild": {
+              "cmake": {
+                "arguments": [
+                  "-DANDROID_STL=c++_shared"
+                ]
+              }
+            }
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

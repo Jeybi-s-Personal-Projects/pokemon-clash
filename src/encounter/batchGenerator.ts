@@ -20,6 +20,10 @@ import {
   gen2Water,
 } from "@/src/encounter/gen2/tables";
 
+// Local Pokémon DB types for metadata injection
+import { gen1Pokemon } from "@/src/data/gen1Pokemon";
+import { gen2Pokemon } from "@/src/data/gen2Pokemon";
+
 export type Region = "gen1" | "gen2";
 export type Area = "cave" | "grass" | "water" | "forest";
 
@@ -37,6 +41,8 @@ const TABLE_REGISTRY: Record<Region, Record<Area, EncounterTable>> = {
     forest: gen2Forest,
   },
 };
+
+const ALL_LOCAL = [...gen1Pokemon, ...gen2Pokemon];
 
 /**
  * Resolves a table from the registry.
@@ -76,11 +82,19 @@ export async function generateBatch(
     isShiny: generateShiny(entry),
   }));
 
-  // Step 2: Deduplicate IDs before fetching
+  // Step 2: Prepare items for fetching with local metadata
   const uniqueIds = [...new Set(generated.map((g) => g.id))];
+  const itemsToFetch = uniqueIds.map((id) => {
+    const local = ALL_LOCAL.find((p) => p.id === id);
+    return {
+      id,
+      name: local?.name,
+      types: local?.types,
+    };
+  });
 
   // Step 3: Fetch all unique IDs in parallel (cache + promise registry handle deduplication)
-  const dataMap = await fetchBatch(uniqueIds);
+  const dataMap = await fetchBatch(itemsToFetch);
 
   // Step 4: Assemble QueueEntry for each generated encounter
   return generated.map((enc) => {

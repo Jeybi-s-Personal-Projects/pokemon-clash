@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import { savePokemon } from "../hooks/savePokemon";
 import { colors } from "../theme/color";
 import { InventoryBagScreenProps } from "../types/navigation";
 
@@ -30,7 +29,7 @@ type BagItem = {
 const POKEBALL_ITEMS: BagItem[] = [
   {
     id: "poke-ball",
-    name: "Poké Ball",
+    name: "Pokéball",
     description: "A standard Poké Ball",
     catchRate: 1,
     sprite: require("../../assets/items/pokeball.png"),
@@ -69,10 +68,9 @@ export default function InventoryBagScreen({
   navigation,
   route,
 }: InventoryBagScreenProps) {
-  const { pokemon } = route.params;
+  const { pokemon, fromScreen, player: playerObj } = route.params as any;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
-  const [saving, setSaving] = useState(false);
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -89,30 +87,18 @@ export default function InventoryBagScreen({
 
   const handleUseItem = (item: BagItem) => {
     playClick();
-    catchPokemon();
-    // return to battle screen
-    navigation.goBack();
-  };
-
-  //catching pokemon
-  const catchPokemon = async () => {
     if (!user) {
       Alert.alert("Error", "You must be logged in.");
       return;
     }
 
-    try {
-      setSaving(true);
-      await savePokemon(pokemon, user.id);
-
-      // Alert.alert("Added!", `${pokemon.name} was added to your team.`, [
-      //   { text: "OK", onPress: () => navigation.navigate("Dashboard") },
-      // ]);
-    } catch (e) {
-      Alert.alert("Error", "Could not save Pokémon. Try again.");
-    } finally {
-      setSaving(false);
-    }
+    // Replace the Bag screen with the dedicated Catching Screen
+    navigation.replace("CatchingScreen", {
+      player: playerObj,
+      enemy: pokemon,
+      item: { id: item.id, name: item.name, catchRate: item.catchRate },
+      fromScreen: fromScreen,
+    });
   };
 
   return (
@@ -188,13 +174,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-
   tabRow: {
     flexDirection: "row",
     padding: 12,
     gap: 8,
   },
-
   tabButton: {
     flex: 1,
     backgroundColor: colors.bgCard,
@@ -204,22 +188,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-
   tabButtonActive: {
     borderColor: colors.accent,
     backgroundColor: colors.accent + "22",
   },
-
   tabText: {
     color: colors.textMuted,
     fontWeight: "bold",
     fontSize: 12,
   },
-
   tabTextActive: {
     color: colors.accent,
   },
-
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -234,31 +214,22 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
-  ballIndicator: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-
   itemName: {
     color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
   },
-
   itemDesc: {
     color: colors.textMuted,
     fontSize: 12,
     marginTop: 2,
   },
-
   catchPreview: {
     color: colors.accent,
     fontSize: 12,
     marginTop: 6,
     fontWeight: "bold",
   },
-
   useText: {
     color: colors.accent,
     fontWeight: "bold",

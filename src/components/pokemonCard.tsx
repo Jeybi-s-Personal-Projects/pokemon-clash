@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
+import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
 import HpBar from "./hpBar";
 
@@ -7,14 +9,48 @@ type Props = {
   pokemon: Pokemon;
   isBack?: boolean;
   isAttacking?: boolean;
+  isDancing?: boolean;
   isHit?: boolean;
+  stages?: StatStages;
+};
+
+const getStatMultiplier = (stage: number) => {
+  if (stage >= 0) return (2 + stage) / 2;
+  return 2 / (2 + Math.abs(stage));
+};
+
+const StatIndicator = ({ label, stage }: { label: string; stage: number }) => {
+  if (stage === 0) return null;
+  const multiplier = getStatMultiplier(stage);
+  const formattedMultiplier = parseFloat(multiplier.toFixed(2));
+  const color = stage > 0 ? "#60A5FA" : "#F87171"; // Blue for buff, Red for debuff
+
+  return (
+    <View
+      style={{
+        backgroundColor: color + "22",
+        paddingHorizontal: 3,
+        paddingVertical: 1,
+        borderRadius: 3,
+        borderWidth: 0.5,
+        borderColor: color + "44",
+        marginRight: 3,
+      }}
+    >
+      <Text style={{ fontSize: 7, fontWeight: "bold", color: color }}>
+        {label} {formattedMultiplier}x
+      </Text>
+    </View>
+  );
 };
 
 export default function PokemonCard({
   pokemon,
   isBack,
   isAttacking,
+  isDancing,
   isHit,
+  stages,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
 
@@ -24,7 +60,7 @@ export default function PokemonCard({
 
   useEffect(() => {
     if (isAttacking) {
-      // Move toward opponent (up for back/player, down for front/enemy)
+      // Normal attack: Move toward opponent
       Animated.sequence([
         Animated.timing(moveAnim, {
           toValue: isBack ? -50 : 50,
@@ -39,6 +75,34 @@ export default function PokemonCard({
       ]).start();
     }
   }, [isAttacking]);
+
+  useEffect(() => {
+    if (isDancing) {
+      // Dance animation: Move side to side
+      Animated.sequence([
+        Animated.timing(shakeAnim, {
+          toValue: 20,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: -20,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: 20,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isDancing]);
 
   useEffect(() => {
     if (isHit) {
@@ -91,14 +155,65 @@ export default function PokemonCard({
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
             {pokemon.name.toUpperCase()}
+            {pokemon.isShiny && (
+              <View>
+                <Ionicons
+                  name="star"
+                  size={12}
+                  color="#facc15"
+                  style={{ marginLeft: 5 }}
+                />
+              </View>
+            )}{" "}
           </Text>
+
           <Text style={{ fontSize: 14, color: "white" }}>
-            {" "}
             lvl {pokemon.level}
           </Text>
         </View>
 
-        <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} />
+        <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} hideRatio />
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: isBack ? "flex-start" : "flex-end",
+            marginTop: -2,
+          }}
+        >
+          {/* Player HP Ratio (Left) */}
+          {isBack && (
+            <Text style={{ color: "white", fontSize: 10, marginRight: 8 }}>
+              {Math.round(pokemon.hp)} / {pokemon.maxHp}
+            </Text>
+          )}
+
+          {/* Stat Stages Indicators */}
+          {stages && (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: isBack ? "flex-start" : "flex-end",
+                flex: 1,
+              }}
+            >
+              <StatIndicator label="ATK" stage={stages.attack} />
+              <StatIndicator label="DEF" stage={stages.defense} />
+              <StatIndicator label="SP.A" stage={stages.specialAttack} />
+              <StatIndicator label="SP.D" stage={stages.specialDefense} />
+              <StatIndicator label="SPD" stage={stages.speed} />
+            </View>
+          )}
+
+          {/* Enemy HP Ratio (Right) */}
+          {!isBack && (
+            <Text style={{ color: "white", fontSize: 10, marginLeft: 8 }}>
+              {Math.round(pokemon.hp)} / {pokemon.maxHp}
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* Independent Animated Sprite */}

@@ -208,7 +208,6 @@ export default function AreaSelectScreen({
         region,
         area: area.id,
         player,
-        onExit: () => navigation.popToTop(),
       });
     }, 200);
   }

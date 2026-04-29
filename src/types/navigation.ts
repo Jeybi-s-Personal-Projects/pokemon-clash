@@ -7,14 +7,34 @@ export type RootStackParamList = {
   Signup: undefined;
   Dashboard: undefined;
   SelectPokemon: { team: Pokemon[] };
-  Battle: { player: Pokemon; enemy: Pokemon };
+  Battle: {
+    player: Pokemon;
+    enemy: Pokemon;
+    onRun?: () => void;
+    onSave?: () => void;
+    catchResult?: {
+      caught: boolean;
+      caughtPokemon: { id: string } & Pokemon;
+      teamFull: boolean;
+    };
+    catchPending?: {
+      item: { id: string; name: string; catchRate: number };
+    };
+  };
   RegionSelect: { player: Pokemon };
   AreaSelect: { region: Region; player: Pokemon };
   EncounterFlow: {
     region: Region;
     area: Area;
     player: Pokemon;
-    onExit: () => void;
+    catchResult?: {
+      caught: boolean;
+      caughtPokemon: { id: string } & Pokemon;
+      teamFull: boolean;
+    };
+    catchPending?: {
+      item: { id: string; name: string; catchRate: number };
+    };
   };
   PokemonList: {
     mode?: "view" | "explore";
@@ -23,8 +43,22 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
-  InventoryBag: { pokemon: Pokemon };
+  InventoryBag: {
+    pokemon: Pokemon;
+    fromScreen: "Battle" | "EncounterFlow";
+  };
+  CatchingScreen: {
+    player: Pokemon;
+    enemy: Pokemon;
+    item: { id: string; name: string; catchRate: number };
+    fromScreen: "Battle" | "EncounterFlow";
+  };
 };
+
+export type CatchingScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "CatchingScreen"
+>;
 
 export type InventoryBagScreenProps = NativeStackScreenProps<
   RootStackParamList,

@@ -1,6 +1,15 @@
 import type { Area, Region } from "@/src/encounter/batchGenerator";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  withSequence,
+  withDelay,
+  Easing
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 
 type Props = {
   region: Region;
@@ -18,35 +27,79 @@ const AREA_MESSAGES: Record<Area, string> = {
   forest: "A Pokémon jumped from the trees!",
 };
 
-const MIN_ANIMATION_MS = 1500;
+// Faster transition
+const ANIMATION_DURATION = 800;
 
-/**
- * Transition screen that plays a minimum animation and only
- * calls onReady when BOTH the animation has finished AND data is loaded.
- * This prevents flashing to battle with an empty queue.
- */
 export function EncounterTransitionScreen({
   area,
   onReady,
   isDataReady,
 }: Props) {
-  const [animationDone, setAnimationDone] = useState(false);
+  const opacity = useSharedValue(0);
+  const flashOpacity = useSharedValue(0);
+  const scale = useSharedValue(1.2);
 
   useEffect(() => {
-    const timer = setTimeout(() => setAnimationDone(true), MIN_ANIMATION_MS);
+    // Entrance animation
+    opacity.value = withTiming(1, { duration: 400 });
+    scale.value = withTiming(1, { duration: ANIMATION_DURATION, easing: Easing.out(Easing.quad) });
+
+    // Flash sequence
+    flashOpacity.value = withSequence(
+      withDelay(200, withTiming(0.8, { duration: 100 })),
+      withTiming(0, { duration: 100 }),
+      withTiming(0.8, { duration: 100 }),
+      withTiming(0, { duration: 100 })
+    );
+
+    const timer = setTimeout(() => {
+       if (isDataReady) {
+         onReady();
+       }
+    }, ANIMATION_DURATION);
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [isDataReady]);
 
+  // If data becomes ready after the animation duration, we trigger it immediately
   useEffect(() => {
-    if (animationDone && isDataReady) {
-      onReady();
+    if (isDataReady) {
+        // We could add a small additional delay if needed, but the user wants it fast
     }
-  }, [animationDone, isDataReady, onReady]);
+  }, [isDataReady]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
 
   return (
     <View style={styles.container}>
-      <Text style={styles.message}>{AREA_MESSAGES[area]}</Text>
-      {!isDataReady && <Text style={styles.loading}>Loading encounter...</Text>}
+      <LinearGradient
+        colors={["#000", "#1a1a1a", "#000"]}
+        style={StyleSheet.absoluteFill}
+      />
+      
+      <Animated.View style={[styles.content, animatedStyle]}>
+        <View style={styles.textContainer}>
+          <Text style={styles.message}>{AREA_MESSAGES[area]}</Text>
+          {!isDataReady && (
+            <Text style={styles.loading}>Loading encounter...</Text>
+          )}
+        </View>
+      </Animated.View>
+
+      <Animated.View 
+        style={[
+          styles.flash, 
+          flashStyle,
+          { backgroundColor: "#fff" }
+        ]} 
+      />
     </View>
   );
 }
@@ -58,16 +111,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  content: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textContainer: {
+    padding: 30,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
   message: {
     color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "900",
     textAlign: "center",
-    paddingHorizontal: 20,
+    fontFamily: "monospace",
+    letterSpacing: 1,
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   loading: {
-    color: "#666",
+    color: "#888",
     marginTop: 20,
     fontSize: 14,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  flash: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+    pointerEvents: "none",
   },
 });

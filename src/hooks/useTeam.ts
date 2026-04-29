@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MOVES } from "../data/pokemon/moves/moves";
 import { supabase } from "../lib/supabase";
 import { Pokemon } from "../types/pokemon";
 
@@ -21,6 +22,8 @@ export function useTeam(userId: string) {
       .from("pokemon")
       .select(`*, pokemon_moves(*)`)
       .eq("user_id", userId)
+      .not("pk_order", "is", null)
+      .neq("pk_order", 0)
       .order("pk_order", { ascending: true })
       .order("created_at", { ascending: true });
 
@@ -46,11 +49,21 @@ export function useTeam(userId: string) {
       frontImage: p.pk_front_image,
       backImage: p.pk_back_image,
       cry: p.pk_cry,
-      moves: p.pokemon_moves.map((m: any) => ({
-        name: m.move_name,
-        power: m.move_power,
-        type: m.move_type,
-      })),
+      moves: p.pokemon_moves.map((m: any) => {
+        const detail = MOVES[m.move_name] || {};
+        return {
+          name: m.move_name,
+          power: detail.power ?? 0,
+          pp: m.move_pp ?? detail.pp ?? 0,
+          maxPp: detail.pp ?? 0,
+          type: detail.type || m.move_type,
+          damageClass: detail.damageClass,
+          accuracy: detail.accuracy,
+          statChanges: detail.statChanges || [],
+          description: detail.description,
+          priority: detail.priority,
+        };
+      }),
     }));
 
     setTeam(mapped);

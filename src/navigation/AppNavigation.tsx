@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 import AreaSelectScreen from "@/src/screens/AreaSelectScreen";
 import BattleScreen from "@/src/screens/BattleScreen";
+import CatchingScreen from "@/src/screens/CatchingScreen";
 import DashboardScreen from "@/src/screens/DashboardScreen";
 import { EncounterFlow } from "@/src/screens/EncounterFlow";
 import InventoryBagScreen from "@/src/screens/inventoryBagScreen";
@@ -133,6 +134,11 @@ export default function AppNavigator() {
               headerTintColor: "#F9FAFB",
               headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
             }}
+          />
+          <Stack.Screen
+            name="CatchingScreen"
+            component={CatchingScreen}
+            options={{ headerShown: false }}
           />
         </>
       )}

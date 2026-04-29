@@ -55,7 +55,21 @@ function mapEncounterToPokemon(
  * EncounterFlow orchestrates the full region → area → battle loop.
  */
 export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
-  const { region, area, player, onExit } = route.params;
+  const { region, area, player } = route.params;
+
+  // Clear catchPending after it's been "consumed" by the state
+  useEffect(() => {
+    if (route.params.catchPending) {
+      // If we are catching, we MUST be in the battle screen, not transition
+      setScreen("battle");
+      
+      const timer = setTimeout(() => {
+        navigation.setParams({ catchPending: undefined } as any);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [route.params.catchPending, navigation]);
+
   const [screen, setScreen] = useState<Screen>("transition");
   const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
     null,
@@ -112,8 +126,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const handleExit = useCallback(() => {
     reset();
-    onExit();
-  }, [reset, onExit]);
+    navigation.popToTop();
+  }, [reset, navigation]);
 
   if (screen === "transition") {
     return (
@@ -137,9 +151,14 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
-        onBagPress={() =>
-          navigation.navigate("InventoryBag", { pokemon: fullyLoadedEnemy })
+        onBagPress={(p, e) =>
+          navigation.navigate("InventoryBag", {
+            player: p,
+            pokemon: e,
+            fromScreen: "EncounterFlow",
+          } as any)
         }
+        catchPending={route.params.catchPending}
       />
     </View>
   );
