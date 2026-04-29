@@ -7,8 +7,7 @@ import Animated, {
   withTiming, 
   withSequence,
   withDelay,
-  Easing,
-  runOnJS
+  Easing
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
