@@ -54,12 +54,6 @@ export function EncounterTransitionScreen({
       withTiming(0, { duration: 100 })
     );
 
-    const checkReady = () => {
-      if (isDataReady) {
-        onReady();
-      }
-    };
-
     const timer = setTimeout(() => {
        if (isDataReady) {
          onReady();
