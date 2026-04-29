@@ -1,6 +1,6 @@
 import type { Area, Region } from "@/src/encounter/batchGenerator";
 import { useEffect } from "react";
-import { StyleSheet, Text, View, Dimensions } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -19,8 +19,6 @@ type Props = {
   /** True when useEncounterQueue has finished its initial load */
   isDataReady: boolean;
 };
-
-const { height } = Dimensions.get("window");
 
 const AREA_MESSAGES: Record<Area, string> = {
   cave: "A Pokémon lurks in the dark...",
