@@ -19,7 +19,7 @@ export default function ExpBar({ exp, maxExp }: Props) {
   }, [percent]);
 
   return (
-    <View style={{ marginTop: 3 }}>
+    <View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
         <Text style={{ fontSize: 7, fontWeight: "bold", color: "#a78bfa" }}>
           EXP

@@ -179,33 +179,35 @@ export default function PokemonCard({
 
         <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} hideRatio />
 
-        {/* EXP Bar — player side only */}
-        {isBack && exp !== undefined && maxExp !== undefined && (
-          <ExpBar exp={exp} maxExp={maxExp} />
-        )}
-
+        {/* Row: HP ratio + EXP bar (player) OR HP ratio + stat stages (enemy) */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: isBack ? "flex-start" : "flex-end",
-            marginTop: -2,
+            justifyContent: isBack ? "flex-end" : "flex-start",
+            marginTop: -3,
           }}
         >
-          {/* Player HP Ratio (Left) */}
+          {/* Player: HP ratio then EXP bar */}
           {isBack && (
-            <Text style={{ color: "white", fontSize: 10, marginRight: 8 }}>
+            <Text style={{ color: "white", fontSize: 10, marginRight: 6 }}>
               {Math.round(pokemon.hp)} / {pokemon.maxHp}
             </Text>
           )}
 
-          {/* Stat Stages Indicators */}
-          {stages && (
+          {isBack && exp !== undefined && maxExp !== undefined && (
+            <View style={{ flex: 1 }}>
+              <ExpBar exp={exp} maxExp={maxExp} />
+            </View>
+          )}
+
+          {/* Enemy: stat stages then HP ratio */}
+          {!isBack && stages && (
             <View
               style={{
-                flexDirection: "row",
+                flexDirection: "row-reverse",
                 flexWrap: "wrap",
-                justifyContent: isBack ? "flex-start" : "flex-end",
+                justifyContent: "flex-end",
                 flex: 1,
               }}
             >
@@ -217,13 +219,30 @@ export default function PokemonCard({
             </View>
           )}
 
-          {/* Enemy HP Ratio (Right) */}
           {!isBack && (
             <Text style={{ color: "white", fontSize: 10, marginLeft: 8 }}>
               {Math.round(pokemon.hp)} / {pokemon.maxHp}
             </Text>
           )}
         </View>
+
+        {/* Row: stat stages for player only — below the HP+EXP row */}
+        {isBack && stages && (
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: "flex-start",
+              marginTop: 2,
+            }}
+          >
+            <StatIndicator label="ATK" stage={stages.attack} />
+            <StatIndicator label="DEF" stage={stages.defense} />
+            <StatIndicator label="SP.A" stage={stages.specialAttack} />
+            <StatIndicator label="SP.D" stage={stages.specialDefense} />
+            <StatIndicator label="SPD" stage={stages.speed} />
+          </View>
+        )}
       </View>
 
       {/* Independent Animated Sprite */}

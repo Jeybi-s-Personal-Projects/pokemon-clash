@@ -438,6 +438,9 @@ export function Battle({
           isAttacking={state.attackingSide === "player"}
           isDancing={state.dancingSide === "player"}
           isHit={state.hitSide === "player"}
+          // TODO: replace with real exp values once EXP system is wired up
+          exp={65}
+          maxExp={100}
         />
       </View>
 
