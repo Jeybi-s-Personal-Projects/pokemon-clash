@@ -339,7 +339,6 @@ export function Battle({
     );
     await delay(1500);
 
-    let nextEnemyHp_enemyTurn = nextEnemyHp;
     let nextPlayerHp = state.player.hp;
     let nextEnemyStages_enemyTurn = nextEnemyStages;
     let nextPlayerStages_enemyTurn = nextPlayerStages;
