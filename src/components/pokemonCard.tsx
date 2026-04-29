@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
 import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
+import ExpBar from "./expBar";
 import HpBar from "./hpBar";
 
 type Props = {
@@ -12,6 +13,8 @@ type Props = {
   isDancing?: boolean;
   isHit?: boolean;
   stages?: StatStages;
+  exp?: number;
+  maxExp?: number;
 };
 
 const getStatMultiplier = (stage: number) => {
@@ -51,6 +54,8 @@ export default function PokemonCard({
   isDancing,
   isHit,
   stages,
+  exp,
+  maxExp,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
 
@@ -173,6 +178,11 @@ export default function PokemonCard({
         </View>
 
         <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} hideRatio />
+
+        {/* EXP Bar — player side only */}
+        {isBack && exp !== undefined && maxExp !== undefined && (
+          <ExpBar exp={exp} maxExp={maxExp} />
+        )}
 
         <View
           style={{
