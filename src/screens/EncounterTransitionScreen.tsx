@@ -20,7 +20,7 @@ type Props = {
   isDataReady: boolean;
 };
 
-const { width, height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 const AREA_MESSAGES: Record<Area, string> = {
   cave: "A Pokémon lurks in the dark...",
