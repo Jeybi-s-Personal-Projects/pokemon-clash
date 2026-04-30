@@ -336,13 +336,19 @@ export function Battle({
         attackingSide: null,
       }));
 
-      const damage = dealDamage(
+      const { damage, isCrit } = dealDamage(
         attacker,
         attackerStages,
         defender,
         defenderStages,
         move,
       );
+
+      if (isCrit) {
+        setCurrentMessage("A critical hit!");
+        await delay(1200);
+      }
+
       nextDefenderHp = Math.max(0, defender.hp - damage);
     }
 
@@ -764,7 +770,7 @@ export function Battle({
 // ─── BattleScreen Wrapper ──────────────────────────────────────────────────
 
 export default function BattleScreen({ route, navigation }: BattleScreenProps) {
-  const { player, enemy, onRun } = route.params;
+  const { player, enemy, onRun, isAutoBattle, onToggleAutoBattle } = route.params as any;
   const catchPending = route.params.catchPending;
   const onSave = (route.params as any).onSave;
 
@@ -799,6 +805,8 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
           fromScreen: "Battle",
         } as any)
       }
+      isAutoBattle={isAutoBattle}
+      onToggleAutoBattle={onToggleAutoBattle}
     />
   );
 }

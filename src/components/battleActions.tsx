@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     top: -24,
     left: 10,
     right: 10,
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     gap: 8,
     zIndex: 10,
   },
@@ -368,5 +368,6 @@ const styles = StyleSheet.create({
     fontFamily: "monospace",
     fontSize: 8,
     fontWeight: "bold",
+    color: "#6bdae2",
   },
 });
