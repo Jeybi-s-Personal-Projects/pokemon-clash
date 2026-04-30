@@ -19,7 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
-import { Pokemon } from "../types/pokemon";
+import { Pokemon, Move } from "../types/pokemon";
 import {
   calculateExpGain,
   checkLevelUp,
@@ -89,12 +89,72 @@ export function Battle({
   const [pendingCaughtId, setPendingCaughtId] = useState<string | null>(null);
   const [finalCatchResult, setFinalCatchResult] = useState<any>(null);
 
+  // Move Learning State
+  const [moveModalVisible, setMoveModalVisible] = useState(false);
+  const [pendingMove, setPendingMove] = useState<Move | null>(null);
+  const [resolveMoveLearning, setResolveMoveLearning] = useState<{
+    resolve: (updatedMoves: Move[]) => void;
+  } | null>(null);
+
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+
+  const promptMoveReplacement = (newMove: Move): Promise<Move[]> => {
+    return new Promise((resolve) => {
+      setPendingMove(newMove);
+      setMoveModalVisible(true);
+      setResolveMoveLearning({ resolve });
+    });
+  };
+
+  const handleMoveSelection = async (index: number | "skip") => {
+    if (!resolveMoveLearning || !pendingMove) return;
+
+    let updatedMoves = [...state.player.moves];
+
+    if (index !== "skip") {
+      const oldMove = updatedMoves[index];
+      updatedMoves[index] = pendingMove;
+
+      // Update Supabase
+      if (user && state.player.id) {
+        // First delete the old move
+        await supabase
+          .from("pokemon_moves")
+          .delete()
+          .eq("pokemon_id", state.player.id)
+          .eq("move_name", oldMove.name);
+
+        // Then insert the new move
+        await supabase.from("pokemon_moves").insert({
+          pokemon_id: state.player.id,
+          move_name: pendingMove.name,
+          move_power: pendingMove.power,
+          move_pp: pendingMove.pp,
+          move_type: pendingMove.type ?? "normal",
+          move_damageClass: pendingMove.damageClass,
+          move_accuracy: pendingMove.accuracy,
+          move_statChanges: JSON.stringify(pendingMove.statChanges),
+          move_description: pendingMove.description,
+          move_priority: pendingMove.priority,
+        });
+      }
+      
+      setCurrentMessage(`${state.player.name} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`);
+    } else {
+      setCurrentMessage(`${state.player.name} did not learn ${pendingMove.name.toUpperCase()}.`);
+    }
+
+    setMoveModalVisible(false);
+    await delay(1500);
+    resolveMoveLearning.resolve(updatedMoves);
+    setPendingMove(null);
+    setResolveMoveLearning(null);
+  };
 
   // ── Handle Catch from Bag ──
   useEffect(() => {
@@ -379,6 +439,15 @@ export function Battle({
                 move_description: move.description,
                 move_priority: move.priority,
               });
+            } else {
+              // Moveset is full, prompt for replacement
+              setCurrentMessage(`${state.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`);
+              await delay(1500);
+              setCurrentMessage(`But ${state.player.name.toUpperCase()} already knows 4 moves!`);
+              await delay(1500);
+              
+              const newMoveset = await promptMoveReplacement(move);
+              updatedPlayer.moves = newMoveset;
             }
           }
         }
@@ -610,6 +679,86 @@ export function Battle({
               style={{ marginTop: 16, alignItems: "center" }}
             >
               <Text style={{ color: "#9CA3AF" }}>Keep current team</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Move Learning Modal */}
+      <Modal visible={moveModalVisible} transparent animationType="slide">
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.8)",
+            padding: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#1F2937",
+              borderRadius: 15,
+              padding: 24,
+              width: "100%",
+              maxWidth: 400,
+              borderWidth: 1,
+              borderColor: "#374151",
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", textAlign: "center", marginBottom: 8 }}>
+              Learn a New Move?
+            </Text>
+            <Text style={{ color: "#9CA3AF", textAlign: "center", marginBottom: 20 }}>
+              {state.player.name.toUpperCase()} wants to learn {pendingMove?.name.toUpperCase()}. Select a move to replace:
+            </Text>
+
+            {/* New Move Info */}
+            <View style={{ backgroundColor: "#374151", padding: 12, borderRadius: 10, marginBottom: 24 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                <Text style={{ color: "#818cf8", fontWeight: "bold" }}>{pendingMove?.name.toUpperCase()}</Text>
+                <Text style={{ color: "#9CA3AF" }}>{pendingMove?.type?.toUpperCase()}</Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 12, marginBottom: 4 }}>
+                <Text style={{ color: "white", fontSize: 12 }}>PWR: {pendingMove?.power || "-"}</Text>
+                <Text style={{ color: "white", fontSize: 12 }}>ACC: {pendingMove?.accuracy || "-"}</Text>
+                <Text style={{ color: "white", fontSize: 12 }}>PP: {pendingMove?.pp}</Text>
+              </View>
+              <Text style={{ color: "#D1D5DB", fontSize: 12, fontStyle: "italic" }}>
+                {pendingMove?.description || "No description available."}
+              </Text>
+            </View>
+
+            {/* Current Moves */}
+            <View style={{ gap: 10 }}>
+              {state.player.moves.map((move, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => handleMoveSelection(index)}
+                  style={{
+                    backgroundColor: "#111827",
+                    padding: 14,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: "#4B5563",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold" }}>{move.name.toUpperCase()}</Text>
+                  <Text style={{ color: "#9CA3AF", fontSize: 12 }}>{move.type?.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => handleMoveSelection("skip")}
+              style={{ marginTop: 24, padding: 12, alignItems: "center" }}
+            >
+              <Text style={{ color: "#EF4444", fontWeight: "bold" }}>
+                STOP LEARNING {pendingMove?.name.toUpperCase()}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
