@@ -19,7 +19,12 @@ import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
-import { Pokemon } from "../types/pokemon";
+import { Pokemon, Move } from "../types/pokemon";
+import {
+  calculateExpGain,
+  checkLevelUp,
+  getExpForLevel,
+} from "../utils/experienceCalculator";
 
 import { setAudioModeAsync } from "expo-audio";
 
@@ -43,12 +48,13 @@ const initialStages: StatStages = {
 interface BattleProps {
   player: Pokemon;
   enemy: Pokemon;
-  onBattleEnd?: (winner: "player" | "enemy") => void;
-  onRun?: () => void;
+  onBattleEnd?: (winner: "player" | "enemy", finalPlayer: Pokemon) => void;
+  onRun?: (finalPlayer: Pokemon) => void;
   onBagPress?: (player: Pokemon, currentEnemy: Pokemon) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
 }
+
 
 export function Battle({
   player,
@@ -83,12 +89,72 @@ export function Battle({
   const [pendingCaughtId, setPendingCaughtId] = useState<string | null>(null);
   const [finalCatchResult, setFinalCatchResult] = useState<any>(null);
 
+  // Move Learning State
+  const [moveModalVisible, setMoveModalVisible] = useState(false);
+  const [pendingMove, setPendingMove] = useState<Move | null>(null);
+  const [resolveMoveLearning, setResolveMoveLearning] = useState<{
+    resolve: (updatedMoves: Move[]) => void;
+  } | null>(null);
+
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+
+  const promptMoveReplacement = (newMove: Move): Promise<Move[]> => {
+    return new Promise((resolve) => {
+      setPendingMove(newMove);
+      setMoveModalVisible(true);
+      setResolveMoveLearning({ resolve });
+    });
+  };
+
+  const handleMoveSelection = async (index: number | "skip") => {
+    if (!resolveMoveLearning || !pendingMove) return;
+
+    let updatedMoves = [...state.player.moves];
+
+    if (index !== "skip") {
+      const oldMove = updatedMoves[index];
+      updatedMoves[index] = pendingMove;
+
+      // Update Supabase
+      if (user && state.player.id) {
+        // First delete the old move
+        await supabase
+          .from("pokemon_moves")
+          .delete()
+          .eq("pokemon_id", state.player.id)
+          .eq("move_name", oldMove.name);
+
+        // Then insert the new move
+        await supabase.from("pokemon_moves").insert({
+          pokemon_id: state.player.id,
+          move_name: pendingMove.name,
+          move_power: pendingMove.power,
+          move_pp: pendingMove.pp,
+          move_type: pendingMove.type ?? "normal",
+          move_damageClass: pendingMove.damageClass,
+          move_accuracy: pendingMove.accuracy,
+          move_statChanges: JSON.stringify(pendingMove.statChanges),
+          move_description: pendingMove.description,
+          move_priority: pendingMove.priority,
+        });
+      }
+      
+      setCurrentMessage(`${state.player.name} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`);
+    } else {
+      setCurrentMessage(`${state.player.name} did not learn ${pendingMove.name.toUpperCase()}.`);
+    }
+
+    setMoveModalVisible(false);
+    await delay(1500);
+    resolveMoveLearning.resolve(updatedMoves);
+    setPendingMove(null);
+    setResolveMoveLearning(null);
+  };
 
   // ── Handle Catch from Bag ──
   useEffect(() => {
@@ -171,7 +237,7 @@ export function Battle({
       loadTeamForSwap(pendingCaughtId!);
     } else {
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player");
+      if (onBattleEnd) onBattleEnd("player", state.player);
     }
   };
 
@@ -180,7 +246,7 @@ export function Battle({
       await swapIntoTeam(pendingCaughtId!, replacedId);
       setSwapModalVisible(false);
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player");
+      if (onBattleEnd) onBattleEnd("player", state.player);
     } catch (e) {
       Alert.alert("Error", "Swap failed.");
     }
@@ -189,7 +255,7 @@ export function Battle({
   const handleDismissSwap = () => {
     setSwapModalVisible(false);
     if (onSave) onSave();
-    if (onBattleEnd) onBattleEnd("player");
+    if (onBattleEnd) onBattleEnd("player", state.player);
   };
 
   const applyStatChanges = (
@@ -324,7 +390,75 @@ export function Battle({
       setState({ ...afterPlayerAttack, winner: "player" });
       await delay(1200);
       setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
-      if (onBattleEnd) onBattleEnd("player");
+
+      const expGain = calculateExpGain(
+        state.enemy.level,
+        state.enemy.speciesId,
+        true,
+      );
+      await delay(1200);
+      setCurrentMessage(
+        `${state.player.name.toUpperCase()} gained ${expGain} EXP!`,
+      );
+
+      const levelUp = checkLevelUp(state.player, expGain);
+      let updatedPlayer = { ...state.player };
+
+      if (levelUp) {
+        await delay(1200);
+        setCurrentMessage(
+          `${state.player.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
+        );
+
+        updatedPlayer = {
+          ...state.player,
+          level: levelUp.newLevel,
+          experience: levelUp.totalExp,
+          ...levelUp.stats,
+        };
+
+        // Handle new moves
+        if (levelUp.newMoves.length > 0) {
+          for (const move of levelUp.newMoves) {
+            await delay(1200);
+            setCurrentMessage(
+              `${state.player.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+            );
+            if (updatedPlayer.moves.length < 4) {
+              updatedPlayer.moves = [...updatedPlayer.moves, move];
+              // Save move to DB
+              await supabase.from("pokemon_moves").insert({
+                pokemon_id: updatedPlayer.id,
+                move_name: move.name,
+                move_power: move.power,
+                move_pp: move.pp,
+                move_type: move.type ?? "normal",
+                move_damageClass: move.damageClass,
+                move_accuracy: move.accuracy,
+                move_statChanges: JSON.stringify(move.statChanges),
+                move_description: move.description,
+                move_priority: move.priority,
+              });
+            } else {
+              // Moveset is full, prompt for replacement
+              setCurrentMessage(`${state.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`);
+              await delay(1500);
+              setCurrentMessage(`But ${state.player.name.toUpperCase()} already knows 4 moves!`);
+              await delay(1500);
+              
+              const newMoveset = await promptMoveReplacement(move);
+              updatedPlayer.moves = newMoveset;
+            }
+          }
+        }
+      } else {
+        updatedPlayer.experience += expGain;
+      }
+
+      setState((s) => ({ ...s, player: updatedPlayer }));
+      
+      await delay(1500);
+      if (onBattleEnd) onBattleEnd("player", updatedPlayer);
       return;
     }
 
@@ -400,12 +534,17 @@ export function Battle({
     const winnerAfterEnemy = isGameOver(afterEnemyAttack);
     if (winnerAfterEnemy) {
       setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
-      setCurrentMessage(
-        winnerAfterEnemy === "enemy"
-          ? `${state.player.name.toUpperCase()} fainted!`
-          : `The wild ${state.enemy.name.toUpperCase()} fainted!`,
-      );
-      if (onBattleEnd) onBattleEnd(winnerAfterEnemy);
+      
+      if (winnerAfterEnemy === "enemy") {
+        setCurrentMessage(`${state.player.name.toUpperCase()} fainted!`);
+        setState(s => ({ ...s, hitSide: "player" })); // Reuse hitSide for a visual indicator or add fainted state
+        await delay(2000);
+      } else {
+        setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+        await delay(1500);
+      }
+      
+      if (onBattleEnd) onBattleEnd(winnerAfterEnemy, afterEnemyAttack.player);
     } else {
       setState(afterEnemyAttack);
       setCurrentMessage(null);
@@ -438,6 +577,23 @@ export function Battle({
           isAttacking={state.attackingSide === "player"}
           isDancing={state.dancingSide === "player"}
           isHit={state.hitSide === "player"}
+          exp={
+            state.player.experience -
+            getExpForLevel(
+              state.player.level,
+              state.player.growthRate || "medium-fast",
+            )
+          }
+          maxExp={
+            getExpForLevel(
+              state.player.level + 1,
+              state.player.growthRate || "medium-fast",
+            ) -
+            getExpForLevel(
+              state.player.level,
+              state.player.growthRate || "medium-fast",
+            )
+          }
         />
       </View>
 
@@ -446,7 +602,7 @@ export function Battle({
         enemyTypes={state.enemy.type}
         onMovePress={attack}
         onBagPress={() => onBagPress?.(state.player, state.enemy)}
-        onRun={onRun}
+        onRun={() => onRun?.(state.player)}
         disabled={
           !!state.attackingSide ||
           !!state.dancingSide ||
@@ -527,6 +683,86 @@ export function Battle({
           </View>
         </View>
       </Modal>
+
+      {/* Move Learning Modal */}
+      <Modal visible={moveModalVisible} transparent animationType="slide">
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.8)",
+            padding: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#1F2937",
+              borderRadius: 15,
+              padding: 24,
+              width: "100%",
+              maxWidth: 400,
+              borderWidth: 1,
+              borderColor: "#374151",
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", textAlign: "center", marginBottom: 8 }}>
+              Learn a New Move?
+            </Text>
+            <Text style={{ color: "#9CA3AF", textAlign: "center", marginBottom: 20 }}>
+              {state.player.name.toUpperCase()} wants to learn {pendingMove?.name.toUpperCase()}. Select a move to replace:
+            </Text>
+
+            {/* New Move Info */}
+            <View style={{ backgroundColor: "#374151", padding: 12, borderRadius: 10, marginBottom: 24 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                <Text style={{ color: "#818cf8", fontWeight: "bold" }}>{pendingMove?.name.toUpperCase()}</Text>
+                <Text style={{ color: "#9CA3AF" }}>{pendingMove?.type?.toUpperCase()}</Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 12, marginBottom: 4 }}>
+                <Text style={{ color: "white", fontSize: 12 }}>PWR: {pendingMove?.power || "-"}</Text>
+                <Text style={{ color: "white", fontSize: 12 }}>ACC: {pendingMove?.accuracy || "-"}</Text>
+                <Text style={{ color: "white", fontSize: 12 }}>PP: {pendingMove?.pp}</Text>
+              </View>
+              <Text style={{ color: "#D1D5DB", fontSize: 12, fontStyle: "italic" }}>
+                {pendingMove?.description || "No description available."}
+              </Text>
+            </View>
+
+            {/* Current Moves */}
+            <View style={{ gap: 10 }}>
+              {state.player.moves.map((move, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => handleMoveSelection(index)}
+                  style={{
+                    backgroundColor: "#111827",
+                    padding: 14,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: "#4B5563",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold" }}>{move.name.toUpperCase()}</Text>
+                  <Text style={{ color: "#9CA3AF", fontSize: 12 }}>{move.type?.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => handleMoveSelection("skip")}
+              style={{ marginTop: 24, padding: 12, alignItems: "center" }}
+            >
+              <Text style={{ color: "#EF4444", fontWeight: "bold" }}>
+                STOP LEARNING {pendingMove?.name.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -555,8 +791,13 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
       enemy={enemy}
       catchPending={catchPending}
       onSave={onSave}
-      onBattleEnd={() => setTimeout(() => navigation.goBack(), 2000)}
-      onRun={onRun}
+      onBattleEnd={(winner, finalPlayer) => {
+        setTimeout(() => navigation.goBack(), 2000);
+      }}
+      onRun={(finalPlayer) => {
+        if (onRun) onRun();
+        else navigation.goBack();
+      }}
       onBagPress={(p, e) =>
         navigation.navigate("InventoryBag", {
           player: p,

@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Image, Text, View } from "react-native";
 import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
+import ExpBar from "./expBar";
 import HpBar from "./hpBar";
 
 type Props = {
@@ -12,6 +13,8 @@ type Props = {
   isDancing?: boolean;
   isHit?: boolean;
   stages?: StatStages;
+  exp?: number;
+  maxExp?: number;
 };
 
 const getStatMultiplier = (stage: number) => {
@@ -51,6 +54,8 @@ export default function PokemonCard({
   isDancing,
   isHit,
   stages,
+  exp,
+  maxExp,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
 
@@ -132,6 +137,35 @@ export default function PokemonCard({
     }
   }, [isHit]);
 
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const isFading = useRef(false);
+
+  useEffect(() => {
+    if (pokemon.hp <= 0) {
+      if (isFading.current) return; // Prevent re-triggering mid-animation
+      isFading.current = true;
+
+      // Wait for HP bar drain animation to finish before fading
+      const delay = setTimeout(() => {
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }).start(() => {
+          // Animation fully complete — no state change here to avoid flash
+          isFading.current = false;
+        });
+      }, 600); // Adjust this to match your HP bar drain duration
+
+      return () => clearTimeout(delay);
+    } else {
+      // Only reset if not currently in a fading state
+      if (!isFading.current) {
+        opacityAnim.setValue(1);
+      }
+    }
+  }, [pokemon.hp]);
+
   return (
     <View
       style={{
@@ -174,28 +208,35 @@ export default function PokemonCard({
 
         <HpBar hp={pokemon.hp} maxHp={pokemon.maxHp} hideRatio />
 
+        {/* Row: HP ratio + EXP bar (player) OR HP ratio + stat stages (enemy) */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: isBack ? "flex-start" : "flex-end",
-            marginTop: -2,
+            justifyContent: isBack ? "flex-end" : "flex-start",
+            marginTop: -3,
           }}
         >
-          {/* Player HP Ratio (Left) */}
+          {/* Player: HP ratio then EXP bar */}
           {isBack && (
-            <Text style={{ color: "white", fontSize: 10, marginRight: 8 }}>
+            <Text style={{ color: "white", fontSize: 10, marginRight: 6 }}>
               {Math.round(pokemon.hp)} / {pokemon.maxHp}
             </Text>
           )}
 
-          {/* Stat Stages Indicators */}
-          {stages && (
+          {isBack && exp !== undefined && maxExp !== undefined && (
+            <View style={{ flex: 1 }}>
+              <ExpBar exp={exp} maxExp={maxExp} />
+            </View>
+          )}
+
+          {/* Enemy: stat stages then HP ratio */}
+          {!isBack && stages && (
             <View
               style={{
-                flexDirection: "row",
+                flexDirection: "row-reverse",
                 flexWrap: "wrap",
-                justifyContent: isBack ? "flex-start" : "flex-end",
+                justifyContent: "flex-end",
                 flex: 1,
               }}
             >
@@ -207,13 +248,30 @@ export default function PokemonCard({
             </View>
           )}
 
-          {/* Enemy HP Ratio (Right) */}
           {!isBack && (
             <Text style={{ color: "white", fontSize: 10, marginLeft: 8 }}>
               {Math.round(pokemon.hp)} / {pokemon.maxHp}
             </Text>
           )}
         </View>
+
+        {/* Row: stat stages for player only — below the HP+EXP row */}
+        {isBack && stages && (
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: "flex-start",
+              marginTop: 2,
+            }}
+          >
+            <StatIndicator label="ATK" stage={stages.attack} />
+            <StatIndicator label="DEF" stage={stages.defense} />
+            <StatIndicator label="SP.A" stage={stages.specialAttack} />
+            <StatIndicator label="SP.D" stage={stages.specialDefense} />
+            <StatIndicator label="SPD" stage={stages.speed} />
+          </View>
+        )}
       </View>
 
       {/* Independent Animated Sprite */}
@@ -223,6 +281,7 @@ export default function PokemonCard({
           position: "absolute",
           bottom: 0,
           [isBack ? "left" : "right"]: isBack ? 0 : 40,
+          opacity: opacityAnim,
         }}
       >
         <Image

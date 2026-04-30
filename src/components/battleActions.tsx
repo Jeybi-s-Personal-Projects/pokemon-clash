@@ -20,27 +20,27 @@ type Props = {
   currentLog?: string | null;
 };
 
-import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 const ACTION_CONFIG = [
   {
     label: "Fight",
-    icon: <FontAwesome5 name="fist-raised" size={14} color="white" />,
+    icon: <MaterialCommunityIcons name="sword-cross" size={18} color="white" />,
     accent: "#E2C96B",
   },
   {
     label: "Pokémon",
-    icon: <Ionicons name="ellipse" size={14} color="white" />,
+    icon: <MaterialCommunityIcons name="pokeball" size={18} color="white" />,
     accent: "#EF5350",
   },
   {
     label: "Bag",
-    icon: <FontAwesome5 name="shopping-bag" size={14} color="white" />,
+    icon: <MaterialCommunityIcons name="bag-personal" size={18} color="white" />,
     accent: "#66BB6A",
   },
   {
     label: "Run",
-    icon: <FontAwesome5 name="running" size={14} color="white" />,
+    icon: <MaterialCommunityIcons name="run" size={18} color="white" />,
     accent: "#4FC3F7",
   },
 ];
@@ -120,7 +120,7 @@ export default function BattleActions({
   }
 
   return (
-    <View style={[styles.container, isExpanded && { height: 300 }]}>
+    <View style={[styles.container]}>
       {/* Expand Toggle */}
       <TouchableOpacity
         activeOpacity={0.8}
@@ -177,7 +177,7 @@ export default function BattleActions({
           disabled={disabled}
           variant="back"
           width="98%"
-          height={isExpanded ? "20%" : "18%"}
+          height="18%"
         />
       </View>
     </View>

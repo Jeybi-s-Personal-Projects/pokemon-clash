@@ -41,7 +41,7 @@ export type RootStackParamList = {
     region?: Region;
     area?: Area;
   };
-  PokemonStats: { pokemon: Pokemon };
+  PokemonStats: { pokemon: Pokemon; onRelease?: () => void };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
   InventoryBag: {
     pokemon: Pokemon;

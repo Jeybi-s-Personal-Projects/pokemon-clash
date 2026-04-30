@@ -3,6 +3,7 @@ import { fetchMoveBatch } from "../encounter/fetchWithCache";
 import { Pokemon } from "../types/pokemon";
 import { selectMoves } from "../utils/moveSelector";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
+import { getExpForLevel, getGrowthRate } from "../utils/experienceCalculator";
 
 export async function getPokemon(
   name: string,
@@ -20,6 +21,8 @@ export async function getPokemon(
   const moves = moveDetails.map((detail) => ({
     name: detail.name,
     power: detail.power ?? 0,
+    pp: detail.pp ?? 0,
+    maxPp: detail.pp ?? 0,
     damageClass: detail.damageClass,
     type: detail.type,
     accuracy: detail.accuracy,
@@ -34,9 +37,16 @@ export async function getPokemon(
   const baseHp = getBaseStat("hp");
   const hp = calculateHp(baseHp, level);
 
+  const speciesId = data.id;
+  const growthRate = getGrowthRate(speciesId);
+  const experience = getExpForLevel(level, growthRate);
+
   return {
+    speciesId,
     name: data.name,
     level,
+    experience,
+    growthRate,
     type: data.types.map((t: any) => t.type.name),
     hp,
     maxHp: hp,
