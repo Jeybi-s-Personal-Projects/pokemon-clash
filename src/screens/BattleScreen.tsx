@@ -25,11 +25,14 @@ import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
 import { Move, Pokemon } from "../types/pokemon";
+import { fetchPokemon } from "../api/pokeApi";
 import {
   calculateExpGain,
   checkLevelUp,
   getExpForLevel,
 } from "../utils/experienceCalculator";
+import { checkEvolution } from "../utils/evolutionChecker";
+import { calculateHp, calculateStat } from "../utils/statCalculator";
 
 import { setAudioModeAsync } from "expo-audio";
 
@@ -103,6 +106,17 @@ export function Battle({
   const [pendingMove, setPendingMove] = useState<Move | null>(null);
   const [resolveMoveLearning, setResolveMoveLearning] = useState<{
     resolve: (updatedMoves: Move[]) => void;
+  } | null>(null);
+
+  // Evolution State
+  const [evolutionVisible, setEvolutionVisible] = useState(false);
+  const [evolvingPokemon, setEvolvingPokemon] = useState<{
+    oldName: string;
+    newSpeciesId: number;
+    newName: string;
+  } | null>(null);
+  const [resolveEvolution, setResolveEvolution] = useState<{
+    resolve: () => void;
   } | null>(null);
 
   useEffect(() => {
@@ -604,7 +618,7 @@ export function Battle({
                 speed: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'speed').base_stat, updatedPlayer.level),
               };
               
-              setCurrentMessage(`${updatedPlayer.name.toUpperCase()} evolved into ${updatedPlayer.name.toUpperCase()}!`);
+              setCurrentMessage(`${evolvingPokemon?.oldName.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`);
               await delay(2000);
               if (onToggleAutoBattle) onToggleAutoBattle(false);
             }
@@ -934,7 +948,7 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
         setTimeout(() => navigation.goBack(), 2000);
       }}
       onRun={(finalPlayer) => {
-        if (onRun) onRun();
+        if (onRun) onRun(finalPlayer);
         else navigation.goBack();
       }}
       onBagPress={(p, e) =>

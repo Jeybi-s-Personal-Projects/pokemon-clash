@@ -128,6 +128,12 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       const { error } = await supabase
         .from("pokemon")
         .update({
+          pk_species_id: finalPlayer.speciesId,
+          pk_name: finalPlayer.name,
+          pk_types: finalPlayer.type,
+          pk_front_image: finalPlayer.frontImage,
+          pk_back_image: finalPlayer.backImage,
+          pk_cry: finalPlayer.cry,
           pk_level: finalPlayer.level,
           pk_experience: finalPlayer.experience,
           pk_hp: finalPlayer.maxHp, // Always save with full health as requested
