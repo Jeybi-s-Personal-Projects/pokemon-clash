@@ -70,6 +70,7 @@ function mapEncounterToPokemon(
 export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const { region, area, player: initialPlayer } = route.params;
   const [localPlayer, setLocalPlayer] = useState<Pokemon>(initialPlayer);
+  const [isAutoBattle, setIsAutoBattle] = useState(false);
 
   // Clear catchPending after it's been "consumed" by the state
   useEffect(() => {

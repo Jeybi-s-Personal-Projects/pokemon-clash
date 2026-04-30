@@ -175,21 +175,46 @@ export default function BattleActions({
 
   return (
     <View style={[styles.container]}>
-      {/* Expand Toggle */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsExpanded(!isExpanded)}
-        style={styles.expandToggle}
-      >
-        <Ionicons
-          name={isExpanded ? "chevron-down" : "chevron-up"}
-          size={18}
-          color="#6bdae2"
-        />
-        <Text style={styles.expandToggleText}>
-          {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
-        </Text>
-      </TouchableOpacity>
+      {/* Action Toggles */}
+      <View style={styles.toggleRow}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
+          style={[
+            styles.toggleButton,
+            { borderColor: isAutoBattle ? "#facc15" : "#6bdae233" },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
+            size={16}
+            color={isAutoBattle ? "#facc15" : "#6bdae2"}
+          />
+          <Text
+            style={[
+              styles.toggleText,
+              { color: isAutoBattle ? "#facc15" : "#6bdae2" },
+            ]}
+          >
+            {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setIsExpanded(!isExpanded)}
+          style={styles.toggleButton}
+        >
+          <Ionicons
+            name={isExpanded ? "chevron-down" : "chevron-up"}
+            size={16}
+            color="#6bdae2"
+          />
+          <Text style={styles.toggleText}>
+            {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.header}>
         <Text style={styles.headerText}>▶ CHOOSE A</Text>
@@ -350,6 +375,33 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   expandToggleText: {
+    color: "#6bdae2",
+    fontFamily: "monospace",
+    fontSize: 8,
+    fontWeight: "bold",
+  },
+  toggleRow: {
+    flexDirection: "row",
+    position: "absolute",
+    top: -24,
+    right: 10,
+    gap: 8,
+    zIndex: 10,
+  },
+  toggleButton: {
+    height: 24,
+    paddingHorizontal: 10,
+    backgroundColor: "#080B14",
+    borderWidth: 1.5,
+    borderColor: "#6bdae233",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  toggleText: {
     color: "#6bdae2",
     fontFamily: "monospace",
     fontSize: 8,

@@ -68,7 +68,9 @@ export function Battle({
   onBagPress,
   catchPending,
   onSave,
-}: BattleProps) {
+  isAutoBattle = false,
+  onToggleAutoBattle,
+}: BattleProps & { isAutoBattle?: boolean; onToggleAutoBattle?: (v: boolean) => void }) {
   const { user } = useAuth();
   const [state, setState] = useState<BattleState>({
     player,
@@ -600,6 +602,8 @@ export function Battle({
           !!currentMessage
         }
         currentLog={currentMessage}
+        isAutoBattle={isAutoBattle}
+        onToggleAutoBattle={onToggleAutoBattle}
       />
 
       <StatusModal
