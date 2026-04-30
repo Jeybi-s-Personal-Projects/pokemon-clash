@@ -704,6 +704,15 @@ export function Battle({
         onClose={handleStatusClose}
       />
 
+      <EvolutionModal
+        visible={evolutionVisible}
+        pokemon={evolvingPokemon}
+        onClose={() => {
+          setEvolutionVisible(false);
+          resolveEvolution?.resolve();
+        }}
+      />
+
       <Modal visible={swapModalVisible} transparent animationType="slide">
         <View
           style={{

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { Pokemon } from "../types/pokemon";
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Animated } from "react-native";
 
 type Props = {
   visible: boolean;
@@ -20,7 +19,6 @@ export default function EvolutionModal({ visible, pokemon, onClose }: Props) {
             {pokemon.oldName.toUpperCase()} is evolving...
           </Text>
           <View style={styles.spriteContainer}>
-            {/* Simple placeholder for sprite, in a real app this would be the actual sprites */}
             <View style={styles.spritePlaceholder} />
           </View>
           <TouchableOpacity onPress={onClose} style={styles.button}>
@@ -56,6 +54,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     marginBottom: 20,
+    textAlign: "center",
   },
   spriteContainer: {
     width: 150,
