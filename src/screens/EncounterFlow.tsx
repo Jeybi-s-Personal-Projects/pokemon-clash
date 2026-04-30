@@ -109,6 +109,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
       async function loadMoveDetails() {
         try {
+          if (!encounter) return;
           const moveDetails = await fetchMoveBatch(encounter.moves);
           const enemy = mapEncounterToPokemon(encounter, moveDetails);
           setFullyLoadedEnemy(enemy);

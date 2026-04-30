@@ -140,6 +140,22 @@ export default function BattleActions({
   return (
     <View style={currentLog ? styles.containerText : styles.container}>
       <View style={styles.toggleRow}>
+        {menu === "fight" && !currentLog && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setIsExpanded(!isExpanded)}
+            style={styles.toggleButton}
+          >
+            <Ionicons
+              name={isExpanded ? "chevron-down" : "chevron-up"}
+              size={16}
+              color="#6bdae2"
+            />
+            <Text style={styles.toggleText}>
+              {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
@@ -162,23 +178,6 @@ export default function BattleActions({
             {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
           </Text>
         </TouchableOpacity>
-
-        {menu === "fight" && !currentLog && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsExpanded(!isExpanded)}
-            style={styles.toggleButton}
-          >
-            <Ionicons
-              name={isExpanded ? "chevron-down" : "chevron-up"}
-              size={16}
-              color="#6bdae2"
-            />
-            <Text style={styles.toggleText}>
-              {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {currentLog ? (
