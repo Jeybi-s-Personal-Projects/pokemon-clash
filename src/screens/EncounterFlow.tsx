@@ -96,20 +96,21 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   // Fetch move details when a new encounter arrives
   useEffect(() => {
-    if (currentEncounter && isReady) {
+    const encounter = currentEncounter;
+    if (encounter && isReady) {
       // Prevent re-fetching if we already have the fully loaded enemy for THIS encounter
       if (
         fullyLoadedEnemy &&
-        fullyLoadedEnemy.id === currentEncounter.id &&
-        fullyLoadedEnemy.level === currentEncounter.level
+        fullyLoadedEnemy.id === encounter.id &&
+        fullyLoadedEnemy.level === encounter.level
       ) {
         return;
       }
 
       async function loadMoveDetails() {
         try {
-          const moveDetails = await fetchMoveBatch(currentEncounter.moves);
-          const enemy = mapEncounterToPokemon(currentEncounter, moveDetails);
+          const moveDetails = await fetchMoveBatch(encounter.moves);
+          const enemy = mapEncounterToPokemon(encounter, moveDetails);
           setFullyLoadedEnemy(enemy);
         } catch (error) {
           console.error("[EncounterFlow] Failed to load move details:", error);
@@ -212,6 +213,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
           } as any)
         }
         catchPending={route.params.catchPending}
+        isAutoBattle={isAutoBattle}
+        onToggleAutoBattle={setIsAutoBattle}
       />
     </View>
   );
