@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DashboardHeader from "../components/dashboardHeader";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { useTeam } from "../hooks/useTeam";
@@ -50,116 +51,38 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       </View>
     );
 
+  // ...
   return (
     <LinearGradient
       colors={["#030712", "#171127", "#201952"]}
       style={styles.container}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-
-          <Text style={styles.username}>
-            {user?.name ?? "Trainer"}{" "}
-            <Text style={{ color: "#818CF8" }}>✦</Text>
-          </Text>
-
-          <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
-            Ready for your next battle?
-          </Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <View style={styles.trainerBadge}>
-            <Ionicons name="ribbon" size={14} color="#818CF8" />
-            <Text style={styles.trainerBadgeText}>Elite Trainer</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={() => {
-              playClick();
-              signOut();
-              navigation.replace("Login");
-            }}
-          >
-            <Ionicons name="log-out-outline" size={16} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Stats Bar */}
-      <View style={styles.statsBar}>
-        <StatItem
-          icon="account-group"
-          label="Team"
-          value={`${team.length}/6`}
-          color="#818CF8"
-        />
-
-        <View style={styles.statDivider} />
-
-        <StatItem
-          icon="trending-up"
-          label="Top Lv."
-          value={team.length > 0 ? Math.max(...team.map((p) => p.level)) : 0}
-          color="#34d399"
-        />
-
-        <View style={styles.statDivider} />
-
-        <StatItem
-          icon="shape-outline"
-          label="Types"
-          value={[...new Set(team.flatMap((p) => p.type))].length}
-          color="#fbbf24"
-        />
-      </View>
-
-      {/* Section Header */}
-      <View style={styles.sectionHeader}>
-        {/* Title */}
-        <View>
-          <Text style={styles.sectionTitle}>Pokémon Team</Text>
-          <Text style={styles.sectionSub}>Manage your active party</Text>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.headerActions}>
-          <IconButton
-            icon="refresh"
-            color="#9CA3AF"
-            onPress={() => {
-              playClick();
-              refetch();
-            }}
-          />
-
-          <IconButton
-            icon="pencil"
-            color="#818CF8"
-            onPress={() => {
-              playClick();
-              navigation.navigate("PokemonTeam", {
-                initialTeam: team,
-                onSave: refetch,
-              });
-            }}
-          />
-
-          <IconButton
-            icon="view-grid"
-            color="#34d399"
-            onPress={() => {
-              playClick();
-              navigation.navigate("PokemonList", {
-                mode: "view",
-              });
-            }}
-          />
-        </View>
-      </View>
+      <DashboardHeader
+        userName={user?.name ?? "Trainer"}
+        team={team}
+        onLogout={() => {
+          playClick();
+          signOut();
+          navigation.replace("Login");
+        }}
+        onRefresh={() => {
+          playClick();
+          refetch();
+        }}
+        onEditTeam={() => {
+          playClick();
+          navigation.navigate("PokemonTeam", {
+            initialTeam: team,
+            onSave: refetch,
+          });
+        }}
+        onViewList={() => {
+          playClick();
+          navigation.navigate("PokemonList", {
+            mode: "view",
+          });
+        }}
+      />
 
       {team.length === 0 ? (
         <View style={styles.emptyContainer}>
