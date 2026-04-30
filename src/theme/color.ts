@@ -7,6 +7,9 @@ export const colors = {
   bgButton: "#0A0D2E",
   bgButtonSecondary: "#0e156cca",
 
+  neonBlue: "#6bdae2",
+  neonOrange: "#facc15",
+
   border: "#374151",
 
   textPrimary: "#F9FAFB",

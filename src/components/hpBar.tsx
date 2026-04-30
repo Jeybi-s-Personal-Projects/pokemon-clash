@@ -32,6 +32,8 @@ export default function HpBar({ hp, maxHp, hideRatio }: Props) {
           backgroundColor: "#ccc",
           borderRadius: 5,
           overflow: "hidden",
+          borderWidth: 0.5,
+          borderColor: "#ffff",
         }}
       >
         <Animated.View

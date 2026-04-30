@@ -80,11 +80,22 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
           ]}
         />
       </View>
-      <Text style={styles.hpText}>
-        HP {pokemon.hp}/{pokemon.maxHp}
-      </Text>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexDirection: "row",
+          width: "80%",
+          marginTop: 10,
+        }}
+      >
+        <Text style={styles.hpText}>
+          HP {pokemon.hp}/{pokemon.maxHp}
+        </Text>
 
-      <Text style={styles.level}>Lv. {pokemon.level}</Text>
+        <Text style={styles.level}>Lv. {pokemon.level}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -102,10 +113,10 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    top: 10,
+    width: 130,
+    height: 90,
+    borderRadius: 10,
+    top: "20%",
     alignSelf: "center",
   },
   typeBadges: {
@@ -137,15 +148,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   hpBarBg: {
-    width: "100%",
-    height: 4,
+    width: "90%",
+    height: 6,
     backgroundColor: "#374151",
     borderRadius: 2,
+    borderWidth: 1,
+    borderColor: "#ffffff7d",
     marginTop: 8,
     overflow: "hidden",
   },
   hpBarFill: {
-    height: 4,
+    height: 6,
     borderRadius: 2,
   },
   hpText: {

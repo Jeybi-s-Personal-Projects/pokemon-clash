@@ -1,3 +1,4 @@
+import { colors } from "@/src/theme/color";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -138,7 +139,12 @@ export default function BattleActions({
   }, [currentLog]);
 
   return (
-    <View style={currentLog ? styles.containerText : styles.container}>
+    <View
+      style={[
+        currentLog ? styles.containerText : styles.container,
+        { borderTopColor: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+      ]}
+    >
       <View style={styles.toggleRow}>
         {menu === "fight" && !currentLog && (
           <TouchableOpacity
@@ -149,7 +155,7 @@ export default function BattleActions({
             <Ionicons
               name={isExpanded ? "chevron-down" : "chevron-up"}
               size={16}
-              color="#6bdae2"
+              color={colors.neonBlue}
             />
             <Text style={styles.toggleText}>
               {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
@@ -161,18 +167,18 @@ export default function BattleActions({
           onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
           style={[
             styles.toggleButton,
-            { borderColor: isAutoBattle ? "#facc15" : "#6bdae233" },
+            { borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue },
           ]}
         >
           <MaterialCommunityIcons
             name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
             size={16}
-            color={isAutoBattle ? "#facc15" : "#6bdae2"}
+            color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
           />
           <Text
             style={[
               styles.toggleText,
-              { color: isAutoBattle ? "#facc15" : "#6bdae2" },
+              { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
             ]}
           >
             {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
@@ -181,7 +187,7 @@ export default function BattleActions({
       </View>
 
       {currentLog ? (
-        <View style={styles.logBox}>
+        <View style={[styles.logBox]}>
           <Text style={styles.logText}>{currentLog}</Text>
           <Animated.View
             style={[styles.cursorArrow, { opacity: cursorOpacity }]}
@@ -195,7 +201,7 @@ export default function BattleActions({
           </View>
           <View style={styles.grid}>
             {ACTION_CONFIG.map((action) => (
-            <BattleButton
+              <BattleButton
                 key={action.label}
                 label={action.label}
                 icon={action.icon}
@@ -265,15 +271,13 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 280,
     backgroundColor: "#080B14",
-    borderTopWidth: 2,
-    borderTopColor: "#6bdae233",
+    borderTopWidth: 1,
   },
   containerText: {
     width: "100%",
     height: 280,
     backgroundColor: "#080B14",
     borderTopWidth: 2,
-    borderTopColor: "#6bdae233",
     paddingBottom: 36,
   },
   header: {
@@ -311,8 +315,8 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 28,
     borderWidth: 2,
-    borderColor: "#6bdae244",
     borderRadius: 4,
+    borderColor: colors.neonBlue,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
@@ -336,7 +340,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 7,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#6bdae2",
+    borderTopColor: colors.neonBlue,
     alignSelf: "flex-end",
   },
   toggleRow: {
@@ -353,8 +357,8 @@ const styles = StyleSheet.create({
     height: 24,
     paddingHorizontal: 10,
     backgroundColor: "#080B14",
-    borderWidth: 1.5,
-    borderColor: "#6bdae233",
+    borderWidth: 1,
+    borderColor: colors.neonBlue,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     flexDirection: "row",
@@ -363,7 +367,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleText: {
-    color: "#6bdae2",
+    color: colors.neonBlue,
     fontFamily: "monospace",
     fontSize: 8,
     fontWeight: "bold",
