@@ -137,6 +137,35 @@ export default function PokemonCard({
     }
   }, [isHit]);
 
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const isFading = useRef(false);
+
+  useEffect(() => {
+    if (pokemon.hp <= 0) {
+      if (isFading.current) return; // Prevent re-triggering mid-animation
+      isFading.current = true;
+
+      // Wait for HP bar drain animation to finish before fading
+      const delay = setTimeout(() => {
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }).start(() => {
+          // Animation fully complete — no state change here to avoid flash
+          isFading.current = false;
+        });
+      }, 600); // Adjust this to match your HP bar drain duration
+
+      return () => clearTimeout(delay);
+    } else {
+      // Only reset if not currently in a fading state
+      if (!isFading.current) {
+        opacityAnim.setValue(1);
+      }
+    }
+  }, [pokemon.hp]);
+
   return (
     <View
       style={{
@@ -252,6 +281,7 @@ export default function PokemonCard({
           position: "absolute",
           bottom: 0,
           [isBack ? "left" : "right"]: isBack ? 0 : 40,
+          opacity: opacityAnim,
         }}
       >
         <Image

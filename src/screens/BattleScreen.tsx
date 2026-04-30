@@ -465,11 +465,16 @@ export function Battle({
     const winnerAfterEnemy = isGameOver(afterEnemyAttack);
     if (winnerAfterEnemy) {
       setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
-      setCurrentMessage(
-        winnerAfterEnemy === "enemy"
-          ? `${state.player.name.toUpperCase()} fainted!`
-          : `The wild ${state.enemy.name.toUpperCase()} fainted!`,
-      );
+      
+      if (winnerAfterEnemy === "enemy") {
+        setCurrentMessage(`${state.player.name.toUpperCase()} fainted!`);
+        setState(s => ({ ...s, hitSide: "player" })); // Reuse hitSide for a visual indicator or add fainted state
+        await delay(2000);
+      } else {
+        setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+        await delay(1500);
+      }
+      
       if (onBattleEnd) onBattleEnd(winnerAfterEnemy, afterEnemyAttack.player);
     } else {
       setState(afterEnemyAttack);
