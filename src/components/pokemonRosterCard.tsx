@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Pokemon } from "../types/pokemon";
 
@@ -35,10 +36,22 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={onPress}
-      style={[styles.card, { borderColor: accentColor + "55" }]}
+      style={[styles.card, { borderColor: accentColor + "95" }]}
     >
       {/* Glow background circle */}
       <View style={[styles.glow, { backgroundColor: accentColor + "22" }]} />
+
+      <View
+        style={{
+          opacity: 0.2,
+          width: 80,
+          height: 80,
+          position: "absolute",
+          top: "20%",
+        }}
+      >
+        <MaterialCommunityIcons name="pokeball" size={80} color="#9aa4b2" />
+      </View>
 
       {/* Type badges */}
       <View style={styles.typeBadges}>
@@ -87,12 +100,27 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
           justifyContent: "space-between",
           flexDirection: "row",
           width: "80%",
-          marginTop: 10,
+          marginTop: 6,
         }}
       >
-        <Text style={styles.hpText}>
-          HP {pokemon.hp}/{pokemon.maxHp}
-        </Text>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            gap: 2,
+            justifyContent: "flex-start",
+            alignContent: "center",
+          }}
+        >
+          <MaterialCommunityIcons
+            name="heart-outline"
+            size={12}
+            color="#a81b1b"
+          />
+          <Text style={styles.hpText}>
+            HP {pokemon.hp}/{pokemon.maxHp}
+          </Text>
+        </View>
 
         <Text style={styles.level}>Lv. {pokemon.level}</Text>
       </View>
@@ -102,18 +130,19 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
+    width: 160, // Added a specific width
+    height: 200,
     backgroundColor: "#111827",
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    padding: 8,
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
   },
   glow: {
     position: "absolute",
-    width: 130,
+    width: "90%",
     height: 90,
     borderRadius: 10,
     top: "20%",
@@ -121,40 +150,38 @@ const styles = StyleSheet.create({
   },
   typeBadges: {
     flexDirection: "row",
-    gap: 4,
-    alignSelf: "flex-start",
-    marginBottom: 4,
+    gap: 8,
+    alignSelf: "center",
   },
   badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "bold",
     textTransform: "uppercase",
   },
   sprite: {
-    width: 90,
-    height: 90,
+    width: 100,
+    height: 100,
   },
   name: {
     color: "white",
     fontWeight: "bold",
-    fontSize: 14,
+    fontSize: 20,
     textTransform: "capitalize",
-    marginTop: 4,
     textAlign: "center",
   },
   hpBarBg: {
+    marginTop: 5,
     width: "90%",
     height: 6,
     backgroundColor: "#374151",
     borderRadius: 2,
     borderWidth: 1,
     borderColor: "#ffffff7d",
-    marginTop: 8,
     overflow: "hidden",
   },
   hpBarFill: {
@@ -164,11 +191,9 @@ const styles = StyleSheet.create({
   hpText: {
     color: "#9CA3AF",
     fontSize: 10,
-    marginTop: 3,
   },
   level: {
     color: "#6B7280",
     fontSize: 11,
-    marginTop: 2,
   },
 });

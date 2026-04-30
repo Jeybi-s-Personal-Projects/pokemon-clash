@@ -1,14 +1,18 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import React from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
@@ -21,6 +25,15 @@ const clickSound = require("../../assets/sounds/buttonClick.mp3");
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, signOut } = useAuth();
   const { team, loading, refetch } = useTeam(user?.id ?? "");
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const screenWidth = Dimensions.get("window").width;
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    setActiveIndex(index);
+  };
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -38,7 +51,10 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     );
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#030712", "#171127", "#201952"]}
+      style={styles.container}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -166,22 +182,45 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={team}
-          keyExtractor={(_, i) => i.toString()}
-          numColumns={2}
-          contentContainerStyle={{ padding: 12, gap: 12 }}
-          columnWrapperStyle={{ gap: 12 }}
-          renderItem={({ item }) => (
-            <PokemonCard
-              pokemon={item}
-              onPress={() => {
-                playClick();
-                navigation.navigate("PokemonStats", { pokemon: item, onRelease: refetch });
-              }}
-            />
-          )}
-        />
+        <View style={styles.carouselContainer}>
+          <FlatList
+            data={team}
+            keyExtractor={(_, i) => i.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={styles.carouselContent}
+            renderItem={({ item }) => (
+              <View style={styles.cardWrapper}>
+                <PokemonCard
+                  pokemon={item}
+                  onPress={() => {
+                    playClick();
+                    navigation.navigate("PokemonStats", {
+                      pokemon: item,
+                      onRelease: refetch,
+                    });
+                  }}
+                />
+              </View>
+            )}
+          />
+          <View style={styles.pagination}>
+            {team.slice(0, 3).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor:
+                      i === activeIndex % 3 ? "#818CF8" : "#374151",
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
       )}
       <View style={styles.actionDock}>
         <TouchableOpacity
@@ -201,7 +240,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           <Text style={styles.actionText}>Explore</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -241,8 +280,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#111827",
     marginHorizontal: 16,
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 8,
+    paddingVertical: 8,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: "#1F2937",
@@ -314,15 +353,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   refreshButtonText: { color: "#9CA3AF", fontWeight: "bold", fontSize: 16 },
-  battleContainer: {
-    padding: 16,
-    paddingBottom: 70,
-    backgroundColor: "#030712",
-    borderTopWidth: 1,
-    borderTopColor: "#1F2937",
-    flexDirection: "row",
-    gap: 10,
-  },
 
   logoutButton: {
     backgroundColor: "#1F2937",
@@ -344,6 +374,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 16,
     paddingBottom: 70,
+    marginBottom: "auto",
     backgroundColor: "#030712",
     borderTopWidth: 1,
     borderTopColor: "#1F2937",
@@ -416,6 +447,35 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+  },
+  carouselContainer: {
+    height: 250,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderTopColor: colors.subtleNeonBlue,
+    borderBottomColor: colors.subtleNeonBlue,
+    backgroundColor: "#060606a8",
+  },
+  carouselContent: {
+    alignItems: "center",
+  },
+  cardWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
 function IconButton({
