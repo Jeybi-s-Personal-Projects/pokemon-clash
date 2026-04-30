@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -9,7 +10,6 @@ import {
 import { getTypeMultiplier, PokemonType } from "../battle/typeChart";
 import { Move } from "../types/pokemon";
 import BattleButton from "./battleButton";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 type Props = {
   moves: Move[];
@@ -37,7 +37,9 @@ const ACTION_CONFIG = [
   },
   {
     label: "Bag",
-    icon: <MaterialCommunityIcons name="bag-personal" size={18} color="white" />,
+    icon: (
+      <MaterialCommunityIcons name="bag-personal" size={18} color="white" />
+    ),
     accent: "#66BB6A",
   },
   {
@@ -78,7 +80,7 @@ export default function BattleActions({
         moveType,
         enemyTypes as PokemonType[],
       );
-      
+
       // STAB: Same Type Attack Bonus (1.5x)
       const stab = playerTypes.includes(moveType) ? 1.5 : 1;
       const effectivePower = power * (effectiveness ?? 1) * stab;
@@ -135,19 +137,8 @@ export default function BattleActions({
     }
   }, [currentLog]);
 
-  if (currentLog) {
-    return (
-      <View style={styles.containerText}>
-        <View style={styles.logBox}>
-          <Text style={styles.logText}>{currentLog}</Text>
-          <Animated.View style={[styles.cursorArrow, { opacity: cursorOpacity }]} />
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
+    <View style={currentLog ? styles.containerText : styles.container}>
       <View style={styles.toggleRow}>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -162,12 +153,17 @@ export default function BattleActions({
             size={16}
             color={isAutoBattle ? "#facc15" : "#6bdae2"}
           />
-          <Text style={[styles.toggleText, { color: isAutoBattle ? "#facc15" : "#6bdae2" }]}>
+          <Text
+            style={[
+              styles.toggleText,
+              { color: isAutoBattle ? "#facc15" : "#6bdae2" },
+            ]}
+          >
             {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
           </Text>
         </TouchableOpacity>
 
-        {menu === "fight" && (
+        {menu === "fight" && !currentLog && (
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setIsExpanded(!isExpanded)}
@@ -185,7 +181,14 @@ export default function BattleActions({
         )}
       </View>
 
-      {menu === "main" ? (
+      {currentLog ? (
+        <View style={styles.logBox}>
+          <Text style={styles.logText}>{currentLog}</Text>
+          <Animated.View
+            style={[styles.cursorArrow, { opacity: cursorOpacity }]}
+          />
+        </View>
+      ) : menu === "main" ? (
         <>
           <View style={styles.header}>
             <Text style={styles.headerText}>▶ WHAT WILL</Text>
@@ -217,7 +220,10 @@ export default function BattleActions({
           <View style={[styles.grid]}>
             {moves.map((move, i) => {
               const moveType = (move.type || "normal") as PokemonType;
-              const effectiveness = getTypeMultiplier(moveType, enemyTypes as PokemonType[]);
+              const effectiveness = getTypeMultiplier(
+                moveType,
+                enemyTypes as PokemonType[],
+              );
               const power = move.power ?? 0;
               const effectivePower = power * (effectiveness ?? 1);
 
