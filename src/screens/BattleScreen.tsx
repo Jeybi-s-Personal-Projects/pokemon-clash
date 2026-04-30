@@ -48,12 +48,13 @@ const initialStages: StatStages = {
 interface BattleProps {
   player: Pokemon;
   enemy: Pokemon;
-  onBattleEnd?: (winner: "player" | "enemy") => void;
-  onRun?: () => void;
+  onBattleEnd?: (winner: "player" | "enemy", finalPlayer: Pokemon) => void;
+  onRun?: (finalPlayer: Pokemon) => void;
   onBagPress?: (player: Pokemon, currentEnemy: Pokemon) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
 }
+
 
 export function Battle({
   player,
@@ -94,30 +95,6 @@ export function Battle({
 
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
-
-  const syncPokemonProgress = async (updatedPokemon: Pokemon) => {
-    if (!user || !updatedPokemon.id) return;
-    try {
-      const { error } = await supabase
-        .from("pokemon")
-        .update({
-          pk_level: updatedPokemon.level,
-          pk_experience: updatedPokemon.experience,
-          pk_hp: updatedPokemon.hp,
-          pk_max_hp: updatedPokemon.maxHp,
-          pk_attack: updatedPokemon.attack,
-          pk_defense: updatedPokemon.defense,
-          pk_special_attack: updatedPokemon.specialAttack,
-          pk_special_defense: updatedPokemon.specialDefense,
-          pk_speed: updatedPokemon.speed,
-        })
-        .eq("id", updatedPokemon.id);
-
-      if (error) console.error("Error syncing pokemon progress:", error);
-    } catch (e) {
-      console.error("Failed to sync pokemon progress", e);
-    }
-  };
 
   // ── Handle Catch from Bag ──
   useEffect(() => {
@@ -200,7 +177,7 @@ export function Battle({
       loadTeamForSwap(pendingCaughtId!);
     } else {
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player");
+      if (onBattleEnd) onBattleEnd("player", state.player);
     }
   };
 
@@ -209,7 +186,7 @@ export function Battle({
       await swapIntoTeam(pendingCaughtId!, replacedId);
       setSwapModalVisible(false);
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player");
+      if (onBattleEnd) onBattleEnd("player", state.player);
     } catch (e) {
       Alert.alert("Error", "Swap failed.");
     }
@@ -218,7 +195,7 @@ export function Battle({
   const handleDismissSwap = () => {
     setSwapModalVisible(false);
     if (onSave) onSave();
-    if (onBattleEnd) onBattleEnd("player");
+    if (onBattleEnd) onBattleEnd("player", state.player);
   };
 
   const applyStatChanges = (
@@ -410,10 +387,9 @@ export function Battle({
       }
 
       setState((s) => ({ ...s, player: updatedPlayer }));
-      await syncPokemonProgress(updatedPlayer);
-
+      
       await delay(1500);
-      if (onBattleEnd) onBattleEnd("player");
+      if (onBattleEnd) onBattleEnd("player", updatedPlayer);
       return;
     }
 
@@ -494,7 +470,7 @@ export function Battle({
           ? `${state.player.name.toUpperCase()} fainted!`
           : `The wild ${state.enemy.name.toUpperCase()} fainted!`,
       );
-      if (onBattleEnd) onBattleEnd(winnerAfterEnemy);
+      if (onBattleEnd) onBattleEnd(winnerAfterEnemy, afterEnemyAttack.player);
     } else {
       setState(afterEnemyAttack);
       setCurrentMessage(null);
@@ -552,7 +528,7 @@ export function Battle({
         enemyTypes={state.enemy.type}
         onMovePress={attack}
         onBagPress={() => onBagPress?.(state.player, state.enemy)}
-        onRun={onRun}
+        onRun={() => onRun?.(state.player)}
         disabled={
           !!state.attackingSide ||
           !!state.dancingSide ||
@@ -661,8 +637,13 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
       enemy={enemy}
       catchPending={catchPending}
       onSave={onSave}
-      onBattleEnd={() => setTimeout(() => navigation.goBack(), 2000)}
-      onRun={onRun}
+      onBattleEnd={(winner, finalPlayer) => {
+        setTimeout(() => navigation.goBack(), 2000);
+      }}
+      onRun={(finalPlayer) => {
+        if (onRun) onRun();
+        else navigation.goBack();
+      }}
       onBagPress={(p, e) =>
         navigation.navigate("InventoryBag", {
           player: p,

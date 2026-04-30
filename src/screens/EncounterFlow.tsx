@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { fetchMoveBatch } from "../encounter/fetchWithCache";
 import { EncounterPokemon, MoveDetail } from "../encounter/types";
 import { useEncounterQueue } from "../hooks/useEncounterQueue";
+import { supabase } from "../lib/supabase";
 import { EncounterFlowProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
@@ -67,7 +68,8 @@ function mapEncounterToPokemon(
  * EncounterFlow orchestrates the full region → area → battle loop.
  */
 export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
-  const { region, area, player } = route.params;
+  const { region, area, player: initialPlayer } = route.params;
+  const [localPlayer, setLocalPlayer] = useState<Pokemon>(initialPlayer);
 
   // Clear catchPending after it's been "consumed" by the state
   useEffect(() => {
@@ -120,26 +122,64 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
     }
   }, [currentEncounter, isReady]);
 
+  const syncAllProgress = async (finalPlayer: Pokemon) => {
+    if (!finalPlayer.id) return;
+    try {
+      const { error } = await supabase
+        .from("pokemon")
+        .update({
+          pk_level: finalPlayer.level,
+          pk_experience: finalPlayer.experience,
+          pk_hp: finalPlayer.maxHp, // Always save with full health as requested
+          pk_max_hp: finalPlayer.maxHp,
+          pk_attack: finalPlayer.attack,
+          pk_defense: finalPlayer.defense,
+          pk_special_attack: finalPlayer.specialAttack,
+          pk_special_defense: finalPlayer.specialDefense,
+          pk_speed: finalPlayer.speed,
+        })
+        .eq("id", finalPlayer.id);
+
+      if (error) console.error("Error syncing progress:", error);
+    } catch (e) {
+      console.error("Failed to sync progress", e);
+    }
+  };
+
   const handleTransitionReady = useCallback(() => {
     setScreen("battle");
   }, []);
 
   const handleBattleEnd = useCallback(
-    (winner: "player" | "enemy") => {
+    async (winner: "player" | "enemy", updatedPlayer: Pokemon) => {
       console.log(`Battle ended. Winner: ${winner}`);
-      // Wait a bit then go back to transition for the next encounter
+      setLocalPlayer(updatedPlayer);
+
+      if (winner === "enemy") {
+        // Player fainted - Save progress and exit to Dashboard
+        await syncAllProgress(updatedPlayer);
+        reset();
+        navigation.navigate("Dashboard" as any);
+        return;
+      }
+
+      // Victory - Wait a bit then go back to transition for the next encounter
       setTimeout(() => {
         advance();
         setScreen("transition");
       }, 2000);
     },
-    [advance],
+    [advance, navigation, reset],
   );
 
-  const handleExit = useCallback(() => {
-    reset();
-    navigation.popToTop();
-  }, [reset, navigation]);
+  const handleExit = useCallback(
+    async (finalPlayer: Pokemon) => {
+      await syncAllProgress(finalPlayer);
+      reset();
+      navigation.navigate("Dashboard" as any);
+    },
+    [reset, navigation],
+  );
 
   if (screen === "transition") {
     return (
@@ -159,7 +199,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   return (
     <View style={styles.container}>
       <Battle
-        player={player}
+        player={localPlayer}
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
