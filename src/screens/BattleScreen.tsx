@@ -11,6 +11,7 @@ import {
 import BattleActions from "../components/battleActions";
 import PokemonCard from "../components/pokemonCard";
 import StatusModal from "../components/statusModal";
+import EvolutionModal from "../components/evolutionModal";
 
 import { getRandomMove } from "../battle/ai";
 import {
@@ -566,6 +567,46 @@ export function Battle({
                   updatedPlayer.moves = newMoveset;
                 }
               }
+            }
+
+            // Check for Evolution
+            const evolutionTargetId = checkEvolution(updatedPlayer, updatedPlayer.level);
+            if (evolutionTargetId) {
+              setCurrentMessage(`What? ${updatedPlayer.name.toUpperCase()} is evolving!`);
+              await delay(2000);
+              
+              const evolve = new Promise<void>((resolve) => {
+                setEvolvingPokemon({
+                  oldName: updatedPlayer.name,
+                  newSpeciesId: evolutionTargetId,
+                  newName: "???", 
+                });
+                setEvolutionVisible(true);
+                setResolveEvolution({ resolve });
+              });
+
+              await evolve;
+              
+              const newSpeciesData = await fetchPokemon(evolutionTargetId.toString());
+              updatedPlayer = {
+                ...updatedPlayer,
+                speciesId: evolutionTargetId,
+                name: newSpeciesData.name,
+                type: newSpeciesData.types.map((t: any) => t.type.name),
+                frontImage: newSpeciesData.sprites.other.showdown.front_default,
+                backImage: newSpeciesData.sprites.other.showdown.back_default,
+                hp: calculateHp(newSpeciesData.stats.find((s: any) => s.stat.name === 'hp').base_stat, updatedPlayer.level),
+                maxHp: calculateHp(newSpeciesData.stats.find((s: any) => s.stat.name === 'hp').base_stat, updatedPlayer.level),
+                attack: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'attack').base_stat, updatedPlayer.level),
+                defense: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'defense').base_stat, updatedPlayer.level),
+                specialAttack: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'special-attack').base_stat, updatedPlayer.level),
+                specialDefense: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'special-defense').base_stat, updatedPlayer.level),
+                speed: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'speed').base_stat, updatedPlayer.level),
+              };
+              
+              setCurrentMessage(`${updatedPlayer.name.toUpperCase()} evolved into ${updatedPlayer.name.toUpperCase()}!`);
+              await delay(2000);
+              if (onToggleAutoBattle) onToggleAutoBattle(false);
             }
           } else {
             updatedPlayer.experience += expGain;
