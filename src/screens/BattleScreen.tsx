@@ -13,7 +13,11 @@ import PokemonCard from "../components/pokemonCard";
 import StatusModal from "../components/statusModal";
 
 import { getRandomMove } from "../battle/ai";
-import { dealDamage, isGameOver } from "../battle/battleEngine";
+import {
+  dealDamage,
+  determineTurnOrder,
+  isGameOver,
+} from "../battle/battleEngine";
 import { BattleState, StatStages } from "../battle/battleTypes";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
@@ -296,7 +300,102 @@ export function Battle({
     return { newStages, logs };
   };
 
-  const attack = async (index: number) => {
+  const executeMove = async (
+    move: Move,
+    attackerSide: "player" | "enemy",
+    currentState: BattleState,
+  ): Promise<BattleState> => {
+    const isPlayerAttacking = attackerSide === "player";
+    const attacker = isPlayerAttacking ? currentState.player : currentState.enemy;
+    const defender = isPlayerAttacking ? currentState.enemy : currentState.player;
+    const attackerStages = isPlayerAttacking ? currentState.playerStages : currentState.enemyStages;
+    const defenderStages = isPlayerAttacking ? currentState.enemyStages : currentState.playerStages;
+
+    // 1. Message
+    const prefix = isPlayerAttacking ? "" : "Wild ";
+    setCurrentMessage(`${prefix}${attacker.name.toUpperCase()} used ${move.name.toUpperCase()}!`);
+    await delay(1500);
+
+    let nextPlayerStages = currentState.playerStages;
+    let nextEnemyStages = currentState.enemyStages;
+    let nextDefenderHp = defender.hp;
+
+    // 2. Animations & Damage
+    if (move.power === 0) {
+      setState((s) => ({ ...s, dancingSide: attackerSide }));
+      await delay(600);
+      setState((s) => ({ ...s, dancingSide: null }));
+    } else {
+      setState((s) => ({ ...s, attackingSide: attackerSide }));
+      await delay(400);
+      setState((s) => ({
+        ...s,
+        hitSide: isPlayerAttacking ? "enemy" : "player",
+        attackingSide: null,
+      }));
+
+      const damage = dealDamage(
+        attacker,
+        attackerStages,
+        defender,
+        defenderStages,
+        move,
+      );
+      nextDefenderHp = Math.max(0, defender.hp - damage);
+    }
+
+    // 3. Stat Changes
+    let moveLogs: string[] = [];
+    if (move.statChanges && move.statChanges.length > 0) {
+      const isDebuff = move.statChanges[0].change < 0;
+      // In Pokémon, most moves target the opponent for debuffs and self for buffs.
+      // We'll assume the target based on the change for now (simplification)
+      const targetSide = isDebuff ? (isPlayerAttacking ? "enemy" : "player") : attackerSide;
+      const targetName = targetSide === "player" ? currentState.player.name : currentState.enemy.name;
+      const targetStages = targetSide === "player" ? nextPlayerStages : nextEnemyStages;
+
+      const { newStages, logs } = applyStatChanges(
+        targetStages,
+        move.statChanges,
+        targetName,
+      );
+
+      if (targetSide === "player") {
+        nextPlayerStages = newStages;
+      } else {
+        nextEnemyStages = newStages;
+      }
+      moveLogs = logs;
+    }
+
+    const updatedState: BattleState = {
+      ...currentState,
+      player: {
+        ...currentState.player,
+        hp: isPlayerAttacking ? currentState.player.hp : nextDefenderHp,
+      },
+      enemy: {
+        ...currentState.enemy,
+        hp: isPlayerAttacking ? nextDefenderHp : currentState.enemy.hp,
+      },
+      playerStages: nextPlayerStages,
+      enemyStages: nextEnemyStages,
+      hitSide: null,
+      attackingSide: null,
+      dancingSide: null,
+    };
+
+    // Show stat change logs if any
+    for (const log of moveLogs) {
+      setCurrentMessage(null);
+      setCurrentMessage(log);
+      await delay(1200);
+    }
+
+    return updatedState;
+  };
+
+  const attack = async (playerMoveIndex: number) => {
     if (
       state.attackingSide ||
       state.dancingSide ||
@@ -305,250 +404,141 @@ export function Battle({
     )
       return;
 
-    // 1. Player Turn
-    const move = state.player.moves[index];
-
-    // Check PP
-    if (move.pp <= 0) {
+    // 1. Setup
+    const playerMove = state.player.moves[playerMoveIndex];
+    if (playerMove.pp <= 0) {
       setCurrentMessage("No PP left for this move!");
       await delay(1000);
       setCurrentMessage(null);
       return;
     }
 
-    // Decrement PP locally
-    const updatedMoves = [...state.player.moves];
-    updatedMoves[index] = { ...move, pp: move.pp - 1 };
+    const enemyMove = getRandomMove(state.enemy);
 
-    setCurrentMessage(`${state.player.name} used ${move.name.toUpperCase()}!`);
-    await delay(1500);
+    // 2. Determine Order
+    const firstSide = determineTurnOrder(
+      state.player,
+      state.playerStages,
+      playerMove,
+      state.enemy,
+      state.enemyStages,
+      enemyMove,
+    );
+    const secondSide = firstSide === "player" ? "enemy" : "player";
 
-    let nextPlayerStages = state.playerStages;
-    let nextEnemyStages = state.enemyStages;
-    let nextEnemyHp = state.enemy.hp;
+    const turns = [
+      { side: firstSide, move: firstSide === "player" ? playerMove : enemyMove },
+      { side: secondSide, move: secondSide === "player" ? playerMove : enemyMove },
+    ];
 
-    // ... damage logic ...
+    let currentState = { ...state };
 
-    // Handle Animations & Damage
-    if (move.power === 0) {
-      setState((s) => ({ ...s, dancingSide: "player" }));
-      await delay(600);
-      setState((s) => ({ ...s, dancingSide: null }));
-    } else {
-      setState((s) => ({ ...s, attackingSide: "player" }));
-      await delay(400);
-      setState((s) => ({ ...s, hitSide: "enemy", attackingSide: null }));
+    // 3. Execute Turns
+    for (const turn of turns) {
+      // Check if someone fainted before their turn
+      if (currentState.player.hp <= 0 || currentState.enemy.hp <= 0) break;
 
-      const damage = dealDamage(
-        state.player,
-        state.playerStages,
-        state.enemy,
-        state.enemyStages,
-        move,
-      );
-      nextEnemyHp = Math.max(0, state.enemy.hp - damage);
-    }
-
-    // Apply Stat Changes if any
-    if (move.statChanges && move.statChanges.length > 0) {
-      const isDebuff = move.statChanges[0].change < 0;
-      const targetStages = isDebuff ? state.enemyStages : state.playerStages;
-      const targetName = isDebuff ? state.enemy.name : state.player.name;
-
-      const { newStages, logs } = applyStatChanges(
-        targetStages,
-        move.statChanges,
-        targetName,
-      );
-
-      if (isDebuff) {
-        nextEnemyStages = newStages;
-      } else {
-        nextPlayerStages = newStages;
+      // Handle PP decrement for player
+      if (turn.side === "player") {
+        const updatedMoves = [...currentState.player.moves];
+        const moveIdx = currentState.player.moves.findIndex(m => m.name === turn.move.name);
+        if (moveIdx !== -1) {
+          updatedMoves[moveIdx] = { ...turn.move, pp: turn.move.pp - 1 };
+          currentState.player.moves = updatedMoves;
+        }
       }
 
-      for (const log of logs) {
-        setCurrentMessage(null);
-        setCurrentMessage(log);
-        await delay(1200);
-      }
-    }
+      currentState = await executeMove(turn.move, turn.side as "player" | "enemy", currentState);
+      setState(currentState);
 
-    const afterPlayerAttack: BattleState = {
-      ...state,
-      player: { ...state.player, moves: updatedMoves },
-      enemy: { ...state.enemy, hp: nextEnemyHp },
-      playerStages: nextPlayerStages,
-      enemyStages: nextEnemyStages,
-      hitSide: null,
-      attackingSide: null,
-      dancingSide: null,
-    };
+      const winner = isGameOver(currentState);
+      if (winner) {
+        setState({ ...currentState, winner });
+        
+        if (winner === "player") {
+          await delay(1200);
+          setCurrentMessage(`The wild ${currentState.enemy.name.toUpperCase()} fainted!`);
 
-    const winnerAfterPlayer = isGameOver(afterPlayerAttack);
-    if (winnerAfterPlayer === "player") {
-      setState({ ...afterPlayerAttack, winner: "player" });
-      await delay(1200);
-      setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
+          const expGain = calculateExpGain(
+            currentState.enemy.level,
+            currentState.enemy.speciesId,
+            true,
+          );
+          await delay(1200);
+          setCurrentMessage(
+            `${currentState.player.name.toUpperCase()} gained ${expGain} EXP!`,
+          );
 
-      const expGain = calculateExpGain(
-        state.enemy.level,
-        state.enemy.speciesId,
-        true,
-      );
-      await delay(1200);
-      setCurrentMessage(
-        `${state.player.name.toUpperCase()} gained ${expGain} EXP!`,
-      );
+          const levelUp = checkLevelUp(currentState.player, expGain);
+          let updatedPlayer = { ...currentState.player };
 
-      const levelUp = checkLevelUp(state.player, expGain);
-      let updatedPlayer = { ...state.player };
-
-      if (levelUp) {
-        await delay(1200);
-        setCurrentMessage(
-          `${state.player.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
-        );
-
-        updatedPlayer = {
-          ...state.player,
-          level: levelUp.newLevel,
-          experience: levelUp.totalExp,
-          ...levelUp.stats,
-        };
-
-        // Handle new moves
-        if (levelUp.newMoves.length > 0) {
-          for (const move of levelUp.newMoves) {
+          if (levelUp) {
             await delay(1200);
             setCurrentMessage(
-              `${state.player.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+              `${currentState.player.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
             );
-            if (updatedPlayer.moves.length < 4) {
-              updatedPlayer.moves = [...updatedPlayer.moves, move];
-              // Save move to DB
-              await supabase.from("pokemon_moves").insert({
-                pokemon_id: updatedPlayer.id,
-                move_name: move.name,
-                move_power: move.power,
-                move_pp: move.pp,
-                move_type: move.type ?? "normal",
-                move_damageClass: move.damageClass,
-                move_accuracy: move.accuracy,
-                move_statChanges: JSON.stringify(move.statChanges),
-                move_description: move.description,
-                move_priority: move.priority,
-              });
-            } else {
-              // Moveset is full, prompt for replacement
-              setCurrentMessage(`${state.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`);
-              await delay(1500);
-              setCurrentMessage(`But ${state.player.name.toUpperCase()} already knows 4 moves!`);
-              await delay(1500);
-              
-              const newMoveset = await promptMoveReplacement(move);
-              updatedPlayer.moves = newMoveset;
+
+            updatedPlayer = {
+              ...currentState.player,
+              level: levelUp.newLevel,
+              experience: levelUp.totalExp,
+              ...levelUp.stats,
+            };
+
+            // Handle new moves
+            if (levelUp.newMoves.length > 0) {
+              for (const move of levelUp.newMoves) {
+                await delay(1200);
+                setCurrentMessage(
+                  `${currentState.player.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+                );
+                if (updatedPlayer.moves.length < 4) {
+                  updatedPlayer.moves = [...updatedPlayer.moves, move];
+                  // Save move to DB
+                  await supabase.from("pokemon_moves").insert({
+                    pokemon_id: updatedPlayer.id,
+                    move_name: move.name,
+                    move_power: move.power,
+                    move_pp: move.pp,
+                    move_type: move.type ?? "normal",
+                    move_damageClass: move.damageClass,
+                    move_accuracy: move.accuracy,
+                    move_statChanges: JSON.stringify(move.statChanges),
+                    move_description: move.description,
+                    move_priority: move.priority,
+                  });
+                } else {
+                  setCurrentMessage(`${currentState.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`);
+                  await delay(1500);
+                  setCurrentMessage(`But ${currentState.player.name.toUpperCase()} already knows 4 moves!`);
+                  await delay(1500);
+                  
+                  const newMoveset = await promptMoveReplacement(move);
+                  updatedPlayer.moves = newMoveset;
+                }
+              }
             }
+          } else {
+            updatedPlayer.experience += expGain;
           }
+
+          setState((s) => ({ ...s, player: updatedPlayer }));
+          await delay(1500);
+          if (onBattleEnd) onBattleEnd("player", updatedPlayer);
+        } else {
+          // Enemy won
+          setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
+          setState(s => ({ ...s, hitSide: "player" }));
+          await delay(2000);
+          if (onBattleEnd) onBattleEnd("enemy", currentState.player);
         }
-      } else {
-        updatedPlayer.experience += expGain;
+        return; // End the attack sequence
       }
 
-      setState((s) => ({ ...s, player: updatedPlayer }));
-      
-      await delay(1500);
-      if (onBattleEnd) onBattleEnd("player", updatedPlayer);
-      return;
+      await delay(1000); // Small pause between turns
     }
 
-    setState(afterPlayerAttack);
-    await delay(1000);
-
-    // 2. Enemy Turn
-    const enemyMove = getRandomMove(state.enemy);
-    setState((s) => ({ ...s, turn: "enemy" }));
-    setCurrentMessage(
-      `Wild ${state.enemy.name.toUpperCase()} used ${enemyMove.name.toUpperCase()}!`,
-    );
-    await delay(1500);
-
-    let nextPlayerHp = state.player.hp;
-    let nextEnemyStages_enemyTurn = nextEnemyStages;
-    let nextPlayerStages_enemyTurn = nextPlayerStages;
-
-    if (enemyMove.power === 0) {
-      setState((s) => ({ ...s, dancingSide: "enemy" }));
-      await delay(600);
-      setState((s) => ({ ...s, dancingSide: null }));
-    } else {
-      setState((s) => ({ ...s, attackingSide: "enemy" }));
-      await delay(400);
-      setState((s) => ({ ...s, hitSide: "player", attackingSide: null }));
-
-      const damage = dealDamage(
-        state.enemy,
-        nextEnemyStages,
-        state.player,
-        nextPlayerStages,
-        enemyMove,
-      );
-      nextPlayerHp = Math.max(0, state.player.hp - damage);
-    }
-
-    if (enemyMove.statChanges && enemyMove.statChanges.length > 0) {
-      const isDebuff = enemyMove.statChanges[0].change < 0;
-      const targetStages = isDebuff ? nextPlayerStages : nextEnemyStages;
-      const targetName = isDebuff ? state.player.name : state.enemy.name;
-
-      const { newStages, logs } = applyStatChanges(
-        targetStages,
-        enemyMove.statChanges,
-        targetName,
-      );
-
-      if (isDebuff) {
-        nextPlayerStages_enemyTurn = newStages;
-      } else {
-        nextEnemyStages_enemyTurn = newStages;
-      }
-
-      for (const log of logs) {
-        setCurrentMessage(null);
-        setCurrentMessage(log);
-        await delay(1200);
-      }
-    }
-
-    const afterEnemyAttack: BattleState = {
-      ...afterPlayerAttack,
-      player: { ...afterPlayerAttack.player, hp: nextPlayerHp },
-      enemyStages: nextEnemyStages_enemyTurn,
-      playerStages: nextPlayerStages_enemyTurn,
-      turn: "player",
-      hitSide: null,
-      attackingSide: null,
-      dancingSide: null,
-    };
-
-    const winnerAfterEnemy = isGameOver(afterEnemyAttack);
-    if (winnerAfterEnemy) {
-      setState({ ...afterEnemyAttack, winner: winnerAfterEnemy });
-      
-      if (winnerAfterEnemy === "enemy") {
-        setCurrentMessage(`${state.player.name.toUpperCase()} fainted!`);
-        setState(s => ({ ...s, hitSide: "player" })); // Reuse hitSide for a visual indicator or add fainted state
-        await delay(2000);
-      } else {
-        setCurrentMessage(`The wild ${state.enemy.name.toUpperCase()} fainted!`);
-        await delay(1500);
-      }
-      
-      if (onBattleEnd) onBattleEnd(winnerAfterEnemy, afterEnemyAttack.player);
-    } else {
-      setState(afterEnemyAttack);
-      setCurrentMessage(null);
-    }
+    setCurrentMessage(null);
   };
 
   return (

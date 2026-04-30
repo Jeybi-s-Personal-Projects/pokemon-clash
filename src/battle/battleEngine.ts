@@ -81,3 +81,9 @@ export function determineTurnOrder(
   // Speed tie, random flip
   return Math.random() < 0.5 ? "player" : "enemy";
 }
+
+export function isGameOver(state: BattleState) {
+  if (state.enemy.hp <= 0) return "player";
+  if (state.player.hp <= 0) return "enemy";
+  return null;
+}
