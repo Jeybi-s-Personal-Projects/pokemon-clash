@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Animated } from "react-native";
-
 type Props = {
   visible: boolean;
-  pokemon: { oldName: string; newSpeciesId: number; newName: string } | null;
+  pokemon: { oldName: string; newSpeciesId: number; newName: string; spriteUrl: string } | null;
   onClose: () => void;
 };
+
+import { Image } from "react-native";
 
 export default function EvolutionModal({ visible, pokemon, onClose }: Props) {
   if (!pokemon) return null;
@@ -19,7 +20,10 @@ export default function EvolutionModal({ visible, pokemon, onClose }: Props) {
             {pokemon.oldName.toUpperCase()} is evolving...
           </Text>
           <View style={styles.spriteContainer}>
-            <View style={styles.spritePlaceholder} />
+            <Image
+              source={{ uri: pokemon.spriteUrl }}
+              style={styles.sprite}
+            />
           </View>
           <TouchableOpacity onPress={onClose} style={styles.button}>
             <Text style={styles.buttonText}>Continue</Text>
@@ -63,11 +67,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  spritePlaceholder: {
-    width: 100,
-    height: 100,
-    backgroundColor: "#374151",
-    borderRadius: 50,
+  sprite: {
+    width: 120,
+    height: 120,
+    resizeMode: "contain",
   },
   button: {
     backgroundColor: "#818cf8",
@@ -80,3 +83,4 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+

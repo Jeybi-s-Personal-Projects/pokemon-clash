@@ -157,7 +157,11 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   }, []);
 
   const handleBattleEnd = useCallback(
-    async (winner: "player" | "enemy", updatedPlayer: Pokemon) => {
+    async (
+      winner: "player" | "enemy",
+      updatedPlayer: Pokemon,
+      didEvolve: boolean = false,
+    ) => {
       setLocalPlayer(updatedPlayer);
 
       if (winner === "enemy") {
@@ -168,7 +172,12 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         return;
       }
 
-      // Victory - Wait a bit then go back to transition for the next encounter
+      // Victory - Only save if evolved to preserve rare progress
+      if (didEvolve) {
+        await syncAllProgress(updatedPlayer);
+      }
+
+      // Wait a bit then go back to transition for the next encounter
       setTimeout(() => {
         advance();
         setScreen("transition");

@@ -9,10 +9,11 @@ import {
 } from "react-native";
 
 import BattleActions from "../components/battleActions";
+import EvolutionModal from "../components/evolutionModal";
 import PokemonCard from "../components/pokemonCard";
 import StatusModal from "../components/statusModal";
-import EvolutionModal from "../components/evolutionModal";
 
+import { fetchPokemon } from "../api/pokeApi";
 import { getRandomMove } from "../battle/ai";
 import {
   dealDamage,
@@ -25,13 +26,12 @@ import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
 import { Move, Pokemon } from "../types/pokemon";
-import { fetchPokemon } from "../api/pokeApi";
+import { checkEvolution } from "../utils/evolutionChecker";
 import {
   calculateExpGain,
   checkLevelUp,
   getExpForLevel,
 } from "../utils/experienceCalculator";
-import { checkEvolution } from "../utils/evolutionChecker";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 
 import { setAudioModeAsync } from "expo-audio";
@@ -56,7 +56,7 @@ const initialStages: StatStages = {
 interface BattleProps {
   player: Pokemon;
   enemy: Pokemon;
-  onBattleEnd?: (winner: "player" | "enemy", finalPlayer: Pokemon) => void;
+  onBattleEnd?: (winner: "player" | "enemy", finalPlayer: Pokemon, didEvolve: boolean) => void;
   onRun?: (finalPlayer: Pokemon) => void;
   onBagPress?: (player: Pokemon, currentEnemy: Pokemon) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
@@ -114,6 +114,7 @@ export function Battle({
     oldName: string;
     newSpeciesId: number;
     newName: string;
+    spriteUrl: string;
   } | null>(null);
   const [resolveEvolution, setResolveEvolution] = useState<{
     resolve: () => void;
@@ -267,7 +268,7 @@ export function Battle({
       loadTeamForSwap(pendingCaughtId!);
     } else {
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player", state.player);
+      if (onBattleEnd) onBattleEnd("player", state.player, false);
     }
   };
 
@@ -276,7 +277,7 @@ export function Battle({
       await swapIntoTeam(pendingCaughtId!, replacedId);
       setSwapModalVisible(false);
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player", state.player);
+      if (onBattleEnd) onBattleEnd("player", state.player, false);
     } catch (e) {
       Alert.alert("Error", "Swap failed.");
     }
@@ -285,7 +286,7 @@ export function Battle({
   const handleDismissSwap = () => {
     setSwapModalVisible(false);
     if (onSave) onSave();
-    if (onBattleEnd) onBattleEnd("player", state.player);
+    if (onBattleEnd) onBattleEnd("player", state.player, false);
   };
 
   const applyStatChanges = (
@@ -588,20 +589,22 @@ export function Battle({
             if (evolutionTargetId) {
               setCurrentMessage(`What? ${updatedPlayer.name.toUpperCase()} is evolving!`);
               await delay(2000);
-              
+
+              const newSpeciesData = await fetchPokemon(evolutionTargetId.toString());
+
               const evolve = new Promise<void>((resolve) => {
                 setEvolvingPokemon({
                   oldName: updatedPlayer.name,
                   newSpeciesId: evolutionTargetId,
-                  newName: "???", 
+                  newName: newSpeciesData.name,
+                  spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
                 });
                 setEvolutionVisible(true);
                 setResolveEvolution({ resolve });
               });
 
               await evolve;
-              
-              const newSpeciesData = await fetchPokemon(evolutionTargetId.toString());
+
               updatedPlayer = {
                 ...updatedPlayer,
                 speciesId: evolutionTargetId,
@@ -617,7 +620,7 @@ export function Battle({
                 specialDefense: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'special-defense').base_stat, updatedPlayer.level),
                 speed: calculateStat(newSpeciesData.stats.find((s: any) => s.stat.name === 'speed').base_stat, updatedPlayer.level),
               };
-              
+
               setCurrentMessage(`${evolvingPokemon?.oldName.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`);
               await delay(2000);
               if (onToggleAutoBattle) onToggleAutoBattle(false);
@@ -628,7 +631,7 @@ export function Battle({
 
           setState((s) => ({ ...s, player: updatedPlayer }));
           await delay(1500);
-          if (onBattleEnd) onBattleEnd("player", updatedPlayer);
+          if (onBattleEnd) onBattleEnd("player", updatedPlayer, false);
         } else {
           // Enemy won
           setCurrentMessage(
@@ -636,7 +639,7 @@ export function Battle({
           );
           setState((s) => ({ ...s, hitSide: "player" }));
           await delay(2000);
-          if (onBattleEnd) onBattleEnd("enemy", currentState.player);
+          if (onBattleEnd) onBattleEnd("enemy", currentState.player, false);
         }
         return; // End the attack sequence
       }
@@ -944,7 +947,7 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
       enemy={enemy}
       catchPending={catchPending}
       onSave={onSave}
-      onBattleEnd={(winner, finalPlayer) => {
+      onBattleEnd={(winner, finalPlayer, didEvolve) => {
         setTimeout(() => navigation.goBack(), 2000);
       }}
       onRun={(finalPlayer) => {
