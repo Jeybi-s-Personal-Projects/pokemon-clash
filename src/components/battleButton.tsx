@@ -145,7 +145,7 @@ export default function BattleButton({
         </View>
       )}
 
-      {icon && <View style={{ marginBottom: 4 }}>{icon}</View>}
+      {icon && <View style={{ marginBottom: 4, alignItems: "center", justifyContent: "center" }}>{icon}</View>}
       <Text
         style={[
           styles.label,
@@ -157,8 +157,14 @@ export default function BattleButton({
       >
         {label.toUpperCase()}
       </Text>
-
-      {/* {subLabel && (
+      {isExpanded && description ? (
+        <Text
+          style={[styles.description, { color: "#9CA3AF" }]}
+          numberOfLines={3}
+        >
+          {description}
+        </Text>
+      ) : subLabel ? (
         <Text
           style={[
             styles.subLabel,
@@ -167,32 +173,7 @@ export default function BattleButton({
         >
           {subLabel}
         </Text>
-      )} */}
-      {/* 
-      {isExpanded && description && (
-        <Text
-          style={[styles.description, { color: "#9CA3AF" }]}
-          numberOfLines={3}
-        >
-          {description}
-        </Text>
-      )} */}
-      {isExpanded && subLabel ?
-        <Text
-          style={[styles.description, { color: "#9CA3AF" }]}
-          numberOfLines={3}
-        >
-          {description}
-        </Text>
-        :
-        <Text
-          style={[
-            styles.subLabel,
-            { color: accentColor, fontSize: isExpanded ? 9 : 10 },
-          ]}
-        >
-          {subLabel}
-        </Text>}
+      ) : null}
     </TouchableOpacity>
   );
 }
