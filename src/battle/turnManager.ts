@@ -7,7 +7,15 @@ export function playerAttack(
   moveIndex: number,
 ): BattleState {
   const move = state.player.moves[moveIndex];
-  const enemyHp = dealDamage(state.enemy.hp, move, state.enemy.type);
+  const { damage } = dealDamage(
+    state.player,
+    state.playerStages,
+    state.enemy,
+    state.enemyStages,
+    move
+  );
+
+  const enemyHp = Math.max(0, state.enemy.hp - damage);
 
   let newState: BattleState = {
     ...state,
@@ -23,7 +31,15 @@ export function playerAttack(
 
 export function enemyTurn(state: BattleState): BattleState {
   const move = getRandomMove(state.enemy);
-  const playerHp = dealDamage(state.player.hp, move, state.player.type);
+  const { damage } = dealDamage(
+    state.enemy,
+    state.enemyStages,
+    state.player,
+    state.playerStages,
+    move
+  );
+  
+  const playerHp = Math.max(0, state.player.hp - damage);
 
   let newState: BattleState = {
     ...state,
