@@ -57,8 +57,27 @@ export function dealDamage(
   return Math.max(finalDamage, 0);
 }
 
-export function isGameOver(state: BattleState) {
-  if (state.enemy.hp <= 0) return "player";
-  if (state.player.hp <= 0) return "enemy";
-  return null;
+export function determineTurnOrder(
+  player: Pokemon,
+  playerStages: StatStages,
+  playerMove: Move,
+  enemy: Pokemon,
+  enemyStages: StatStages,
+  enemyMove: Move,
+): "player" | "enemy" {
+  const pPriority = playerMove.priority || 0;
+  const ePriority = enemyMove.priority || 0;
+
+  if (pPriority > ePriority) return "player";
+  if (ePriority > pPriority) return "enemy";
+
+  // Priorities are equal, check speed
+  const pSpeed = calculateStatWithStages(player.speed, playerStages.speed);
+  const eSpeed = calculateStatWithStages(enemy.speed, enemyStages.speed);
+
+  if (pSpeed > eSpeed) return "player";
+  if (eSpeed > pSpeed) return "enemy";
+
+  // Speed tie, random flip
+  return Math.random() < 0.5 ? "player" : "enemy";
 }
