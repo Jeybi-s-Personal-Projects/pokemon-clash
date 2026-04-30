@@ -195,16 +195,16 @@ export default function BattleActions({
           </View>
           <View style={styles.grid}>
             {ACTION_CONFIG.map((action) => (
-              <BattleButton
+            <BattleButton
                 key={action.label}
                 label={action.label}
                 icon={action.icon}
                 onPress={() => {
                   if (action.label === "Fight") setMenu("fight");
-                  else if (action.label === "Bag" && onBagPress) onBagPress();
-                  else if (action.label === "Run" && onRun) onRun();
+                  else if (action.label === "Bag") onBagPress?.();
+                  else if (action.label === "Run") onRun?.();
                 }}
-                disabled={disabled}
+                disabled={disabled && action.label !== "Run"}
                 variant="action"
               />
             ))}
