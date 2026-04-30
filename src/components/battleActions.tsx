@@ -18,6 +18,8 @@ type Props = {
   onRun?: () => void;
   disabled: boolean;
   currentLog?: string | null;
+  isAutoBattle?: boolean;
+  onToggleAutoBattle?: (value: boolean) => void;
 };
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -53,10 +55,62 @@ export default function BattleActions({
   onRun,
   disabled,
   currentLog,
+  isAutoBattle = false,
+  onToggleAutoBattle,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
   const cursorOpacity = useRef(new Animated.Value(1)).current;
+
+  const findBestMoveIndex = () => {
+    let bestIndex = -1;
+    let maxEffectivePower = -1;
+
+    moves.forEach((move, i) => {
+      if ((move.pp ?? 0) <= 0) return;
+
+      const power = move.power ?? 0;
+      if (power === 0) return; // Ignore status moves for auto-battle
+
+      const moveType = (move.type || "normal") as PokemonType;
+      const effectiveness = getTypeMultiplier(
+        moveType,
+        enemyTypes as PokemonType[],
+      );
+      const effectivePower = power * (effectiveness ?? 1);
+
+      if (effectivePower > maxEffectivePower) {
+        maxEffectivePower = effectivePower;
+        bestIndex = i;
+      }
+    });
+
+    // If no damaging move found, fallback to move with most PP
+    if (bestIndex === -1) {
+      let maxPP = -1;
+      moves.forEach((move, i) => {
+        if ((move.pp ?? 0) > maxPP) {
+          maxPP = move.pp ?? 0;
+          bestIndex = i;
+        }
+      });
+    }
+
+    return bestIndex;
+  };
+
+  // Auto-battle effect
+  useEffect(() => {
+    if (isAutoBattle && !disabled && !currentLog) {
+      const bestIdx = findBestMoveIndex();
+      if (bestIdx !== -1) {
+        const timer = setTimeout(() => {
+          onMovePress(bestIdx);
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isAutoBattle, disabled, currentLog]);
 
   useEffect(() => {
     if (currentLog) {
