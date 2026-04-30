@@ -6,11 +6,8 @@ import { useEncounterQueue } from "../hooks/useEncounterQueue";
 import { supabase } from "../lib/supabase";
 import { EncounterFlowProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
+import { getExpForLevel, getGrowthRate } from "../utils/experienceCalculator";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
-import {
-  getExpForLevel,
-  getGrowthRate,
-} from "../utils/experienceCalculator";
 import { Battle } from "./BattleScreen";
 import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
 
@@ -77,7 +74,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
     if (route.params.catchPending) {
       // If we are catching, we MUST be in the battle screen, not transition
       setScreen("battle");
-      
+
       const timer = setTimeout(() => {
         navigation.setParams({ catchPending: undefined } as any);
       }, 500);
@@ -155,7 +152,6 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const handleBattleEnd = useCallback(
     async (winner: "player" | "enemy", updatedPlayer: Pokemon) => {
-      console.log(`Battle ended. Winner: ${winner}`);
       setLocalPlayer(updatedPlayer);
 
       if (winner === "enemy") {
