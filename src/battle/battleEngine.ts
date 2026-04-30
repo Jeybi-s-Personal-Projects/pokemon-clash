@@ -26,11 +26,21 @@ export function dealDamage(
   defender: Pokemon,
   defenderStages: StatStages,
   move: Move,
-): number {
-  if (move.power === 0) return 0;
+): { damage: number; isCrit: boolean } {
+  if (move.power === 0) return { damage: 0, isCrit: false };
 
   const moveType = (move.type || "normal") as PokemonType;
   const typeMultiplier = getTypeMultiplier(moveType, defender.type as PokemonType[]);
+
+  // STAB: Same Type Attack Bonus (1.5x)
+  const stab = attacker.type.includes(moveType) ? 1.5 : 1;
+
+  // Critical Hit (6.25% chance)
+  const isCrit = Math.random() < 0.0625;
+  const critMultiplier = isCrit ? 1.5 : 1;
+
+  // Random variance (85-100%)
+  const variance = Math.random() * (1 - 0.85) + 0.85;
 
   // Determine which stats to use based on damage class
   let attackStat = attacker.attack;
@@ -48,13 +58,17 @@ export function dealDamage(
   const effectiveAttack = calculateStatWithStages(attackStat, attackStage);
   const effectiveDefense = calculateStatWithStages(defenseStat, defenseStage);
 
-  // Simple damage formula: ((2*Level/5 + 2) * Power * A/D) / 50 + 2
-  // We'll use a slightly simplified version but keeping the ratios
-  const baseDamage = ((((2 * attacker.level) / 5 + 2) * move.power * (effectiveAttack / effectiveDefense)) / 50) + 2;
+  // Advanced damage formula
+  const baseDamage =
+    ((((2 * attacker.level) / 5 + 2) * move.power * (effectiveAttack / effectiveDefense)) / 50 + 2) *
+    stab *
+    typeMultiplier *
+    critMultiplier *
+    variance;
 
-  const finalDamage = Math.floor(baseDamage * typeMultiplier);
+  const finalDamage = Math.floor(baseDamage);
 
-  return Math.max(finalDamage, 0);
+  return { damage: Math.max(finalDamage, 0), isCrit };
 }
 
 export function determineTurnOrder(

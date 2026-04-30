@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -22,8 +23,6 @@ type Props = {
   onToggleAutoBattle?: (value: boolean) => void;
 };
 
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-
 const ACTION_CONFIG = [
   {
     label: "Fight",
@@ -37,7 +36,9 @@ const ACTION_CONFIG = [
   },
   {
     label: "Bag",
-    icon: <MaterialCommunityIcons name="bag-personal" size={18} color="white" />,
+    icon: (
+      <MaterialCommunityIcons name="bag-personal" size={18} color="white" />
+    ),
     accent: "#66BB6A",
   },
   {
@@ -70,7 +71,7 @@ export default function BattleActions({
       if ((move.pp ?? 0) <= 0) return;
 
       const power = move.power ?? 0;
-      if (power === 0) return; // Ignore status moves for auto-battle
+      if (power === 0) return;
 
       const moveType = (move.type || "normal") as PokemonType;
       const effectiveness = getTypeMultiplier(
@@ -85,7 +86,6 @@ export default function BattleActions({
       }
     });
 
-    // If no damaging move found, fallback to move with most PP
     if (bestIndex === -1) {
       let maxPP = -1;
       moves.forEach((move, i) => {
@@ -99,7 +99,6 @@ export default function BattleActions({
     return bestIndex;
   };
 
-  // Auto-battle effect
   useEffect(() => {
     if (isAutoBattle && !disabled && !currentLog) {
       const bestIdx = findBestMoveIndex();
@@ -146,36 +145,8 @@ export default function BattleActions({
     );
   }
 
-  if (menu === "main") {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>▶ WHAT WILL</Text>
-          <Text style={styles.headerTextBold}>PLAYER DO?</Text>
-        </View>
-        <View style={styles.grid}>
-          {ACTION_CONFIG.map((action) => (
-            <BattleButton
-              key={action.label}
-              label={action.label}
-              icon={action.icon}
-              onPress={() => {
-                if (action.label === "Fight") setMenu("fight");
-                else if (action.label === "Bag" && onBagPress) onBagPress();
-                else if (action.label === "Run" && onRun) onRun();
-              }}
-              disabled={disabled}
-              variant="action"
-            />
-          ))}
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container]}>
-      {/* Action Toggles */}
+    <View style={styles.container}>
       <View style={styles.toggleRow}>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -200,65 +171,93 @@ export default function BattleActions({
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setIsExpanded(!isExpanded)}
-          style={styles.toggleButton}
-        >
-          <Ionicons
-            name={isExpanded ? "chevron-down" : "chevron-up"}
-            size={16}
-            color="#6bdae2"
-          />
-          <Text style={styles.toggleText}>
-            {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.header}>
-        <Text style={styles.headerText}>▶ CHOOSE A</Text>
-        <Text style={styles.headerTextBold}>MOVE</Text>
-      </View>
-      <View style={[styles.grid]}>
-        {moves.map((move, i) => {
-          const moveType = (move.type || "normal") as PokemonType;
-          const effectiveness = getTypeMultiplier(
-            moveType,
-            enemyTypes as PokemonType[],
-          );
-          const power = move.power ?? 0;
-          const effectiveMove = effectiveness ?? 1;
-          const effectivePower = power * effectiveMove;
-
-          return (
-            <BattleButton
-              key={i}
-              label={move.name}
-              subLabel={`PWR ${effectivePower} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
-              description={move.description}
-              isExpanded={isExpanded}
-              moveType={move.type}
-              effectiveness={effectiveness}
-              onPress={() => onMovePress(i)}
-              disabled={disabled || (move.pp ?? 0) <= 0}
-              variant="move"
-              height={"40%"}
+        {menu === "fight" && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setIsExpanded(!isExpanded)}
+            style={styles.toggleButton}
+          >
+            <Ionicons
+              name={isExpanded ? "chevron-down" : "chevron-up"}
+              size={16}
+              color="#6bdae2"
             />
-          );
-        })}
-        <BattleButton
-          label="← Back"
-          onPress={() => {
-            setMenu("main");
-            setIsExpanded(false);
-          }}
-          disabled={disabled}
-          variant="back"
-          width="98%"
-          height="18%"
-        />
+            <Text style={styles.toggleText}>
+              {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {menu === "main" ? (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.headerText}>▶ WHAT WILL</Text>
+            <Text style={styles.headerTextBold}>PLAYER DO?</Text>
+          </View>
+          <View style={styles.grid}>
+            {ACTION_CONFIG.map((action) => (
+              <BattleButton
+                key={action.label}
+                label={action.label}
+                icon={action.icon}
+                onPress={() => {
+                  if (action.label === "Fight") setMenu("fight");
+                  else if (action.label === "Bag" && onBagPress) onBagPress();
+                  else if (action.label === "Run" && onRun) onRun();
+                }}
+                disabled={disabled}
+                variant="action"
+              />
+            ))}
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.headerText}>▶ CHOOSE A</Text>
+            <Text style={styles.headerTextBold}>MOVE</Text>
+          </View>
+          <View style={[styles.grid]}>
+            {moves.map((move, i) => {
+              const moveType = (move.type || "normal") as PokemonType;
+              const effectiveness = getTypeMultiplier(
+                moveType,
+                enemyTypes as PokemonType[],
+              );
+              const power = move.power ?? 0;
+              const effectivePower = power * (effectiveness ?? 1);
+
+              return (
+                <BattleButton
+                  key={i}
+                  label={move.name}
+                  subLabel={`PWR ${effectivePower} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
+                  description={move.description}
+                  isExpanded={isExpanded}
+                  moveType={move.type}
+                  effectiveness={effectiveness}
+                  onPress={() => onMovePress(i)}
+                  disabled={disabled || (move.pp ?? 0) <= 0}
+                  variant="move"
+                  height={"40%"}
+                />
+              );
+            })}
+            <BattleButton
+              label="← Back"
+              onPress={() => {
+                setMenu("main");
+                setIsExpanded(false);
+              }}
+              disabled={disabled}
+              variant="back"
+              width="98%"
+              height="18%"
+            />
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -310,21 +309,6 @@ const styles = StyleSheet.create({
     alignContent: "space-between",
     flex: 1,
   },
-  logContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  cursor: {
-    width: 12,
-    height: 12,
-    backgroundColor: "#E2C96B",
-    position: "absolute",
-    right: 24,
-    bottom: 24,
-    transform: [{ rotate: "45deg" }],
-  },
   logBox: {
     flex: 1,
     margin: 28,
@@ -357,34 +341,13 @@ const styles = StyleSheet.create({
     borderTopColor: "#6bdae2",
     alignSelf: "flex-end",
   },
-  expandToggle: {
-    height: 24,
-    width: 120,
-    backgroundColor: "#080B14",
-    borderWidth: 1.5,
-    borderColor: "#6bdae233",
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    position: "absolute",
-    top: -24,
-    alignSelf: "flex-end",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    zIndex: 10,
-  },
-  expandToggleText: {
-    color: "#6bdae2",
-    fontFamily: "monospace",
-    fontSize: 8,
-    fontWeight: "bold",
-  },
   toggleRow: {
     flexDirection: "row",
     position: "absolute",
     top: -24,
+    left: 10,
     right: 10,
+    justifyContent: "flex-end",
     gap: 8,
     zIndex: 10,
   },
@@ -402,7 +365,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleText: {
-    color: "#6bdae2",
     fontFamily: "monospace",
     fontSize: 8,
     fontWeight: "bold",
