@@ -23,7 +23,7 @@ import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { BattleScreenProps } from "../types/navigation";
-import { Pokemon, Move } from "../types/pokemon";
+import { Move, Pokemon } from "../types/pokemon";
 import {
   calculateExpGain,
   checkLevelUp,
@@ -59,7 +59,6 @@ interface BattleProps {
   onSave?: () => void;
 }
 
-
 export function Battle({
   player,
   enemy,
@@ -70,7 +69,10 @@ export function Battle({
   onSave,
   isAutoBattle = false,
   onToggleAutoBattle,
-}: BattleProps & { isAutoBattle?: boolean; onToggleAutoBattle?: (v: boolean) => void }) {
+}: BattleProps & {
+  isAutoBattle?: boolean;
+  onToggleAutoBattle?: (v: boolean) => void;
+}) {
   const { user } = useAuth();
   const [state, setState] = useState<BattleState>({
     player,
@@ -149,10 +151,14 @@ export function Battle({
           move_priority: pendingMove.priority,
         });
       }
-      
-      setCurrentMessage(`${state.player.name} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`);
+
+      setCurrentMessage(
+        `${state.player.name} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`,
+      );
     } else {
-      setCurrentMessage(`${state.player.name} did not learn ${pendingMove.name.toUpperCase()}.`);
+      setCurrentMessage(
+        `${state.player.name} did not learn ${pendingMove.name.toUpperCase()}.`,
+      );
     }
 
     setMoveModalVisible(false);
@@ -160,6 +166,9 @@ export function Battle({
     resolveMoveLearning.resolve(updatedMoves);
     setPendingMove(null);
     setResolveMoveLearning(null);
+
+    // Automatically turn off auto-battle when manual intervention is required
+    if (onToggleAutoBattle) onToggleAutoBattle(false);
   };
 
   // ── Handle Catch from Bag ──
@@ -281,10 +290,6 @@ export function Battle({
         const currentStage = newStages[statKey];
         const stageSign = currentStage > 0 ? "+" : "";
 
-        console.log(
-          `[StatChange] ${targetName}: ${statKey} ${oldStage} -> ${currentStage} (change: ${c.change})`,
-        );
-
         if (currentStage === oldStage) {
           logs.push(
             `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} won't go any higher! (${stageSign}${currentStage})`,
@@ -308,14 +313,24 @@ export function Battle({
     currentState: BattleState,
   ): Promise<BattleState> => {
     const isPlayerAttacking = attackerSide === "player";
-    const attacker = isPlayerAttacking ? currentState.player : currentState.enemy;
-    const defender = isPlayerAttacking ? currentState.enemy : currentState.player;
-    const attackerStages = isPlayerAttacking ? currentState.playerStages : currentState.enemyStages;
-    const defenderStages = isPlayerAttacking ? currentState.enemyStages : currentState.playerStages;
+    const attacker = isPlayerAttacking
+      ? currentState.player
+      : currentState.enemy;
+    const defender = isPlayerAttacking
+      ? currentState.enemy
+      : currentState.player;
+    const attackerStages = isPlayerAttacking
+      ? currentState.playerStages
+      : currentState.enemyStages;
+    const defenderStages = isPlayerAttacking
+      ? currentState.enemyStages
+      : currentState.playerStages;
 
     // 1. Message
     const prefix = isPlayerAttacking ? "" : "Wild ";
-    setCurrentMessage(`${prefix}${attacker.name.toUpperCase()} used ${move.name.toUpperCase()}!`);
+    setCurrentMessage(
+      `${prefix}${attacker.name.toUpperCase()} used ${move.name.toUpperCase()}!`,
+    );
     await delay(1500);
 
     let nextPlayerStages = currentState.playerStages;
@@ -358,9 +373,17 @@ export function Battle({
       const isDebuff = move.statChanges[0].change < 0;
       // In Pokémon, most moves target the opponent for debuffs and self for buffs.
       // We'll assume the target based on the change for now (simplification)
-      const targetSide = isDebuff ? (isPlayerAttacking ? "enemy" : "player") : attackerSide;
-      const targetName = targetSide === "player" ? currentState.player.name : currentState.enemy.name;
-      const targetStages = targetSide === "player" ? nextPlayerStages : nextEnemyStages;
+      const targetSide = isDebuff
+        ? isPlayerAttacking
+          ? "enemy"
+          : "player"
+        : attackerSide;
+      const targetName =
+        targetSide === "player"
+          ? currentState.player.name
+          : currentState.enemy.name;
+      const targetStages =
+        targetSide === "player" ? nextPlayerStages : nextEnemyStages;
 
       const { newStages, logs } = applyStatChanges(
         targetStages,
@@ -435,8 +458,14 @@ export function Battle({
     const secondSide = firstSide === "player" ? "enemy" : "player";
 
     const turns = [
-      { side: firstSide, move: firstSide === "player" ? playerMove : enemyMove },
-      { side: secondSide, move: secondSide === "player" ? playerMove : enemyMove },
+      {
+        side: firstSide,
+        move: firstSide === "player" ? playerMove : enemyMove,
+      },
+      {
+        side: secondSide,
+        move: secondSide === "player" ? playerMove : enemyMove,
+      },
     ];
 
     let currentState = { ...state };
@@ -449,23 +478,31 @@ export function Battle({
       // Handle PP decrement for player
       if (turn.side === "player") {
         const updatedMoves = [...currentState.player.moves];
-        const moveIdx = currentState.player.moves.findIndex(m => m.name === turn.move.name);
+        const moveIdx = currentState.player.moves.findIndex(
+          (m) => m.name === turn.move.name,
+        );
         if (moveIdx !== -1) {
           updatedMoves[moveIdx] = { ...turn.move, pp: turn.move.pp - 1 };
           currentState.player.moves = updatedMoves;
         }
       }
 
-      currentState = await executeMove(turn.move, turn.side as "player" | "enemy", currentState);
+      currentState = await executeMove(
+        turn.move,
+        turn.side as "player" | "enemy",
+        currentState,
+      );
       setState(currentState);
 
       const winner = isGameOver(currentState);
       if (winner) {
         setState({ ...currentState, winner });
-        
+
         if (winner === "player") {
           await delay(1200);
-          setCurrentMessage(`The wild ${currentState.enemy.name.toUpperCase()} fainted!`);
+          setCurrentMessage(
+            `The wild ${currentState.enemy.name.toUpperCase()} fainted!`,
+          );
 
           const expGain = calculateExpGain(
             currentState.enemy.level,
@@ -516,11 +553,15 @@ export function Battle({
                     move_priority: move.priority,
                   });
                 } else {
-                  setCurrentMessage(`${currentState.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`);
+                  setCurrentMessage(
+                    `${currentState.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
+                  );
                   await delay(1500);
-                  setCurrentMessage(`But ${currentState.player.name.toUpperCase()} already knows 4 moves!`);
+                  setCurrentMessage(
+                    `But ${currentState.player.name.toUpperCase()} already knows 4 moves!`,
+                  );
                   await delay(1500);
-                  
+
                   const newMoveset = await promptMoveReplacement(move);
                   updatedPlayer.moves = newMoveset;
                 }
@@ -535,8 +576,10 @@ export function Battle({
           if (onBattleEnd) onBattleEnd("player", updatedPlayer);
         } else {
           // Enemy won
-          setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
-          setState(s => ({ ...s, hitSide: "player" }));
+          setCurrentMessage(
+            `${currentState.player.name.toUpperCase()} fainted!`,
+          );
+          setState((s) => ({ ...s, hitSide: "player" }));
           await delay(2000);
           if (onBattleEnd) onBattleEnd("enemy", currentState.player);
         }
@@ -597,6 +640,7 @@ export function Battle({
 
       <BattleActions
         moves={state.player.moves}
+        playerTypes={state.player.type}
         enemyTypes={state.enemy.type}
         onMovePress={attack}
         onBagPress={() => onBagPress?.(state.player, state.enemy)}
@@ -706,25 +750,65 @@ export function Battle({
               borderColor: "#374151",
             }}
           >
-            <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", textAlign: "center", marginBottom: 8 }}>
+            <Text
+              style={{
+                color: "white",
+                fontSize: 20,
+                fontWeight: "bold",
+                textAlign: "center",
+                marginBottom: 8,
+              }}
+            >
               Learn a New Move?
             </Text>
-            <Text style={{ color: "#9CA3AF", textAlign: "center", marginBottom: 20 }}>
-              {state.player.name.toUpperCase()} wants to learn {pendingMove?.name.toUpperCase()}. Select a move to replace:
+            <Text
+              style={{
+                color: "#9CA3AF",
+                textAlign: "center",
+                marginBottom: 20,
+              }}
+            >
+              {state.player.name.toUpperCase()} wants to learn{" "}
+              {pendingMove?.name.toUpperCase()}. Select a move to replace:
             </Text>
 
             {/* New Move Info */}
-            <View style={{ backgroundColor: "#374151", padding: 12, borderRadius: 10, marginBottom: 24 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-                <Text style={{ color: "#818cf8", fontWeight: "bold" }}>{pendingMove?.name.toUpperCase()}</Text>
-                <Text style={{ color: "#9CA3AF" }}>{pendingMove?.type?.toUpperCase()}</Text>
+            <View
+              style={{
+                backgroundColor: "#374151",
+                padding: 12,
+                borderRadius: 10,
+                marginBottom: 24,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                }}
+              >
+                <Text style={{ color: "#818cf8", fontWeight: "bold" }}>
+                  {pendingMove?.name.toUpperCase()}
+                </Text>
+                <Text style={{ color: "#9CA3AF" }}>
+                  {pendingMove?.type?.toUpperCase()}
+                </Text>
               </View>
               <View style={{ flexDirection: "row", gap: 12, marginBottom: 4 }}>
-                <Text style={{ color: "white", fontSize: 12 }}>PWR: {pendingMove?.power || "-"}</Text>
-                <Text style={{ color: "white", fontSize: 12 }}>ACC: {pendingMove?.accuracy || "-"}</Text>
-                <Text style={{ color: "white", fontSize: 12 }}>PP: {pendingMove?.pp}</Text>
+                <Text style={{ color: "white", fontSize: 12 }}>
+                  PWR: {pendingMove?.power || "-"}
+                </Text>
+                <Text style={{ color: "white", fontSize: 12 }}>
+                  ACC: {pendingMove?.accuracy || "-"}
+                </Text>
+                <Text style={{ color: "white", fontSize: 12 }}>
+                  PP: {pendingMove?.pp}
+                </Text>
               </View>
-              <Text style={{ color: "#D1D5DB", fontSize: 12, fontStyle: "italic" }}>
+              <Text
+                style={{ color: "#D1D5DB", fontSize: 12, fontStyle: "italic" }}
+              >
                 {pendingMove?.description || "No description available."}
               </Text>
             </View>
@@ -743,11 +827,15 @@ export function Battle({
                     borderColor: "#4B5563",
                     flexDirection: "row",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: "center",
                   }}
                 >
-                  <Text style={{ color: "white", fontWeight: "bold" }}>{move.name.toUpperCase()}</Text>
-                  <Text style={{ color: "#9CA3AF", fontSize: 12 }}>{move.type?.toUpperCase()}</Text>
+                  <Text style={{ color: "white", fontWeight: "bold" }}>
+                    {move.name.toUpperCase()}
+                  </Text>
+                  <Text style={{ color: "#9CA3AF", fontSize: 12 }}>
+                    {move.type?.toUpperCase()}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -770,7 +858,8 @@ export function Battle({
 // ─── BattleScreen Wrapper ──────────────────────────────────────────────────
 
 export default function BattleScreen({ route, navigation }: BattleScreenProps) {
-  const { player, enemy, onRun, isAutoBattle, onToggleAutoBattle } = route.params as any;
+  const { player, enemy, onRun, isAutoBattle, onToggleAutoBattle } =
+    route.params as any;
   const catchPending = route.params.catchPending;
   const onSave = (route.params as any).onSave;
 
