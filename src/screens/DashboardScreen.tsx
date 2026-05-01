@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DashboardHeader from "../components/dashboardHeader";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
@@ -25,6 +26,7 @@ const clickSound = require("../../assets/sounds/buttonClick.mp3");
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, signOut } = useAuth();
   const { team, loading, refetch } = useTeam(user?.id ?? "");
+  const insets = useSafeAreaInsets();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const screenWidth = Dimensions.get("window").width;
@@ -52,7 +54,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   // ...
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <DashboardHeader
         userName={user?.name ?? "Trainer"}
         team={team}
@@ -181,7 +183,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.bg, paddingVertical: 20 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -256,7 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 40,
   },
-  emptyEmoji: { fontSize: 56, marginBottom: 16 },
+  emptyEmoji: { fontSize: 56, marginBottom: 8 },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "bold",
@@ -308,8 +310,7 @@ const styles = StyleSheet.create({
   actionDock: {
     flexDirection: "row",
     gap: 10,
-    padding: 16,
-    paddingBottom: 70,
+    padding: 8,
     marginBottom: "auto",
     backgroundColor: "#030712",
     borderTopWidth: 1,
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
   },
   carouselContainer: {
     height: 250,
-    paddingVertical: 10,
+    paddingVertical: 5,
     paddingHorizontal: 10,
     borderWidth: 1,
     borderTopColor: colors.subtleNeonBlue,

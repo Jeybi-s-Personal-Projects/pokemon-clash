@@ -38,22 +38,12 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Login"
             component={LoginScreen}
-            options={{
-              title: "",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Signup"
-            options={{
-              title: "",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
             component={SignupScreen}
+            options={{ headerShown: false }}
           />
         </>
       ) : (
@@ -62,12 +52,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Dashboard"
             component={DashboardScreen}
-            options={{
-              title: "",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen name="SelectPokemon" component={SelectPokemonScreen} />
           <Stack.Screen

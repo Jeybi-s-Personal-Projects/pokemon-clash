@@ -24,7 +24,10 @@ const BADGES = [
   require("../../assets/badges/badge-rock.png"),
   require("../../assets/badges/bagde-water.png"),
 ];
-const obtained = 4; // or derive from props
+const banner = require("../../assets/banners/banner.jpg");
+const rank = require("../../assets/rank/rank-1.png");
+
+const obtained = 4;
 export default function DashboardHeader({
   userName,
   team,
@@ -49,7 +52,10 @@ export default function DashboardHeader({
 
         <View style={styles.headerRight}>
           <View style={styles.trainerBadge}>
-            <Ionicons name="ribbon" size={14} color="#818CF8" />
+            <Image
+              source={rank}
+              style={{ width: 30, height: 30, resizeMode: "cover" }}
+            />
             <Text style={styles.trainerBadgeText}>Elite Trainer</Text>
           </View>
 
@@ -111,7 +117,7 @@ export default function DashboardHeader({
             icon="account-group"
             label="Team"
             value={`${team.length}/6`}
-            color="#818CF8"
+            color="#34d399"
           />
           <View style={styles.statDivider} />
           <StatItem
@@ -125,21 +131,33 @@ export default function DashboardHeader({
             icon="shape-outline"
             label="Types"
             value={[...new Set(team.flatMap((p) => p.type))].length}
-            color="#fbbf24"
+            color="#34d399"
           />
         </View>
       </View>
 
+      <View
+        style={{
+          height: 120,
+          overflow: "hidden",
+          paddingHorizontal: 10,
+          opacity: 0.5,
+        }}
+      >
+        <Image
+          source={banner}
+          style={{ width: "auto", height: "100%", resizeMode: "cover" }}
+        />
+      </View>
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>Pokémon Team</Text>
-          <Text style={styles.sectionSub}>Manage your active party</Text>
         </View>
 
         <View style={styles.headerActions}>
-          <IconButton icon="refresh" color="#9CA3AF" onPress={onRefresh} />
+          <IconButton icon="refresh" color="#818CF8" onPress={onRefresh} />
           <IconButton icon="pencil" color="#818CF8" onPress={onEditTeam} />
-          <IconButton icon="view-grid" color="#34d399" onPress={onViewList} />
+          <IconButton icon="view-grid" color="#818CF8" onPress={onViewList} />
         </View>
       </View>
     </>
@@ -176,10 +194,10 @@ function StatItem({
   return (
     <View style={{ alignItems: "center", flex: 1 }}>
       <MaterialCommunityIcons name={icon as any} size={18} color={color} />
-      <Text style={{ fontSize: 18, fontWeight: "700", color, marginTop: 4 }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color, marginTop: 4 }}>
         {value}
       </Text>
-      <Text style={{ fontSize: 11, color: "#6B7280" }}>{label}</Text>
+      <Text style={{ fontSize: 8, color: "#6B7280" }}>{label}</Text>
     </View>
   );
 }
@@ -200,25 +218,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#1F2937",
     borderWidth: 1,
     borderColor: "#374151",
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 10,
+    flexDirection: "row",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-around",
   },
-  trainerBadgeText: { color: "#D1D5DB", fontSize: 13 },
+  trainerBadgeText: {
+    color: "#D1D5DB",
+    fontSize: 13,
+  },
   logoutButton: {
     backgroundColor: "#1F2937",
     borderWidth: 1,
     borderColor: "#374151",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   statsRow: {
     flexDirection: "row",
     gap: 8,
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   statsBar: {
     flex: 1,
@@ -243,10 +268,10 @@ const styles = StyleSheet.create({
     borderColor: colors.subtleNeonBlue,
   },
   quickStatsLabel: {
-    fontSize: 13,
+    fontSize: 8,
     fontWeight: "700",
     color: "#F9FAFB",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   badgeProgressRow: {
     flexDirection: "row",
@@ -287,7 +312,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    marginBottom: 8,
+    marginBottom: 4,
     borderWidth: 1,
     borderColor: colors.subtleNeonBlue,
   },
@@ -296,8 +321,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.subtleNeonBlue,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#F9FAFB" },
   sectionSub: { fontSize: 12, color: "#6B7280", marginTop: 2 },
@@ -305,10 +333,10 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: "#111827",
     borderWidth: 1,
-    borderColor: "#1F2937",
+    borderColor: colors.subtleNeonBlue,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
