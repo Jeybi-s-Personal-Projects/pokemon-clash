@@ -69,11 +69,58 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const [localTeam, setLocalTeam] = useState<Pokemon[]>(initialTeam);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
 
-  // For now, we still pick the first pokemon to display, 
-  // but we pass the full team to the Battle component.
-  const activePlayer = localTeam[0];
+  // Clear catchPending after it's been "consumed" by the state
+  useEffect(() => {
+    if (route.params.catchPending) {
+      setScreen("battle");
+      const timer = setTimeout(() => {
+        navigation.setParams({ catchPending: undefined } as any);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [route.params.catchPending, navigation]);
 
-  // ... (rest of useEffects)
+  const [screen, setScreen] = useState<Screen>("transition");
+  const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
+    null,
+  );
+  const [isLoadingMoves, setIsLoadingMoves] = useState(false);
+
+  const { currentEncounter, isReady, isInitialLoading, advance, reset } =
+    useEncounterQueue(region, area);
+
+  // Fetch move details when a new encounter arrives
+  useEffect(() => {
+    const encounter = currentEncounter;
+    if (encounter && isReady) {
+      if (
+        fullyLoadedEnemy &&
+        fullyLoadedEnemy.id === encounter.id &&
+        fullyLoadedEnemy.level === encounter.level
+      ) {
+        return;
+      }
+
+      async function loadMoveDetails() {
+        try {
+          if (!encounter) return;
+          setIsLoadingMoves(true);
+          const moveDetails = await fetchMoveBatch(encounter.moves);
+          const enemy = mapEncounterToPokemon(encounter, moveDetails);
+          setFullyLoadedEnemy(enemy);
+        } catch (error) {
+          console.error("[EncounterFlow] Failed to load move details:", error);
+        } finally {
+          setIsLoadingMoves(false);
+        }
+      }
+      loadMoveDetails();
+    } else {
+      setFullyLoadedEnemy(null);
+    }
+  }, [currentEncounter, isReady]);
+
+  const activePlayer = localTeam[0];
 
   const syncAllProgress = async (finalTeam: Pokemon[]) => {
     try {
@@ -90,7 +137,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
             pk_cry: p.cry,
             pk_level: p.level,
             pk_experience: p.experience,
-            pk_hp: p.hp, // Save actual HP during exploration
+            pk_hp: p.hp,
             pk_max_hp: p.maxHp,
             pk_attack: p.attack,
             pk_defense: p.defense,
@@ -114,46 +161,37 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const handleBattleEnd = useCallback(
     async (
       winner: "player" | "enemy",
-      updatedPlayer: Pokemon,
+      updatedTeam: Pokemon[],
       didEvolve: boolean = false,
     ) => {
-      // In Phase 2, Battle will return the updated team. 
-      // For now, we update the first member.
-      const updatedTeam = [...localTeam];
-      updatedTeam[0] = updatedPlayer;
       setLocalTeam(updatedTeam);
 
       if (winner === "enemy") {
-        // Player fainted - Save progress and exit to Dashboard
         await syncAllProgress(updatedTeam);
         reset();
         navigation.navigate("Dashboard" as any);
         return;
       }
 
-      // Victory - Only save if evolved to preserve rare progress
       if (didEvolve) {
         await syncAllProgress(updatedTeam);
       }
 
-      // Wait a bit then go back to transition for the next encounter
       setTimeout(() => {
         advance();
         setScreen("transition");
       }, 2000);
     },
-    [advance, navigation, reset, localTeam],
+    [advance, navigation, reset],
   );
 
   const handleExit = useCallback(
-    async (finalPlayer: Pokemon) => {
-      const updatedTeam = [...localTeam];
-      updatedTeam[0] = finalPlayer;
-      await syncAllProgress(updatedTeam);
+    async (finalTeam: Pokemon[]) => {
+      await syncAllProgress(finalTeam);
       reset();
       navigation.navigate("Dashboard" as any);
     },
-    [reset, navigation, localTeam],
+    [reset, navigation],
   );
 
   if (screen === "transition") {
@@ -179,10 +217,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
         onRun={handleExit}
-        onBagPress={(p, e) =>
+        onBagPress={(p, t, e) =>
           navigation.navigate("InventoryBag", {
             player: p,
-            team: localTeam,
+            team: t,
             pokemon: e,
             fromScreen: "EncounterFlow",
           } as any)

@@ -68,7 +68,7 @@ export default function InventoryBagScreen({
   navigation,
   route,
 }: InventoryBagScreenProps) {
-  const { pokemon, fromScreen, player: playerObj } = route.params as any;
+  const { pokemon, fromScreen, player: playerObj, team } = route.params as any;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
 
@@ -95,6 +95,7 @@ export default function InventoryBagScreen({
     // Replace the Bag screen with the dedicated Catching Screen
     navigation.replace("CatchingScreen", {
       player: playerObj,
+      team: team,
       enemy: pokemon,
       item: { id: item.id, name: item.name, catchRate: item.catchRate },
       fromScreen: fromScreen,
