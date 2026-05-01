@@ -67,6 +67,7 @@ function mapEncounterToPokemon(
 export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const { region, area, team: initialTeam } = route.params;
   const [localTeam, setLocalTeam] = useState<Pokemon[]>(initialTeam);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
 
   // Clear catchPending after it's been "consumed" by the state
@@ -120,7 +121,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
     }
   }, [currentEncounter, isReady]);
 
-  const activePlayer = localTeam[0];
+  const activePlayer = localTeam[activeIndex];
 
   const syncAllProgress = async (finalTeam: Pokemon[]) => {
     try {
@@ -164,8 +165,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       winner: "player" | "enemy",
       updatedTeam: Pokemon[],
       didEvolve: boolean = false,
+      newIndex: number = 0,
     ) => {
       setLocalTeam(updatedTeam);
+      setActiveIndex(newIndex);
 
       if (winner === "enemy") {
         await syncAllProgress(updatedTeam);

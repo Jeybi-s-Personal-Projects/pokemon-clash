@@ -37,6 +37,7 @@ interface UseBattleOptions {
     winner: "player" | "enemy",
     finalTeam: Pokemon[],
     didEvolve: boolean,
+    activeIndex: number,
   ) => void;
   onSave?: () => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
@@ -69,6 +70,7 @@ export function useBattle({
   });
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
+  const [isPlayerEntering, setIsPlayerEntering] = useState(false);
 
   // Status Modal & Swap State
   const [statusVisible, setStatusVisible] = useState(false);
@@ -231,7 +233,7 @@ export function useBattle({
       loadTeamForSwap(pendingCaughtId!);
     } else {
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player", state.team, false);
+      if (onBattleEnd) onBattleEnd("player", state.team, false, state.activePlayerIndex);
     }
   };
 
@@ -240,7 +242,7 @@ export function useBattle({
       await swapIntoTeam(pendingCaughtId!, replacedId);
       setSwapModalVisible(false);
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player", state.team, false);
+      if (onBattleEnd) onBattleEnd("player", state.team, false, state.activePlayerIndex);
     } catch (e) {
       Alert.alert("Error", "Swap failed.");
     }
@@ -249,41 +251,7 @@ export function useBattle({
   const handleDismissSwap = () => {
     setSwapModalVisible(false);
     if (onSave) onSave();
-    if (onBattleEnd) onBattleEnd("player", state.team, false);
-  };
-
-  const applyStatChanges = (
-    currentStages: StatStages,
-    changes: { stat: string; change: number }[],
-    targetName: string,
-  ) => {
-    const newStages = { ...currentStages };
-    let logs: string[] = [];
-
-    changes.forEach((c) => {
-      const statKey = c.stat as keyof StatStages;
-      if (newStages[statKey] !== undefined) {
-        const oldStage = newStages[statKey];
-        newStages[statKey] = Math.max(-6, Math.min(6, oldStage + c.change));
-
-        const currentStage = newStages[statKey];
-        const stageSign = currentStage > 0 ? "+" : "";
-
-        if (currentStage === oldStage) {
-          logs.push(
-            `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} won't go any higher! (${stageSign}${currentStage})`,
-          );
-        } else {
-          const degree = Math.abs(c.change) >= 2 ? "sharply " : "";
-          const direction = c.change > 0 ? "rose" : "fell";
-          logs.push(
-            `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} ${degree}${direction}! (${stageSign}${currentStage})`,
-          );
-        }
-      }
-    });
-
-    return { newStages, logs };
+    if (onBattleEnd) onBattleEnd("player", state.team, false, state.activePlayerIndex);
   };
 
   const handleSwitch = async (index: number) => {
@@ -298,7 +266,11 @@ export function useBattle({
 
     setSwitchModalVisible(false);
     const isForced = state.player.hp <= 0;
+    
     setCurrentMessage(`Go! ${state.team[index].name.toUpperCase()}!`);
+    
+    // Slow delay before the sprite appears
+    await delay(1200);
 
     const newState: BattleState = {
       ...state,
@@ -306,8 +278,13 @@ export function useBattle({
       activePlayerIndex: index,
       playerStages: { ...initialStages },
     };
+    
     setState(newState);
-    await delay(1200);
+    setIsPlayerEntering(true);
+    
+    // Quick delay for fade-in animation
+    await delay(600);
+    setIsPlayerEntering(false);
 
     if (!isForced) {
       const enemyMove = getRandomMove(state.enemy);
@@ -493,12 +470,12 @@ export function useBattle({
 
       setState((s) => ({ ...s, player: updatedPlayer, team: finalTeam }));
       await delay(1500);
-      if (onBattleEnd) onBattleEnd("player", finalTeam, false);
+      if (onBattleEnd) onBattleEnd("player", finalTeam, false, currentState.activePlayerIndex);
     } else {
       setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
       setState((s) => ({ ...s, hitSide: "player" }));
       await delay(2000);
-      if (onBattleEnd) onBattleEnd("enemy", currentState.team, false);
+      if (onBattleEnd) onBattleEnd("enemy", currentState.team, false, currentState.activePlayerIndex);
     }
   };
 
@@ -706,6 +683,7 @@ export function useBattle({
   return {
     state,
     currentMessage,
+    isPlayerEntering,
     attack,
     handleSwitch,
     // Status Modal

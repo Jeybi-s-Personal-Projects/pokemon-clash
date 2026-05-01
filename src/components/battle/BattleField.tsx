@@ -13,6 +13,7 @@ interface BattleFieldProps {
   attackingSide: "player" | "enemy" | null;
   dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
+  isPlayerEntering?: boolean;
 }
 
 export const BattleField = ({
@@ -23,6 +24,7 @@ export const BattleField = ({
   attackingSide,
   dancingSide,
   hitSide,
+  isPlayerEntering,
 }: BattleFieldProps) => {
   return (
     <View style={styles.container}>
@@ -41,6 +43,7 @@ export const BattleField = ({
         isAttacking={attackingSide === "player"}
         isDancing={dancingSide === "player"}
         isHit={hitSide === "player"}
+        isEntering={isPlayerEntering}
         exp={
           player.experience -
           getExpForLevel(player.level, player.growthRate || "medium-fast")

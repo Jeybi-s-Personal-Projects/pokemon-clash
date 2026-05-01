@@ -1,5 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { FlatList, Modal, Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Pokemon } from "../../types/pokemon";
 
 interface SwitchModalProps {
@@ -23,7 +24,15 @@ export const SwitchModal = ({
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>Choose a Pokémon:</Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>Choose a Pokémon:</Text>
+            {canCancel && (
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close-circle" size={28} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+          </View>
+
           <FlatList
             data={team}
             keyExtractor={(p, i) => i.toString()}
@@ -93,11 +102,19 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "80%",
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   title: {
     color: "white",
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 16,
+  },
+  closeButton: {
+    padding: 4,
   },
   item: {
     flexDirection: "row",

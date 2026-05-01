@@ -23,6 +23,7 @@ interface BattleProps {
     winner: "player" | "enemy",
     finalTeam: Pokemon[],
     didEvolve: boolean,
+    activeIndex: number,
   ) => void;
   onRun?: (finalTeam: Pokemon[]) => void;
   onBagPress?: (player: Pokemon, team: Pokemon[], currentEnemy: Pokemon) => void;
@@ -72,6 +73,7 @@ export function Battle({
         attackingSide={state.attackingSide}
         dancingSide={state.dancingSide}
         hitSide={state.hitSide}
+        isPlayerEntering={battle.isPlayerEntering}
       />
 
       {/* 2. Action Menu / Log */}
@@ -133,8 +135,15 @@ export function Battle({
 // ─── BattleScreen Wrapper ──────────────────────────────────────────────────
 
 export default function BattleScreen({ route, navigation }: BattleScreenProps) {
-  const { player, team, enemy, onRun, isAutoBattle, onToggleAutoBattle } =
-    route.params as any;
+  const { 
+    player, 
+    team, 
+    enemy, 
+    onRun, 
+    onBattleEnd: onBattleEndProp, 
+    isAutoBattle, 
+    onToggleAutoBattle 
+  } = route.params as any;
   const catchPending = route.params.catchPending;
   const onSave = (route.params as any).onSave;
 
@@ -154,8 +163,9 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
       enemy={enemy}
       catchPending={catchPending}
       onSave={onSave}
-      onBattleEnd={(winner, finalTeam, didEvolve) => {
-        setTimeout(() => navigation.goBack(), 2000);
+      onBattleEnd={(winner, finalTeam, didEvolve, activeIndex) => {
+        if (onBattleEndProp) onBattleEndProp(winner, finalTeam, didEvolve, activeIndex);
+        else setTimeout(() => navigation.goBack(), 2000);
       }}
       onRun={(finalTeam) => {
         if (onRun) onRun(finalTeam);
