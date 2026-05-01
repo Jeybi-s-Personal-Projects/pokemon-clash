@@ -124,31 +124,32 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const syncAllProgress = async (finalTeam: Pokemon[]) => {
     try {
-      for (const p of finalTeam) {
-        if (!p.id) continue;
-        const { error } = await supabase
-          .from("pokemon")
-          .update({
-            pk_species_id: p.speciesId,
-            pk_name: p.name,
-            pk_types: p.type,
-            pk_front_image: p.frontImage,
-            pk_back_image: p.backImage,
-            pk_cry: p.cry,
-            pk_level: p.level,
-            pk_experience: p.experience,
-            pk_hp: p.hp,
-            pk_max_hp: p.maxHp,
-            pk_attack: p.attack,
-            pk_defense: p.defense,
-            pk_special_attack: p.specialAttack,
-            pk_special_defense: p.specialDefense,
-            pk_speed: p.speed,
-          })
-          .eq("id", p.id);
+      const syncData = finalTeam
+        .filter((p) => !!p.id)
+        .map((p) => ({
+          id: p.id,
+          pk_species_id: p.speciesId,
+          pk_name: p.name,
+          pk_types: p.type,
+          pk_front_image: p.frontImage,
+          pk_back_image: p.backImage,
+          pk_cry: p.cry,
+          pk_level: p.level,
+          pk_experience: p.experience,
+          pk_hp: p.hp,
+          pk_max_hp: p.maxHp,
+          pk_attack: p.attack,
+          pk_defense: p.defense,
+          pk_special_attack: p.specialAttack,
+          pk_special_defense: p.specialDefense,
+          pk_speed: p.speed,
+        }));
 
-        if (error) console.error("Error syncing progress:", error);
-      }
+      if (syncData.length === 0) return;
+
+      const { error } = await supabase.from("pokemon").upsert(syncData);
+
+      if (error) console.error("Error syncing progress:", error);
     } catch (e) {
       console.error("Failed to sync progress", e);
     }
