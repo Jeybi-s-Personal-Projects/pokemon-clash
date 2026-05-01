@@ -44,7 +44,7 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon; onRelease?: () => void };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
-  SelectFromPC: { currentTeamIds: string[] };
+  SelectFromPC: { currentTeamIds: (string | number)[]; teamLength: number };
   InventoryBag: {
     player: Pokemon;
     team?: Pokemon[];
@@ -77,6 +77,10 @@ export type DashboardScreenProps = NativeStackScreenProps<
 export type PokemonTeamScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "PokemonTeam"
+>;
+export type SelectFromPCScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "SelectFromPC"
 >;
 export type PokemonStatsScreenProps = NativeStackScreenProps<
   RootStackParamList,

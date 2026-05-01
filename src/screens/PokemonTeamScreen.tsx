@@ -1,7 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,6 +17,8 @@ import {
 } from "react-native";
 import StatusModal from "../components/statusModal";
 import ExpBar from "../components/expBar";
+import { useAuth } from "../context/AuthContext";
+import { useTeam } from "../hooks/useTeam";
 import { supabase } from "../lib/supabase";
 import { colors } from "../theme/color";
 import { PokemonTeamScreenProps } from "../types/navigation";
@@ -56,12 +59,28 @@ export default function PokemonTeamScreen({
   route,
   navigation,
 }: PokemonTeamScreenProps) {
-  const { initialTeam, onSave } = route.params;
-  const [team, setTeam] = useState<Pokemon[]>(initialTeam);
+  const { onSave } = route.params;
+  const { user } = useAuth();
+  const { team: dbTeam, refetch, loading: isLoadingTeam } = useTeam(user?.id ?? "");
+  const [team, setTeam] = useState<Pokemon[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
+
+  // Sync internal state with DB team on refetch
+  React.useEffect(() => {
+    if (dbTeam.length > 0) {
+      setTeam(dbTeam);
+    }
+  }, [dbTeam]);
+
+  // Refresh team when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [])
+  );
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -239,6 +258,14 @@ export default function PokemonTeamScreen({
     );
   };
 
+  if (isLoadingTeam && team.length === 0) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.headerInfo}>
@@ -264,8 +291,13 @@ export default function PokemonTeamScreen({
               style={styles.addButton}
               onPress={() => {
                 playClick();
-                navigation.navigate("SelectFromPC" as any, {
-                  currentTeamIds: team.map((p) => p.id),
+                const teamIds = team
+                  .map((p) => p.id)
+                  .filter((id): id is string | number => id !== undefined);
+
+                navigation.navigate("SelectFromPC", {
+                  currentTeamIds: teamIds,
+                  teamLength: team.length,
                 });
               }}
             >
@@ -310,6 +342,12 @@ export default function PokemonTeamScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.bg,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.bg,
   },
   headerInfo: {

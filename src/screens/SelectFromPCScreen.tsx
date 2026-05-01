@@ -40,7 +40,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function SelectFromPCScreen({ route, navigation }: any) {
-  const { currentTeamIds } = route.params;
+  const { teamLength } = route.params;
   const { user } = useAuth();
   const [pcPokemon, setPcPokemon] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,14 +84,7 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
     setIsProcessing(true);
 
     try {
-      // Find the next available order index
-      const { count } = await supabase
-        .from("pokemon")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user?.id)
-        .not("pk_order", "is", null);
-
-      const nextOrder = (count || 0) + 1;
+      const nextOrder = (teamLength || 0) + 1;
 
       const { error } = await supabase
         .from("pokemon")
