@@ -1,7 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -53,10 +52,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   // ...
   return (
-    <LinearGradient
-      colors={["#030712", "#171127", "#201952"]}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <DashboardHeader
         userName={user?.name ?? "Trainer"}
         team={team}
@@ -147,6 +143,23 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       )}
       <View style={styles.actionDock}>
         <TouchableOpacity
+          style={[styles.battleButton, team.length === 0 && styles.disabled]}
+          onPress={() => {
+            playClick();
+            if (team.length === 0) return;
+
+            const playerPokemon = team[0];
+            navigation.navigate("RegionSelect", {
+              player: playerPokemon,
+            });
+          }}
+          disabled={team.length === 0}
+        >
+          <MaterialCommunityIcons name="pokeball" size={20} color="#ffffff" />
+          <Text style={styles.actionText}>PVP Battle</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.exploreButton, team.length === 0 && styles.disabled]}
           onPress={() => {
             playClick();
@@ -163,7 +176,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           <Text style={styles.actionText}>Explore</Text>
         </TouchableOpacity>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -302,23 +315,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#1F2937",
   },
-
   battleButton: {
     flex: 1,
-    backgroundColor: "#4338ca",
+    backgroundColor: "#818df8b4",
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ffffff70",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
-
   exploreButton: {
     flex: 1,
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#34d3998f",
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ffffff70",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -378,7 +393,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderTopColor: colors.subtleNeonBlue,
     borderBottomColor: colors.subtleNeonBlue,
-    backgroundColor: "#060606a8",
+    backgroundColor: "#000000",
   },
   carouselContent: {
     alignItems: "center",
@@ -401,39 +416,3 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 });
-function IconButton({
-  icon,
-  onPress,
-  color,
-}: {
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  onPress: () => void;
-  color: string;
-}) {
-  return (
-    <TouchableOpacity onPress={onPress} style={styles.iconButton}>
-      <MaterialCommunityIcons name={icon} size={20} color={color} />
-    </TouchableOpacity>
-  );
-}
-function StatItem({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: string;
-  label: string;
-  value: string | number;
-  color: string;
-}) {
-  return (
-    <View style={{ alignItems: "center", flex: 1 }}>
-      <MaterialCommunityIcons name={icon as any} size={18} color={color} />
-      <Text style={{ fontSize: 18, fontWeight: "700", color, marginTop: 4 }}>
-        {value}
-      </Text>
-      <Text style={{ fontSize: 11, color: "#6B7280" }}>{label}</Text>
-    </View>
-  );
-}

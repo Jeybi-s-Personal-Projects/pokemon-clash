@@ -1,6 +1,8 @@
+import { colors } from "@/src/theme/color";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Pokemon } from "../types/pokemon";
 
 type Props = {
@@ -12,6 +14,17 @@ type Props = {
   onViewList: () => void;
 };
 
+const BADGES = [
+  require("../../assets/badges/badge-dragon.png"),
+  require("../../assets/badges/badge-fighting.png"),
+  require("../../assets/badges/badge-ground.png"),
+  require("../../assets/badges/badge-ice.png"),
+  require("../../assets/badges/badge-leaf-non.png"),
+  require("../../assets/badges/badge-poison.png"),
+  require("../../assets/badges/badge-rock.png"),
+  require("../../assets/badges/bagde-water.png"),
+];
+const obtained = 4; // or derive from props
 export default function DashboardHeader({
   userName,
   team,
@@ -26,7 +39,8 @@ export default function DashboardHeader({
         <View>
           <Text style={styles.greeting}>Welcome back</Text>
           <Text style={styles.username}>
-            {userName} <Text style={{ color: "#818CF8" }}>✦</Text>
+            {userName}{" "}
+            <MaterialCommunityIcons name="pokeball" size={25} color="#818CF8" />
           </Text>
           <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
             Ready for your next battle?
@@ -40,32 +54,80 @@ export default function DashboardHeader({
           </View>
 
           <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-            <Ionicons name="log-out-outline" size={16} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={30} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.statsBar}>
-        <StatItem
-          icon="account-group"
-          label="Team"
-          value={`${team.length}/6`}
-          color="#818CF8"
-        />
-        <View style={styles.statDivider} />
-        <StatItem
-          icon="trending-up"
-          label="Top Lv."
-          value={team.length > 0 ? Math.max(...team.map((p) => p.level)) : 0}
-          color="#34d399"
-        />
-        <View style={styles.statDivider} />
-        <StatItem
-          icon="shape-outline"
-          label="Types"
-          value={[...new Set(team.flatMap((p) => p.type))].length}
-          color="#fbbf24"
-        />
+      <LinearGradient
+        colors={["#010101", "#323232"]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 0 }}
+        style={styles.badgeContainer}
+      >
+        {BADGES.map((badge, index) => (
+          <Image
+            key={index}
+            source={badge}
+            style={[
+              styles.badgeImage,
+              index >= 4 && { opacity: 0.2 }, // Last 4 badges look unobtained
+            ]}
+          />
+        ))}
+      </LinearGradient>
+
+      <View style={styles.statsRow}>
+        <View style={styles.badgeStatsBar}>
+          <Text style={styles.quickStatsLabel}>Quick Stats</Text>
+          <View style={styles.badgeProgressRow}>
+            {/* Background segments (all gray) */}
+            {BADGES.map((_, index) => (
+              <View
+                key={index}
+                style={[styles.badgeSegment, styles.badgeSegmentEmpty]}
+              />
+            ))}
+
+            {/* Gradient overlay — width proportional to obtained badges */}
+            <LinearGradient
+              colors={["#818CF8", "#34d399"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.badgeGradientOverlay,
+                { width: `${(obtained / BADGES.length) * 100}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.badgeCountLabel}>
+            Kanto Badges ({BADGES.filter((_, i) => i < 4).length}/
+            {BADGES.length})
+          </Text>
+        </View>
+
+        <View style={styles.statsBar}>
+          <StatItem
+            icon="account-group"
+            label="Team"
+            value={`${team.length}/6`}
+            color="#818CF8"
+          />
+          <View style={styles.statDivider} />
+          <StatItem
+            icon="trending-up"
+            label="Top Lv."
+            value={team.length > 0 ? Math.max(...team.map((p) => p.level)) : 0}
+            color="#34d399"
+          />
+          <View style={styles.statDivider} />
+          <StatItem
+            icon="shape-outline"
+            label="Types"
+            value={[...new Set(team.flatMap((p) => p.type))].length}
+            color="#fbbf24"
+          />
+        </View>
       </View>
 
       <View style={styles.sectionHeader}>
@@ -140,7 +202,7 @@ const styles = StyleSheet.create({
     borderColor: "#374151",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 10,
   },
   trainerBadgeText: { color: "#D1D5DB", fontSize: 13 },
   logoutButton: {
@@ -149,10 +211,74 @@ const styles = StyleSheet.create({
     borderColor: "#374151",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 10,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  statsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
   statsBar: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#111827",
+    borderRadius: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: colors.subtleNeonBlue,
+  },
+  badgeStatsBar: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#111827",
+    borderRadius: 8,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.subtleNeonBlue,
+  },
+  quickStatsLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#F9FAFB",
+    marginBottom: 6,
+  },
+  badgeProgressRow: {
+    flexDirection: "row",
+    gap: 1,
+    alignItems: "center",
+    paddingHorizontal: 10,
+    position: "relative",
+  },
+  badgeGradientOverlay: {
+    position: "absolute",
+    left: 10,
+    top: 0,
+    bottom: 0,
+    borderRadius: 1,
+  },
+  badgeSegment: {
+    flex: 1,
+    height: 6,
+    borderRadius: 1,
+  },
+  badgeSegmentFilled: {
+    backgroundColor: "#34d399",
+  },
+  badgeSegmentEmpty: {
+    backgroundColor: "#374151",
+  },
+  badgeCountLabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 5,
+  },
+  badgeContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
@@ -160,9 +286,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 8,
     paddingVertical: 8,
+    paddingHorizontal: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#1F2937",
+    borderColor: colors.subtleNeonBlue,
   },
   statDivider: { width: 1, height: 30, backgroundColor: "#1F2937" },
   sectionHeader: {
@@ -189,5 +316,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+  },
+  badgeImage: {
+    width: 32,
+    height: 32,
+    resizeMode: "contain",
   },
 });
