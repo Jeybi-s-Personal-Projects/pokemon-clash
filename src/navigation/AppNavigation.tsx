@@ -97,6 +97,16 @@ export default function AppNavigator() {
             component={PokemonTeamScreen}
           />
           <Stack.Screen
+            name="SelectFromPC"
+            options={{
+              title: "PC Selection",
+              headerStyle: { backgroundColor: "#111827" },
+              headerTintColor: "#F9FAFB",
+              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
+            }}
+            component={SelectFromPCScreen}
+          />
+          <Stack.Screen
             name="EncounterFlow"
             component={EncounterFlow}
             options={{ headerShown: false }}
