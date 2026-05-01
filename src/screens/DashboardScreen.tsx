@@ -143,7 +143,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       )}
       <View style={styles.actionDock}>
         <TouchableOpacity
-          style={[styles.battleButton, team.length === 0 && styles.disabled]}
+          style={[styles.battleButton, true && styles.disabled]}
           onPress={() => {
             playClick();
             if (team.length === 0) return;
@@ -153,7 +153,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
               player: playerPokemon,
             });
           }}
-          disabled={team.length === 0}
+          disabled={true}
         >
           <MaterialCommunityIcons name="pokeball" size={20} color="#ffffff" />
           <Text style={styles.actionText}>PVP Battle</Text>
@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#374151",
     opacity: 0.6,
   },
+
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
