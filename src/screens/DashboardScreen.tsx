@@ -150,9 +150,8 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
             playClick();
             if (team.length === 0) return;
 
-            const playerPokemon = team[0];
             navigation.navigate("RegionSelect", {
-              player: playerPokemon,
+              team,
             });
           }}
           disabled={true}
@@ -167,9 +166,8 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
             playClick();
             if (team.length === 0) return;
 
-            const playerPokemon = team[0];
             navigation.navigate("RegionSelect", {
-              player: playerPokemon,
+              team,
             });
           }}
           disabled={team.length === 0}

@@ -250,7 +250,7 @@ export default function RegionSelectScreen({
   navigation,
   route,
 }: RegionSelectScreenProps) {
-  const { player } = route.params;
+  const { team } = route.params;
   const [selected, setSelected] = useState<string | null>(null);
 
   function handleSelect(region: RegionConfig) {
@@ -259,7 +259,7 @@ export default function RegionSelectScreen({
     setTimeout(() => {
       navigation.navigate("AreaSelect", {
         region: region.id as Region,
-        player,
+        team,
       });
     }, 200);
   }

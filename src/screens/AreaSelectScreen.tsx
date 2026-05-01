@@ -196,7 +196,7 @@ export default function AreaSelectScreen({
   navigation,
   route,
 }: AreaSelectScreenProps) {
-  const { region, player } = route.params;
+  const { region, team } = route.params;
   const [selected, setSelected] = useState<Area | null>(null);
 
   const flavorMap = REGION_FLAVOR[region] ?? {};
@@ -207,7 +207,7 @@ export default function AreaSelectScreen({
       navigation.navigate("EncounterFlow", {
         region,
         area: area.id,
-        player,
+        team,
       });
     }, 200);
   }

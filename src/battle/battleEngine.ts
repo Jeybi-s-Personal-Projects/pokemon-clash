@@ -98,6 +98,10 @@ export function determineTurnOrder(
 
 export function isGameOver(state: BattleState) {
   if (state.enemy.hp <= 0) return "player";
-  if (state.player.hp <= 0) return "enemy";
+  
+  // Check if all team members have fainted
+  const allFainted = state.team.every(p => p.hp <= 0);
+  if (allFainted) return "enemy";
+  
   return null;
 }

@@ -17,6 +17,7 @@ type Props = {
   playerTypes: string[];
   enemyTypes: string[];
   onMovePress: (index: number) => void;
+  onPokemonPress?: () => void;
   onBagPress?: () => void;
   onRun?: () => void;
   disabled: boolean;
@@ -55,6 +56,7 @@ export default function BattleActions({
   playerTypes,
   enemyTypes,
   onMovePress,
+  onPokemonPress,
   onBagPress,
   onRun,
   disabled,
@@ -207,6 +209,7 @@ export default function BattleActions({
                 icon={action.icon}
                 onPress={() => {
                   if (action.label === "Fight") setMenu("fight");
+                  else if (action.label === "Pokémon") onPokemonPress?.();
                   else if (action.label === "Bag") onBagPress?.();
                   else if (action.label === "Run") onRun?.();
                 }}

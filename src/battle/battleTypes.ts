@@ -10,6 +10,8 @@ export type StatStages = {
 
 export type BattleState = {
   player: Pokemon;
+  team: Pokemon[];
+  activePlayerIndex: number;
   enemy: Pokemon;
   turn: "player" | "enemy";
   log: string[];
