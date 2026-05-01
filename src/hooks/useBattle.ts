@@ -19,6 +19,7 @@ import {
   getExpForLevel,
 } from "../utils/experienceCalculator";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
+import { applyStatChanges, delay } from "../utils/battleUtils";
 
 const initialStages: StatStages = {
   attack: 0,
@@ -98,9 +99,6 @@ export function useBattle({
   const [resolveEvolution, setResolveEvolution] = useState<{
     resolve: () => void;
   } | null>(null);
-
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
 
   const promptMoveReplacement = (newMove: Move): Promise<Move[]> => {
     return new Promise((resolve) => {
