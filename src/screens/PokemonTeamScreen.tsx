@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
@@ -185,14 +186,12 @@ export default function PokemonTeamScreen({
           <View style={styles.hpTextRow}>
             <Text style={styles.hpLabel}>HP</Text>
             <Text style={styles.hpValue}>
-              {item.hp}/{item.maxHp}
+              {Math.ceil(item.hp)}/{item.maxHp}
             </Text>
           </View>
 
-          <Text style={styles.level}>Lv. {item.level}</Text>
-
           {/* EXP Bar */}
-          <View style={{ width: "100%", marginTop: -4, marginBottom: 8 }}>
+          <View style={{ width: "100%", marginTop: 10, marginBottom: 4 }}>
             <ExpBar
               exp={
                 item.experience -
@@ -204,6 +203,8 @@ export default function PokemonTeamScreen({
               }
             />
           </View>
+
+          <Text style={styles.level}>Lv. {item.level}</Text>
         </TouchableOpacity>
 
         <View style={styles.controls}>
@@ -212,7 +213,7 @@ export default function PokemonTeamScreen({
             onPress={() => swap(index, index - 1)}
             style={[styles.arrowButton, index === 0 && styles.disabledArrow]}
           >
-            <Text style={styles.arrowText}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -223,7 +224,11 @@ export default function PokemonTeamScreen({
               index === team.length - 1 && styles.disabledArrow,
             ]}
           >
-            <Text style={styles.arrowText}>→</Text>
+            <MaterialCommunityIcons
+              name="arrow-right"
+              size={24}
+              color="white"
+            />
           </TouchableOpacity>
         </View>
 
