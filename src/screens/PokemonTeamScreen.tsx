@@ -224,11 +224,7 @@ export default function PokemonTeamScreen({
               index === team.length - 1 && styles.disabledArrow,
             ]}
           >
-            <MaterialCommunityIcons
-              name="arrow-right"
-              size={24}
-              color="white"
-            />
+            <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -262,17 +258,38 @@ export default function PokemonTeamScreen({
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveButton, isSaving && styles.disabledButton]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Team Order</Text>
+        <View style={styles.footerButtons}>
+          {team.length < 6 && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                playClick();
+                navigation.navigate("SelectFromPC" as any, {
+                  currentTeamIds: team.map((p) => p.id),
+                });
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="white" />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              isSaving && styles.disabledButton,
+              team.length === 6 && { flex: 1 },
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Order</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <StatusModal
@@ -411,15 +428,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   level: {
-    color: "#818CF8",
+    color: "#9CA3AF",
     fontSize: 12,
-    fontWeight: "800",
-    marginTop: 4,
+    fontWeight: "700",
+    marginTop: 2,
     marginBottom: 8,
   },
   controls: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
     marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: "#1F2937",
@@ -429,18 +446,13 @@ const styles = StyleSheet.create({
   },
   arrowButton: {
     backgroundColor: "#1F2937",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 36,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#374151",
-  },
-  arrowText: {
-    color: "white",
-    fontSize: 22,
-    fontWeight: "bold",
   },
   disabledArrow: {
     opacity: 0.1,
@@ -467,7 +479,33 @@ const styles = StyleSheet.create({
     borderTopColor: "#1F2937",
     backgroundColor: "#030712",
   },
+  footerButtons: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  addButton: {
+    backgroundColor: "#10B981",
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  addButtonText: {
+    color: "white",
+    fontWeight: "900",
+    fontSize: 16,
+    textTransform: "uppercase",
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: "#818CF8",
     paddingVertical: 18,
     borderRadius: 20,
@@ -484,8 +522,8 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "white",
     fontWeight: "900",
-    fontSize: 18,
-    letterSpacing: 1.5,
+    fontSize: 16,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
 });

@@ -44,6 +44,7 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon; onRelease?: () => void };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
+  SelectFromPC: { currentTeamIds: string[] };
   InventoryBag: {
     player: Pokemon;
     team?: Pokemon[];
