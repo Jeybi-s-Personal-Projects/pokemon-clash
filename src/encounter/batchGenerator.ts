@@ -25,20 +25,36 @@ import { gen1Pokemon } from "@/src/data/gen1Pokemon";
 import { gen2Pokemon } from "@/src/data/gen2Pokemon";
 
 export type Region = "gen1" | "gen2";
-export type Area = "cave" | "grass" | "water" | "forest";
+export type Area =
+  | "plains"
+  | "mountain"
+  | "water"
+  | "cave"
+  | "urban"
+  | "volcano"
+  | "training"
+  | "safari";
 
 const TABLE_REGISTRY: Record<Region, Record<Area, EncounterTable>> = {
   gen1: {
-    cave: gen1Cave,
-    grass: gen1Grass,
-    water: gen1Water,
-    forest: gen1Forest,
+    plains: require("./gen1/tables").gen1Plains,
+    mountain: require("./gen1/tables").gen1Mountain,
+    water: require("./gen1/tables").gen1Water,
+    cave: require("./gen1/tables").gen1Cave,
+    urban: require("./gen1/tables").gen1Urban,
+    volcano: require("./gen1/tables").gen1Volcano,
+    training: require("./gen1/tables").gen1Training,
+    safari: require("./gen1/tables").gen1Safari,
   },
   gen2: {
-    cave: gen2Cave,
-    grass: gen2Grass,
-    water: gen2Water,
-    forest: gen2Forest,
+    plains: require("./gen2/tables").gen2Plains,
+    mountain: require("./gen2/tables").gen2Mountain,
+    water: require("./gen2/tables").gen2Water,
+    cave: require("./gen2/tables").gen2Cave,
+    urban: require("./gen2/tables").gen2Urban,
+    volcano: require("./gen2/tables").gen2Volcano,
+    training: require("./gen2/tables").gen2Training,
+    safari: require("./gen2/tables").gen2Safari,
   },
 };
 
