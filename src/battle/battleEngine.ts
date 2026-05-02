@@ -26,6 +26,7 @@ export function dealDamage(
   defender: Pokemon,
   defenderStages: StatStages,
   move: Move,
+  weather: WeatherCondition = null,
 ): { damage: number; isCrit: boolean } {
   if (move.power === 0) return { damage: 0, isCrit: false };
 
@@ -34,6 +35,16 @@ export function dealDamage(
 
   // STAB: Same Type Attack Bonus (1.5x)
   const stab = attacker.type.includes(moveType) ? 1.5 : 1;
+
+  // Weather Multipliers
+  let weatherMultiplier = 1;
+  if (weather === "rain") {
+    if (moveType === "water") weatherMultiplier = 1.5;
+    else if (moveType === "fire") weatherMultiplier = 0.5;
+  } else if (weather === "sun") {
+    if (moveType === "fire") weatherMultiplier = 1.5;
+    else if (moveType === "water") weatherMultiplier = 0.5;
+  }
 
   // Critical Hit (6.25% chance)
   const isCrit = Math.random() < 0.0625;
@@ -69,7 +80,8 @@ export function dealDamage(
     stab *
     typeMultiplier *
     critMultiplier *
-    variance;
+    variance *
+    weatherMultiplier;
 
   const finalDamage = Math.floor(baseDamage);
 

@@ -21,6 +21,7 @@ import {
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { applyStatChanges, delay } from "../utils/battleUtils";
 import { MOVE_STATUS_MAP, getStatusDuration } from "../utils/statusUtils";
+import { MOVE_WEATHER_MAP, getWeatherStartMessage, getWeatherContinueMessage } from "../utils/weatherUtils";
 
 const initialStages: StatStages = {
   attack: 0,
@@ -68,6 +69,8 @@ export function useBattle({
     hitSide: null,
     playerStages: { ...initialStages },
     enemyStages: { ...initialStages },
+    weather: null,
+    weatherTurns: 0,
   });
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
@@ -511,6 +514,8 @@ export function useBattle({
     let nextDefenderStatus = defender.status;
     let nextDefenderStatusTurns = defender.statusTurns;
     let nextDefenderConfusionTurns = defender.confusionTurns;
+    let nextWeather = currentState.weather;
+    let nextWeatherTurns = currentState.weatherTurns;
 
     if (move.power === 0) {
       setState((s) => ({ ...s, dancingSide: attackerSide }));
@@ -531,6 +536,7 @@ export function useBattle({
         defender,
         defenderStages,
         move,
+        currentState.weather,
       );
 
       if (isCrit) {
@@ -571,6 +577,16 @@ export function useBattle({
           await delay(1200);
         }
       }
+    }
+
+    // Handle Weather Infliction
+    const weatherEffect = MOVE_WEATHER_MAP[move.name.toLowerCase()];
+    if (weatherEffect) {
+      nextWeather = weatherEffect.weather;
+      nextWeatherTurns = weatherEffect.duration;
+      setCurrentMessage(null);
+      setCurrentMessage(getWeatherStartMessage(nextWeather));
+      await delay(1200);
     }
 
     let moveLogs: string[] = [];
@@ -627,6 +643,8 @@ export function useBattle({
       team: nextTeam,
       playerStages: nextPlayerStages,
       enemyStages: nextEnemyStages,
+      weather: nextWeather,
+      weatherTurns: nextWeatherTurns,
       hitSide: null,
       attackingSide: null,
       dancingSide: null,
@@ -810,16 +828,69 @@ export function useBattle({
       await delay(1000);
     }
 
-    // 3. End of Turn Damage (Poison / Burn)
+    // 3. End of Turn Damage (Poison / Burn / Weather)
     let finalState = { ...currentState };
-    const participants: ("player" | "enemy")[] = ["player", "enemy"];
     
+    // Weather effects
+    if (finalState.weather) {
+      setCurrentMessage(null);
+      setCurrentMessage(getWeatherContinueMessage(finalState.weather));
+      await delay(1200);
+
+      // Decrement weather duration
+      finalState.weatherTurns -= 1;
+      if (finalState.weatherTurns === 0) {
+        setCurrentMessage(null);
+        setCurrentMessage("The weather returned to normal.");
+        await delay(1200);
+        finalState.weather = null;
+      }
+
+      // Chip damage from weather (Sandstorm / Hail)
+      if (finalState.weather === "sandstorm" || finalState.weather === "hail") {
+        const sides: ("player" | "enemy")[] = ["player", "enemy"];
+        for (const side of sides) {
+          const p = side === "player" ? finalState.player : finalState.enemy;
+          if (p.hp <= 0) continue;
+
+          // Immunities
+          let isImmune = false;
+          if (finalState.weather === "sandstorm") {
+            isImmune = p.type.some(t => ["rock", "ground", "steel"].includes(t));
+          } else if (finalState.weather === "hail") {
+            isImmune = p.type.includes("ice");
+          }
+
+          if (!isImmune) {
+            const damage = Math.floor(p.maxHp / 16);
+            const nextHp = Math.max(0, p.hp - damage);
+            setCurrentMessage(null);
+            setCurrentMessage(`${p.name.toUpperCase()} was buffeted by the ${finalState.weather}!`);
+            await delay(1200);
+            
+            if (side === "player") finalState = { ...finalState, player: { ...p, hp: nextHp }, hitSide: "player" };
+            else finalState = { ...finalState, enemy: { ...p, hp: nextHp }, hitSide: "enemy" };
+            
+            setState(finalState);
+            await delay(600);
+            setState(s => ({ ...s, hitSide: null }));
+            
+            const winner = isGameOver(finalState);
+            if (winner) { handleWinner(winner, finalState); return; }
+          }
+        }
+      }
+    }
+
+    // Status effects
+    const participants: ("player" | "enemy")[] = ["player", "enemy"];
     for (const side of participants) {
       const p = side === "player" ? finalState.player : finalState.enemy;
       if (p.hp > 0 && (p.status === "poison" || p.status === "burn")) {
         const damage = Math.floor(p.maxHp / 8);
         const nextHp = Math.max(0, p.hp - damage);
         
+        setCurrentMessage(null);
         setCurrentMessage(`${p.name.toUpperCase()} was hurt by its ${p.status}!`);
         await delay(1200);
         
