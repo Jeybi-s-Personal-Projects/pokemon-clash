@@ -74,7 +74,7 @@ const AREAS: AreaConfig[] = [
     bgTop: "#1a1428",
     bgBottom: "#0c0a18",
     accent: "#8060d0",
-    icon: "cave",
+    icon: "tunnel",
     difficulty: "hard",
     encounterRate: "Moderate",
   },
