@@ -13,6 +13,8 @@ export type Move = {
   priority?: number | null;
 };
 
+export type StatusCondition = "poison" | "burn" | "paralysis" | "sleep" | "freeze" | null;
+
 export type Pokemon = {
   id?: number | string;
   speciesId: number;
@@ -34,4 +36,7 @@ export type Pokemon = {
   isShiny?: boolean;
   moves: Move[];
   cry: string;
+  status?: StatusCondition;
+  statusTurns?: number; // For sleep
+  confusionTurns?: number; // Volatile status
 };
