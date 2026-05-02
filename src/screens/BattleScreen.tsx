@@ -128,7 +128,7 @@ export function Battle({
 
       <MoveLearningModal
         visible={battle.moveModalVisible}
-        pokemon={state.player}
+        pokemon={battle.learningPokemon || state.player}
         newMove={battle.pendingMove}
         onSelect={battle.handleMoveSelection}
       />

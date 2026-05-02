@@ -90,6 +90,7 @@ export function useBattle({
   // Move Learning State
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [pendingMove, setPendingMove] = useState<Move | null>(null);
+  const [learningPokemon, setLearningPokemon] = useState<Pokemon | null>(null);
   const [resolveMoveLearning, setResolveMoveLearning] = useState<{
     resolve: (updatedMoves: Move[]) => void;
   } | null>(null);
@@ -106,8 +107,12 @@ export function useBattle({
     resolve: () => void;
   } | null>(null);
 
-  const promptMoveReplacement = (newMove: Move): Promise<Move[]> => {
+  const promptMoveReplacement = (
+    newMove: Move,
+    pokemon: Pokemon,
+  ): Promise<Move[]> => {
     return new Promise((resolve) => {
+      setLearningPokemon(pokemon);
       setPendingMove(newMove);
       setMoveModalVisible(true);
       setResolveMoveLearning({ resolve });
@@ -115,23 +120,24 @@ export function useBattle({
   };
 
   const handleMoveSelection = async (index: number | "skip") => {
-    if (!resolveMoveLearning || !pendingMove) return;
+    if (!resolveMoveLearning || !pendingMove || !learningPokemon) return;
 
-    let updatedMoves = [...state.player.moves];
+    let updatedMoves = [...learningPokemon.moves];
 
     if (index !== "skip") {
       const oldMove = updatedMoves[index];
-      updatedMoves[index] = pendingMove;
+      updatedMoves[index] = { ...pendingMove };
 
-      if (user && state.player.id) {
+      if (user && learningPokemon.id) {
+        // Delete old move and insert new one
         await supabase
           .from("pokemon_moves")
           .delete()
-          .eq("pokemon_id", state.player.id)
+          .eq("pokemon_id", learningPokemon.id)
           .eq("move_name", oldMove.name);
 
         await supabase.from("pokemon_moves").insert({
-          pokemon_id: state.player.id,
+          pokemon_id: learningPokemon.id,
           move_name: pendingMove.name,
           move_power: pendingMove.power,
           move_pp: pendingMove.pp,
@@ -145,11 +151,11 @@ export function useBattle({
       }
 
       setCurrentMessage(
-        `${state.player.name} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`,
+        `${learningPokemon.name.toUpperCase()} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`,
       );
     } else {
       setCurrentMessage(
-        `${state.player.name} did not learn ${pendingMove.name.toUpperCase()}.`,
+        `${learningPokemon.name.toUpperCase()} did not learn ${pendingMove.name.toUpperCase()}.`,
       );
     }
 
@@ -157,6 +163,7 @@ export function useBattle({
     await delay(1500);
     resolveMoveLearning.resolve(updatedMoves);
     setPendingMove(null);
+    setLearningPokemon(null);
     setResolveMoveLearning(null);
 
     if (onToggleAutoBattle) onToggleAutoBattle(false);
@@ -331,7 +338,7 @@ export function useBattle({
       );
 
       const finalTeam = [...currentState.team];
-      let didActivePlayerEvolve = false;
+      let didAnyEvolve = false;
 
       // 1. Process EXP for all team members
       for (let i = 0; i < finalTeam.length; i++) {
@@ -354,135 +361,133 @@ export function useBattle({
             ...levelUp.stats,
           };
 
-          // Detailed logs and interactions only for active pokemon
-          if (isActive) {
-            await delay(1200);
-            setCurrentMessage(
-              `${p.name.toUpperCase()} gained ${sharedExp} EXP!`,
-            );
-            await delay(1200);
-            setCurrentMessage(
-              `${p.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
-            );
+          await delay(1200);
+          setCurrentMessage(`${p.name.toUpperCase()} gained ${sharedExp} EXP!`);
+          await delay(1200);
+          setCurrentMessage(
+            `${p.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
+          );
 
-            // Handle new moves
-            if (levelUp.newMoves.length > 0) {
-              for (const move of levelUp.newMoves) {
+          // Handle new moves
+          if (levelUp.newMoves.length > 0) {
+            for (const move of levelUp.newMoves) {
+              if (updatedPokemon.moves.length < 4) {
+                // Auto-learn if slots available
+                updatedPokemon.moves = [...updatedPokemon.moves, move];
                 await delay(1200);
                 setCurrentMessage(
-                  `${p.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+                  `${updatedPokemon.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
                 );
-                if (updatedPokemon.moves.length < 4) {
-                  updatedPokemon.moves = [...updatedPokemon.moves, move];
-                  await supabase.from("pokemon_moves").insert({
-                    pokemon_id: updatedPokemon.id,
-                    move_name: move.name,
-                    move_power: move.power,
-                    move_pp: move.pp,
-                    move_type: move.type ?? "normal",
-                    move_damageClass: move.damageClass,
-                    move_accuracy: move.accuracy,
-                    move_statChanges: JSON.stringify(move.statChanges),
-                    move_description: move.description,
-                    move_priority: move.priority,
-                  });
-                } else {
-                  setCurrentMessage(
-                    `${p.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
-                  );
-                  await delay(1500);
-                  setCurrentMessage(
-                    `But ${p.name.toUpperCase()} already knows 4 moves!`,
-                  );
-                  await delay(1500);
+                await supabase.from("pokemon_moves").insert({
+                  pokemon_id: updatedPokemon.id,
+                  move_name: move.name,
+                  move_power: move.power,
+                  move_pp: move.pp,
+                  move_type: move.type ?? "normal",
+                  move_damageClass: move.damageClass,
+                  move_accuracy: move.accuracy,
+                  move_statChanges: JSON.stringify(move.statChanges),
+                  move_description: move.description,
+                  move_priority: move.priority,
+                });
+              } else {
+                // Prompt replacement
+                await delay(1200);
+                setCurrentMessage(
+                  `${updatedPokemon.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
+                );
+                await delay(1500);
+                setCurrentMessage(
+                  `But it already knows 4 moves!`,
+                );
+                await delay(1500);
 
-                  const newMoveset = await promptMoveReplacement(move);
-                  updatedPokemon.moves = newMoveset;
-                }
+                const newMoveset = await promptMoveReplacement(move, updatedPokemon);
+                updatedPokemon.moves = newMoveset;
               }
             }
+          }
 
-            // Check for Evolution
-            const evolutionTargetId = checkEvolution(
-              updatedPokemon,
-              updatedPokemon.level,
+          // Check for Evolution
+          const evolutionTargetId = checkEvolution(
+            updatedPokemon,
+            updatedPokemon.level,
+          );
+          if (evolutionTargetId) {
+            setCurrentMessage(
+              `What? ${updatedPokemon.name.toUpperCase()} is evolving!`,
             );
-            if (evolutionTargetId) {
-              setCurrentMessage(
-                `What? ${updatedPokemon.name.toUpperCase()} is evolving!`,
-              );
-              await delay(2000);
+            await delay(2000);
 
-              const newSpeciesData = await fetchPokemon(
-                evolutionTargetId.toString(),
-              );
+            const newSpeciesData = await fetchPokemon(
+              evolutionTargetId.toString(),
+            );
 
-              const evolve = new Promise<void>((resolve) => {
-                setEvolvingPokemon({
-                  oldName: updatedPokemon.name,
-                  newSpeciesId: evolutionTargetId,
-                  newName: newSpeciesData.name,
-                  spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
-                });
-                setEvolutionVisible(true);
-                setResolveEvolution({ resolve });
+            const evolve = new Promise<void>((resolve) => {
+              setEvolvingPokemon({
+                oldName: updatedPokemon.name,
+                newSpeciesId: evolutionTargetId,
+                newName: newSpeciesData.name,
+                spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
               });
+              setEvolutionVisible(true);
+              setResolveEvolution({ resolve });
+            });
 
-              await evolve;
+            await evolve;
 
-              updatedPokemon = {
-                ...updatedPokemon,
-                speciesId: evolutionTargetId,
-                name: newSpeciesData.name,
-                type: newSpeciesData.types.map((t: any) => t.type.name),
-                frontImage: newSpeciesData.sprites.other.showdown.front_default,
-                backImage: newSpeciesData.sprites.other.showdown.back_default,
-                hp: calculateHp(
-                  newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
-                    .base_stat,
-                  updatedPokemon.level,
-                ),
-                maxHp: calculateHp(
-                  newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
-                    .base_stat,
-                  updatedPokemon.level,
-                ),
-                attack: calculateStat(
-                  newSpeciesData.stats.find((s: any) => s.stat.name === "attack")
-                    .base_stat,
-                  updatedPokemon.level,
-                ),
-                defense: calculateStat(
-                  newSpeciesData.stats.find((s: any) => s.stat.name === "defense")
-                    .base_stat,
-                  updatedPokemon.level,
-                ),
-                specialAttack: calculateStat(
-                  newSpeciesData.stats.find(
-                    (s: any) => s.stat.name === "special-attack",
-                  ).base_stat,
-                  updatedPokemon.level,
-                ),
-                specialDefense: calculateStat(
-                  newSpeciesData.stats.find(
-                    (s: any) => s.stat.name === "special-defense",
-                  ).base_stat,
-                  updatedPokemon.level,
-                ),
-                speed: calculateStat(
-                  newSpeciesData.stats.find((s: any) => s.stat.name === "speed")
-                    .base_stat,
-                  updatedPokemon.level,
-                ),
-              };
+            updatedPokemon = {
+              ...updatedPokemon,
+              speciesId: evolutionTargetId,
+              name: newSpeciesData.name,
+              type: newSpeciesData.types.map((t: any) => t.type.name),
+              frontImage: newSpeciesData.sprites.other.showdown.front_default,
+              backImage: newSpeciesData.sprites.other.showdown.back_default,
+              hp: calculateHp(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              maxHp: calculateHp(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              attack: calculateStat(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "attack")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              defense: calculateStat(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "defense")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              specialAttack: calculateStat(
+                newSpeciesData.stats.find(
+                  (s: any) => s.stat.name === "special-attack",
+                ).base_stat,
+                updatedPokemon.level,
+              ),
+              specialDefense: calculateStat(
+                newSpeciesData.stats.find(
+                  (s: any) => s.stat.name === "special-defense",
+                ).base_stat,
+                updatedPokemon.level,
+              ),
+              speed: calculateStat(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "speed")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+            };
 
-              didActivePlayerEvolve = true;
-              setCurrentMessage(
-                `${p.name.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
-              );
-              await delay(2000);
-              if (onToggleAutoBattle) onToggleAutoBattle(false);
-            }
+            didAnyEvolve = true;
+            setCurrentMessage(
+              `${updatedPokemon.name.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
+            );
+            await delay(2000);
+            if (onToggleAutoBattle) onToggleAutoBattle(false);
           }
         } else {
           updatedPokemon.experience += sharedExp;
@@ -495,35 +500,21 @@ export function useBattle({
         }
 
         finalTeam[i] = updatedPokemon;
+        
+        // Update state progressively so UI reflects levels immediately
+        setState(s => ({ 
+            ...s, 
+            player: i === s.activePlayerIndex ? updatedPokemon : s.player,
+            team: finalTeam 
+        }));
       }
-
-      // 2. Summary for bench
-      const benchLeveledUp = finalTeam.filter(
-        (p, idx) =>
-          idx !== currentState.activePlayerIndex &&
-          p.level > currentState.team[idx].level,
-      );
-
-      if (benchLeveledUp.length > 0) {
-        await delay(1200);
-        setCurrentMessage("Other team members gained experience!");
-        await delay(1500);
-      }
-
-      const updatedActivePlayer = finalTeam[currentState.activePlayerIndex];
-
-      setState((s) => ({
-        ...s,
-        player: updatedActivePlayer,
-        team: finalTeam,
-      }));
 
       await delay(1500);
       if (onBattleEnd)
         onBattleEnd(
           "player",
           finalTeam,
-          didActivePlayerEvolve,
+          didAnyEvolve,
           currentState.activePlayerIndex,
         );
     } else {
@@ -980,6 +971,7 @@ export function useBattle({
     state,
     currentMessage,
     isPlayerEntering,
+    learningPokemon,
     attack,
     handleSwitch,
     // Status Modal

@@ -116,13 +116,13 @@ export default function PokemonTeamScreen({
     setIsSaving(true);
 
     try {
-      const updatePromises = team.map((p, index) =>
-        supabase.from("pokemon").update({ pk_order: index + 1 }).eq("id", p.id),
-      );
+      const syncData = team.map((p, index) => ({
+        id: p.id,
+        pk_order: index + 1,
+      }));
 
-      const results = await Promise.all(updatePromises);
-      const firstError = results.find((r) => r.error)?.error;
-      if (firstError) throw firstError;
+      const { error } = await supabase.from("pokemon").upsert(syncData);
+      if (error) throw error;
 
       playClick("medium");
       setStatusMessage("Team order saved successfully!");
