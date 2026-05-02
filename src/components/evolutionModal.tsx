@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, Text, Modal, TouchableOpacity, StyleSheet } from "react-native";
 type Props = {
   visible: boolean;
   pokemon: { oldName: string; newSpeciesId: number; newName: string; spriteUrl: string } | null;
