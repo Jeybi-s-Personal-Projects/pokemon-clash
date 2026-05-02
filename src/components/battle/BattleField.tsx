@@ -1,10 +1,9 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import PokemonCard from "../pokemonCard";
-import { Pokemon } from "../../types/pokemon";
+import { Image, StyleSheet, View } from "react-native";
 import { StatStages } from "../../battle/battleTypes";
+import { Pokemon } from "../../types/pokemon";
 import { getExpForLevel } from "../../utils/experienceCalculator";
-
+import PokemonCard from "../pokemonCard";
 interface BattleFieldProps {
   player: Pokemon;
   enemy: Pokemon;
@@ -15,6 +14,8 @@ interface BattleFieldProps {
   hitSide: "player" | "enemy" | null;
   isPlayerEntering?: boolean;
 }
+
+const bg = require("@/assets/backgrounds/background-grass.jpg");
 
 export const BattleField = ({
   player,
@@ -28,6 +29,7 @@ export const BattleField = ({
 }: BattleFieldProps) => {
   return (
     <View style={styles.container}>
+      <Image source={bg} style={styles.background} />
       <PokemonCard
         pokemon={enemy}
         stages={enemyStages}
@@ -61,9 +63,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 10,
+    position: "relative",
   },
   spacer: {
     height: 100,
+  },
+  background: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    zIndex: 0,
+    top: 0,
+    left: 0,
   },
 });

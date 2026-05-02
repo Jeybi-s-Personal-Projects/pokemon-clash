@@ -371,6 +371,8 @@ export default function PokemonCard({
           source={{ uri: imageSource }}
           style={{
             width: isBack ? 180 : 100,
+            marginRight: isBack ? 0 : 15,
+            marginLeft: isBack ? 15 : 0,
             height: isBack ? 180 : 100,
             resizeMode: "contain",
           }}
