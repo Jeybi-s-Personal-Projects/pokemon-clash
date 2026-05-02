@@ -1,4 +1,5 @@
 import type { Area } from "@/src/encounter/batchGenerator";
+import { colors } from "@/src/theme/color";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useRef, useState } from "react";
 import {
@@ -25,6 +26,7 @@ import * as gen1Tables from "../encounter/gen1/tables";
 import * as gen2Tables from "../encounter/gen2/tables";
 
 const ALL_POKEMON_META = [...gen1Pokemon, ...gen2Pokemon];
+const banner = require("@/assets/banners/banner-2.jpg");
 
 // ─── Assets ───────────────────────────────────────────────────────────────────
 
@@ -165,11 +167,7 @@ function AreaCard({
         isSelected && { borderColor: area.accent, borderWidth: 2 },
       ]}
     >
-      <ImageBackground
-        source={image}
-        style={StyleSheet.absoluteFill}
-        imageStyle={{ borderRadius: 14 }}
-      >
+      <ImageBackground source={image} style={StyleSheet.absoluteFill}>
         <View style={styles.gradientOverlay} />
 
         <View style={styles.cardTop}>
@@ -311,7 +309,7 @@ export default function AreaSelectScreen({
         {/* ── Header ── */}
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </Pressable>
           <View style={styles.headerText}>
             <Text style={styles.eyebrow}>
@@ -321,6 +319,25 @@ export default function AreaSelectScreen({
             <Text style={styles.subtitle}>
               Each area holds unique Pokémon to discover
             </Text>
+          </View>
+          <View
+            style={{
+              width: 380,
+              height: 200,
+              position: "absolute",
+              backgroundColor: "#03030392",
+              zIndex: 0,
+            }}
+          >
+            <Image
+              source={banner}
+              style={{
+                height: 180,
+                width: "100%",
+                position: "absolute",
+                opacity: 0.3,
+              }}
+            />
           </View>
         </View>
 
@@ -405,31 +422,36 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    position: "relative",
+    height: 180,
     paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 24,
-    paddingBottom: 20,
-    backgroundColor: "#1a1f35",
+    paddingBottom: 10,
   },
   backBtn: {
     marginBottom: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1,
+    borderColor: "white",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 1,
   },
   headerText: {
     gap: 4,
+    zIndex: 1,
   },
   eyebrow: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#e8534a",
     letterSpacing: 1.5,
+    color: "white",
   },
   title: {
-    fontSize: 32,
+    fontSize: 25,
     fontWeight: "800",
     color: "#fff",
   },
@@ -443,7 +465,10 @@ const styles = StyleSheet.create({
   },
   areaCard: {
     height: 160,
-    borderRadius: 14,
+    borderTopStartRadius: 20,
+    borderBottomEndRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     overflow: "hidden",
     backgroundColor: "#111826",
     elevation: 5,
@@ -533,19 +558,19 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    backgroundColor: colors.modalOverlay,
   },
   modalContent: {
     width: "100%",
     maxHeight: "80%",
-    backgroundColor: "#111826",
+    backgroundColor: colors.bgCard,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: colors.borderSubtle,
   },
   modalHeader: {
     flexDirection: "row",
@@ -568,11 +593,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#1a1f35",
-    padding: 12,
+    backgroundColor: colors.bgButtonStandard,
+    borderWidth: 1,
+    borderColor: colors.buttonBorder,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderRadius: 12,
   },
   encounterName: {
+    marginLeft: 8,
     color: "#fff",
     fontSize: 14,
     fontWeight: "bold",

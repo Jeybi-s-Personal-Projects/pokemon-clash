@@ -1,3 +1,4 @@
+import { colors } from "@/src/theme/color";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   container: {
-    backgroundColor: "#1d2633",
+    backgroundColor: colors.modalBackground,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: "80%",
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderWidth: 1,
-    borderColor: "#ffffff80",
+    borderColor: colors.buttonBorder,
     borderRadius: 10,
     gap: 12,
     marginBottom: 8,

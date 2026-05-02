@@ -1,5 +1,7 @@
+import { colors } from "@/src/theme/color";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useRef, useState } from "react";
+
 import {
   Animated,
   ImageBackground,
@@ -408,7 +410,7 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#ffffff7e",
+    borderColor: colors.borderSubtle,
     overflow: "hidden",
     backgroundColor: "#111826",
     shadowColor: "#000",

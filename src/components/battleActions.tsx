@@ -316,10 +316,10 @@ const styles = StyleSheet.create({
   },
   logBox: {
     flex: 1,
-    margin: 28,
+    margin: 40,
     borderWidth: 2,
-    borderRadius: 4,
     borderColor: colors.neonBlue,
+    backgroundColor: colors.bgButtonStandard,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
