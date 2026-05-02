@@ -1,6 +1,6 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { WeatherCondition } from "../../battle/battleTypes";
 
 interface WeatherIndicatorProps {
@@ -41,9 +41,20 @@ export const WeatherIndicator = ({ weather, turns }: WeatherIndicatorProps) => {
   const config = WEATHER_CONFIG[weather];
 
   return (
-    <View style={[styles.container, { borderColor: config.color, backgroundColor: config.bg }]}>
-      <MaterialCommunityIcons name={config.icon as any} size={24} color={config.color} />
-      <Text style={[styles.label, { color: config.color }]}>{config.label}</Text>
+    <View
+      style={[
+        styles.container,
+        { borderColor: config.color, backgroundColor: config.bg },
+      ]}
+    >
+      <MaterialCommunityIcons
+        name={config.icon as any}
+        size={16}
+        color={config.color}
+      />
+      <Text style={[styles.label, { color: config.color }]}>
+        {config.label}
+      </Text>
       <View style={[styles.turnBadge, { backgroundColor: config.color }]}>
         <Text style={styles.turnText}>{turns}</Text>
       </View>
@@ -54,13 +65,14 @@ export const WeatherIndicator = ({ weather, turns }: WeatherIndicatorProps) => {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    left: 10,
-    top: "40%",
+    left: 0,
+    top: "33%",
+    flexDirection: "row",
     transform: [{ translateY: -40 }],
-    width: 50,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 80,
+    paddingVertical: 4,
+    borderTopEndRadius: 10,
+    borderBottomEndRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
@@ -72,8 +84,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   turnBadge: {
-    width: 18,
-    height: 18,
+    width: 12,
+    height: 12,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
@@ -81,7 +93,7 @@ const styles = StyleSheet.create({
   },
   turnText: {
     color: "#1F2937",
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "bold",
   },
 });

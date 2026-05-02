@@ -8,6 +8,7 @@ import StatusModal from "../components/statusModal";
 import { BattleField } from "../components/battle/BattleField";
 import { SwitchModal } from "../components/battle/SwitchModal";
 import { MoveLearningModal } from "../components/battle/MoveLearningModal";
+import { WeatherIndicator } from "../components/battle/WeatherIndicator";
 
 import { useBattle } from "../hooks/useBattle";
 import { BattleScreenProps } from "../types/navigation";
@@ -64,6 +65,9 @@ export function Battle({
 
   return (
     <View style={styles.container}>
+      {/* 0. Weather Indicator */}
+      <WeatherIndicator weather={state.weather} turns={state.weatherTurns} />
+
       {/* 1. The Battle Field (Sprites & HP) */}
       <BattleField
         player={state.player}

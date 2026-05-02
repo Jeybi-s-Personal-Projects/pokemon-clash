@@ -1,5 +1,5 @@
 import { Move, Pokemon } from "../types/pokemon";
-import { BattleState, StatStages } from "./battleTypes";
+import { BattleState, StatStages, WeatherCondition } from "./battleTypes";
 import { getTypeMultiplier, PokemonType } from "./typeChart";
 
 /**
