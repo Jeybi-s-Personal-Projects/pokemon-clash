@@ -137,7 +137,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
           pk_cry: p.cry,
           pk_level: p.level,
           pk_experience: p.experience,
-          pk_hp: p.hp,
+          pk_hp: p.maxHp, // Fully heal
           pk_max_hp: p.maxHp,
           pk_attack: p.attack,
           pk_defense: p.defense,

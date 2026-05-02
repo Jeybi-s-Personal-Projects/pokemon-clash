@@ -7,7 +7,7 @@ import {
   determineTurnOrder,
   isGameOver,
 } from "../battle/battleEngine";
-import { BattleState, StatStages } from "../battle/battleTypes";
+import { BattleState, StatStages, WeatherCondition } from "../battle/battleTypes";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
@@ -905,6 +905,9 @@ export function useBattle({
         if (winner) { handleWinner(winner, finalState); return; }
       }
     }
+
+    // FINAL UPDATE: Ensure all state changes (like weatherTurns) are applied
+    setState(finalState);
 
     if (finalState.player.hp <= 0) {
       setCurrentMessage(`${finalState.player.name.toUpperCase()} fainted!`);
