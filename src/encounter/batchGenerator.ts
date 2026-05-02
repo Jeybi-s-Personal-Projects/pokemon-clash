@@ -7,18 +7,6 @@ import type { EncounterTable, GeneratedEncounter, QueueEntry } from "./types";
  * Region/area → encounter table registry.
  * Extend this as you add more regions and tables.
  */
-import {
-  gen1Cave,
-  gen1Forest,
-  gen1Grass,
-  gen1Water,
-} from "@/src/encounter/gen1/tables";
-import {
-  gen2Cave,
-  gen2Forest,
-  gen2Grass,
-  gen2Water,
-} from "@/src/encounter/gen2/tables";
 
 // Local Pokémon DB types for metadata injection
 import { gen1Pokemon } from "@/src/data/gen1Pokemon";

@@ -1,7 +1,11 @@
 import type { Area } from "@/src/encounter/batchGenerator";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
+  Animated,
+  FlatList,
+  ImageBackground,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +16,27 @@ import {
 } from "react-native";
 import { AreaSelectScreenProps } from "../types/navigation";
 
+// Data imports for encounter info
+import { gen1Pokemon } from "../data/gen1Pokemon";
+import { gen2Pokemon } from "../data/gen2Pokemon";
+import * as gen1Tables from "../encounter/gen1/tables";
+import * as gen2Tables from "../encounter/gen2/tables";
+
+const ALL_POKEMON_META = [...gen1Pokemon, ...gen2Pokemon];
+
+// ─── Assets ───────────────────────────────────────────────────────────────────
+
+const AREA_IMAGES: Record<string, any> = {
+  plains: require("../../assets/areas/plains.jpg"),
+  mountain: require("../../assets/areas/mountain.jpg"),
+  water: require("../../assets/areas/water.jpg"),
+  cave: require("../../assets/areas/cave.jpg"),
+  urban: require("../../assets/areas/urban.jpg"),
+  volcano: require("../../assets/areas/volcano.jpg"),
+  training: require("../../assets/areas/training.jpg"),
+  safari: require("../../assets/areas/safari.jpg"),
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type AreaConfig = {
@@ -19,12 +44,8 @@ type AreaConfig = {
   label: string;
   description: string;
   encounterHint: string;
-  bgTop: string;
-  bgBottom: string;
   accent: string;
-  icon: string;
   difficulty: "easy" | "medium" | "hard";
-  encounterRate: string;
 };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -34,127 +55,72 @@ const AREAS: AreaConfig[] = [
     id: "plains",
     label: "Blooming Plains",
     description: "Sun-drenched meadows teeming with life.",
-    encounterHint: "Pidgey, Sentret, Oddish...",
-    bgTop: "#1a3a10",
-    bgBottom: "#0e2208",
+    encounterHint: "Normal, Grass, Bug",
     accent: "#5dc840",
-    icon: "grass",
     difficulty: "easy",
-    encounterRate: "Common",
-  },
-  {
-    id: "mountain",
-    label: "Peak of Titans",
-    description: "Jagged cliffs where only the strong survive.",
-    encounterHint: "Geodude, Skarmory, Machop...",
-    bgTop: "#3a2a10",
-    bgBottom: "#1a1408",
-    accent: "#c8a440",
-    icon: "image-filter-hdr",
-    difficulty: "hard",
-    encounterRate: "Frequent",
   },
   {
     id: "water",
     label: "Azure Coast",
     description: "The rhythmic crashing of waves hide secrets.",
-    encounterHint: "Lapras, Totodile, Staryu...",
-    bgTop: "#0a1e38",
-    bgBottom: "#060e20",
+    encounterHint: "Water, Ice",
     accent: "#2090e0",
-    icon: "water",
     difficulty: "medium",
-    encounterRate: "Moderate",
-  },
-  {
-    id: "cave",
-    label: "Crystal Caverns",
-    description: "Glowing gems illuminate the deep dark.",
-    encounterHint: "Zubat, Unown, Onix...",
-    bgTop: "#1a1428",
-    bgBottom: "#0c0a18",
-    accent: "#8060d0",
-    icon: "tunnel",
-    difficulty: "hard",
-    encounterRate: "Moderate",
-  },
-  {
-    id: "urban",
-    label: "Abandoned Lab",
-    description: "Flickering lights and humming machinery.",
-    encounterHint: "Mewtwo, Elekid, Magnemite...",
-    bgTop: "#2a2a2a",
-    bgBottom: "#121212",
-    accent: "#9aa4b2",
-    icon: "factory",
-    difficulty: "hard",
-    encounterRate: "Rare finds",
-  },
-  {
-    id: "volcano",
-    label: "Magma Crater",
-    description: "The air shimmers with intense heat.",
-    encounterHint: "Magmar, Entei, Moltres...",
-    bgTop: "#3a1010",
-    bgBottom: "#1a0808",
-    accent: "#ef4444",
-    icon: "fire",
-    difficulty: "hard",
-    encounterRate: "Extreme",
   },
   {
     id: "training",
     label: "Training Grounds",
     description: "A sanctuary for rare and gifted Pokémon.",
-    encounterHint: "Bulbasaur, Pikachu, Pichu...",
-    bgTop: "#103a30",
-    bgBottom: "#081a14",
+    encounterHint: "Starters, Babies",
     accent: "#10b981",
-    icon: "sword-cross",
     difficulty: "medium",
-    encounterRate: "Discovered",
   },
   {
     id: "safari",
     label: "Safari Zone",
     description: "The ultimate wilderness for true trackers.",
-    encounterHint: "Scyther, Heracross, Chansey...",
-    bgTop: "#2a3a10",
-    bgBottom: "#141a08",
+    encounterHint: "Rare & Versatile",
     accent: "#84cc16",
-    icon: "compass",
     difficulty: "medium",
-    encounterRate: "Diverse",
+  },
+  {
+    id: "mountain",
+    label: "Peak of Titans",
+    description: "Jagged cliffs where only the strong survive.",
+    encounterHint: "Rock, Ground, Flying",
+    accent: "#c8a440",
+    difficulty: "hard",
+  },
+  {
+    id: "cave",
+    label: "Crystal Caverns",
+    description: "Glowing gems illuminate the deep dark.",
+    encounterHint: "Ghost, Steel, Fossil",
+    accent: "#8060d0",
+    difficulty: "hard",
+  },
+  {
+    id: "urban",
+    label: "Abandoned Lab",
+    description: "Flickering lights and humming machinery.",
+    encounterHint: "Electric, Steel, Psychic",
+    accent: "#9aa4b2",
+    difficulty: "hard",
+  },
+  {
+    id: "volcano",
+    label: "Magma Crater",
+    description: "The air shimmers with intense heat.",
+    encounterHint: "Fire, Fighting, Dark",
+    accent: "#ef4444",
+    difficulty: "hard",
   },
 ];
 
-const DIFFICULTY_LABEL: Record<string, string> = {
-  easy: "Beginner",
-  medium: "Intermediate",
-  hard: "Advanced",
-};
-
-const REGION_FLAVOR: Record<string, Partial<Record<Area, string>>> = {
-  gen1: {
-    plains: "Kanto Route 1 · Viridian Outskirts",
-    mountain: "Mt. Ember · Victory Road Path",
-    water: "Seafoam Islands · Cerulean Cape",
-    cave: "Mt. Moon · Rock Tunnel Depths",
-    urban: "Cinnabar Mansion · Power Plant",
-    volcano: "Mt. Ember Crater · Fire Path",
-    training: "Pallet Secret Meadow",
-    safari: "Fuchsia Safari Zone",
-  },
-  gen2: {
-    plains: "Johto Route 29 · National Park",
-    mountain: "Mt. Silver Peaks · Cliff Cave",
-    water: "Whirl Islands · Olivine Coast",
-    cave: "Dark Cave · Mt. Mortar Ruins",
-    urban: "Burned Tower · Goldenrod Underground",
-    volcano: "Mt. Silver Magma Chambers",
-    training: "New Bark Training Field",
-    safari: "Cianwood Safari Preserve",
-  },
+const DIFFICULTY_COLOR: Record<string, string> = {
+  easy: "#22c55e",
+  medium: "#f59e0b",
+  hard: "#ef4444",
 };
 
 // ─── Area card ────────────────────────────────────────────────────────────────
@@ -162,87 +128,100 @@ const REGION_FLAVOR: Record<string, Partial<Record<Area, string>>> = {
 function AreaCard({
   area,
   flavorText,
-  onPress,
+  onEnter,
+  onShowEncounters,
   isSelected,
 }: {
   area: AreaConfig;
   flavorText?: string;
-  onPress: () => void;
+  onEnter: () => void;
+  onShowEncounters: () => void;
   isSelected: boolean;
 }) {
-  const [pressed, setPressed] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const image = AREA_IMAGES[area.id];
 
-  const difficultyColor = {
-    easy: "#22c55e",
-    medium: "#f59e0b",
-    hard: "#ef4444",
-  }[area.difficulty];
+  function handlePressIn() {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+    }).start();
+  }
+
+  function handlePressOut() {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  }
 
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
+    <Animated.View
       style={[
         styles.areaCard,
-        {
-          transform: [{ scale: pressed ? 0.98 : 1 }],
-          borderColor: isSelected ? area.accent : "#222",
-          backgroundColor: area.bgBottom,
-        },
+        { transform: [{ scale: scaleAnim }] },
+        isSelected && { borderColor: area.accent, borderWidth: 2 },
       ]}
     >
-      {/* Accent strip */}
-      <View style={[styles.areaAccent, { backgroundColor: area.accent }]} />
+      <ImageBackground
+        source={image}
+        style={StyleSheet.absoluteFill}
+        imageStyle={{ borderRadius: 14 }}
+      >
+        <View style={styles.gradientOverlay} />
 
-      <View style={styles.cardBody}>
-        {/* LEFT */}
-        <View style={styles.cardLeft}>
-          <View style={styles.areaHeader}>
-            <View style={[styles.iconBadge, { backgroundColor: area.bgTop }]}>
-              <MaterialCommunityIcons
-                name={area.icon as any}
-                size={18}
-                color={area.accent}
-              />
-            </View>
-
-            <Text style={styles.areaName}>{area.label}</Text>
-          </View>
-
-          <Text style={styles.areaDesc}>{area.description}</Text>
-
-          {flavorText && <Text style={styles.flavorText}>{flavorText}</Text>}
-
-          {/* Difficulty */}
+        <View style={styles.cardTop}>
           <View
             style={[
               styles.diffBadge,
-              { backgroundColor: difficultyColor + "22" },
+              { backgroundColor: DIFFICULTY_COLOR[area.difficulty] + "CC" },
             ]}
           >
-            <View
-              style={[styles.diffDot, { backgroundColor: difficultyColor }]}
-            />
-            <Text style={[styles.diffText, { color: difficultyColor }]}>
-              {DIFFICULTY_LABEL[area.difficulty]}
-            </Text>
+            <Text style={styles.diffText}>{area.difficulty.toUpperCase()}</Text>
           </View>
         </View>
 
-        {/* RIGHT */}
-        <View style={styles.cardRight}>
-          <View style={styles.rateBadge}>
-            <MaterialCommunityIcons name="pokeball" size={14} color="#9aa4b2" />
-            <Text style={styles.encounterRate}>{area.encounterRate}</Text>
+        <View style={styles.cardBottom}>
+          <View style={styles.cardInfo}>
+            <Text style={styles.areaLabel}>{area.label}</Text>
+            <Text style={styles.areaDescription}>{area.description}</Text>
+            {flavorText && <Text style={styles.flavorText}>{flavorText}</Text>}
           </View>
 
-          <Text style={styles.encounterHint}>{area.encounterHint}</Text>
+          <View style={styles.actionButtons}>
+            <Pressable
+              onPress={onShowEncounters}
+              style={({ pressed }) => [
+                styles.iconActionBtn,
+                {
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="eye-outline"
+                size={20}
+                color="#fff"
+              />
+            </Pressable>
 
-          <Ionicons name="chevron-forward" size={18} color="#6b7280" />
+            <Pressable
+              onPress={onEnter}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              style={({ pressed }) => [
+                styles.enterBtn,
+                { opacity: pressed ? 0.8 : 1 },
+              ]}
+            >
+              <Text style={styles.enterBtnText}>ENTER</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </Pressable>
+          </View>
         </View>
-      </View>
-    </Pressable>
+      </ImageBackground>
+    </Animated.View>
   );
 }
 
@@ -253,12 +232,36 @@ export default function AreaSelectScreen({
   route,
 }: AreaSelectScreenProps) {
   const { region, team } = route.params;
-  const [selected, setSelected] = useState<Area | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<Area | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [encounterList, setEncounterList] = useState<any[]>([]);
+  const [modalTitle, setModalTitle] = useState("");
 
-  const flavorMap = REGION_FLAVOR[region] ?? {};
+  const flavorMap =
+    region === "gen1"
+      ? {
+          plains: "Kanto Route 1 · Viridian Outskirts",
+          mountain: "Mt. Ember · Victory Road Path",
+          water: "Seafoam Islands · Cerulean Cape",
+          cave: "Mt. Moon · Rock Tunnel Depths",
+          urban: "Cinnabar Mansion · Power Plant",
+          volcano: "Mt. Ember Crater · Fire Path",
+          training: "Pallet Secret Meadow",
+          safari: "Fuchsia Safari Zone",
+        }
+      : {
+          plains: "Johto Route 29 · National Park",
+          mountain: "Mt. Silver Peaks · Cliff Cave",
+          water: "Whirl Islands · Olivine Coast",
+          cave: "Dark Cave · Mt. Mortar Ruins",
+          urban: "Burned Tower · Goldenrod Underground",
+          volcano: "Mt. Silver Magma Chambers",
+          training: "New Bark Training Field",
+          safari: "Cianwood Safari Preserve",
+        };
 
-  function handleSelect(area: AreaConfig) {
-    setSelected(area.id);
+  function handleEnter(area: AreaConfig) {
+    setSelectedAreaId(area.id);
     setTimeout(() => {
       navigation.navigate("EncounterFlow", {
         region,
@@ -268,44 +271,111 @@ export default function AreaSelectScreen({
     }, 200);
   }
 
-  const onBack = () => navigation.goBack();
+  function handleShowEncounters(area: AreaConfig) {
+    setModalTitle(area.label);
+
+    // Resolve the table
+    const tableKey = `${region}${area.id.charAt(0).toUpperCase() + area.id.slice(1)}`;
+    const tables: any = region === "gen1" ? gen1Tables : gen2Tables;
+    const table = tables[tableKey];
+
+    if (table) {
+      const displayData = table
+        .map((entry: any) => {
+          const meta = ALL_POKEMON_META.find((p) => p.id === entry.id);
+          return {
+            id: entry.id,
+            name: meta?.name || "Unknown",
+            rate: (entry.rate * 100).toFixed(1),
+            levels: `${entry.levels.min}-${entry.levels.max}`,
+            image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${entry.id}.png`,
+          };
+        })
+        .sort((a: any, b: any) => parseFloat(b.rate) - parseFloat(a.rate));
+
+      setEncounterList(displayData);
+      setModalVisible(true);
+    }
+  }
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0b0f1a" />
+      <StatusBar barStyle="light-content" backgroundColor="#0a0e1a" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back */}
-        <View style={styles.headerRow}>
-          <Pressable onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Back</Text>
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </Pressable>
+          <View style={styles.headerText}>
+            <Text style={styles.eyebrow}>
+              {region.toUpperCase()} EXPLORATION
+            </Text>
+            <Text style={styles.title}>Select Area</Text>
+            <Text style={styles.subtitle}>
+              Each area holds unique Pokémon to discover
+            </Text>
+          </View>
         </View>
 
-        {/* Title */}
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>Choose Area</Text>
-          <Text style={styles.subtitle}>
-            Each area has unique Pokémon encounters
-          </Text>
-        </View>
-
-        {/* Areas */}
+        {/* ── Areas ── */}
         <View style={styles.list}>
           {AREAS.map((area) => (
             <AreaCard
               key={area.id}
               area={area}
-              flavorText={flavorMap[area.id]}
-              onPress={() => handleSelect(area)}
-              isSelected={selected === area.id}
+              flavorText={(flavorMap as any)[area.id]}
+              onEnter={() => handleEnter(area)}
+              onShowEncounters={() => handleShowEncounters(area)}
+              isSelected={selectedAreaId === area.id}
             />
           ))}
         </View>
       </ScrollView>
+
+      {/* ── Encounters Modal ── */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{modalTitle} Encounters</Text>
+              <Pressable onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </Pressable>
+            </View>
+
+            <FlatList
+              data={encounterList}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.encounterItem}>
+                  <Text style={styles.encounterName}>
+                    {item.name.toUpperCase()}
+                  </Text>
+                  <View style={styles.encounterMeta}>
+                    <Text style={styles.encounterLevels}>
+                      Lv. {item.levels}
+                    </Text>
+                    <View style={styles.rateTag}>
+                      <Text style={styles.rateText}>{item.rate}%</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+              contentContainerStyle={styles.modalList}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -315,155 +385,202 @@ export default function AreaSelectScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0b0f1a",
+    backgroundColor: "#080c18",
   },
-
   scrollContent: {
     paddingBottom: 40,
   },
-
-  headerRow: {
+  header: {
     paddingTop: Platform.OS === "ios" ? 60 : 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    backgroundColor: "#1a1f35",
   },
-
   backBtn: {
-    paddingVertical: 6,
+    marginBottom: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-
-  backBtnText: {
-    fontSize: 14,
-    color: "#9aa4b2",
+  headerText: {
+    gap: 4,
   },
-
-  titleBlock: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#e8534a",
+    letterSpacing: 1.5,
   },
-
   title: {
-    fontSize: 20,
+    fontSize: 32,
+    fontWeight: "800",
     color: "#fff",
-    marginBottom: 4,
   },
-
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#8b98a5",
   },
-
   list: {
-    paddingHorizontal: 12,
-    gap: 10,
+    padding: 16,
+    gap: 16,
   },
-
-  cardBody: {
+  areaCard: {
+    height: 160,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "#111826",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  cardTop: {
+    padding: 12,
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
+    justifyContent: "flex-end",
   },
-
-  cardLeft: {
+  diffBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  diffText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  cardBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  cardInfo: {
     flex: 1,
   },
-
-  areaName: {
-    fontSize: 16,
+  areaLabel: {
+    fontSize: 20,
+    fontWeight: "bold",
     color: "#fff",
-    marginBottom: 4,
   },
-
-  areaDesc: {
-    fontSize: 13,
-    color: "#aab4c3",
-    marginBottom: 4,
-  },
-
-  flavorText: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-
-  cardRight: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
-
-  diffText: {
-    fontSize: 12,
-    color: "#9aa4b2",
-  },
-
-  encounterRate: {
-    fontSize: 12,
-    color: "#9aa4b2",
-  },
-
-  encounterHint: {
+  areaDescription: {
     fontSize: 11,
-    color: "#6b7280",
-    textAlign: "right",
-    maxWidth: 120,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 2,
   },
-  areaAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+  flavorText: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.5)",
+    fontStyle: "italic",
+    marginTop: 2,
   },
-
-  areaHeader: {
+  actionButtons: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-    marginBottom: 4,
-  },
-
-  iconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
     alignItems: "center",
+  },
+  iconActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
-  },
-
-  diffBadge: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    alignSelf: "flex-start",
-    marginTop: 6,
-  },
-
-  diffDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-
-  rateBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-
-  areaCard: {
-    borderRadius: 12,
     borderWidth: 1,
-    padding: 14,
-    overflow: "hidden",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  enterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+    gap: 6,
+  },
+  enterBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    maxHeight: "80%",
+    backgroundColor: "#111826",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+    paddingBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  modalList: {
+    gap: 12,
+  },
+  encounterItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#1a1f35",
+    padding: 12,
+    borderRadius: 12,
+  },
+  encounterName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  encounterMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  encounterLevels: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+  },
+  rateTag: {
+    backgroundColor: "#e8534a",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  rateText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "bold",
   },
 });
