@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { AreaSelectScreenProps } from "../types/navigation";
+import { getPokemonIcon } from "../utils/pokemonImageUtils";
 
 // Data imports for encounter info
 import { gen1Pokemon } from "../data/gen1Pokemon";
@@ -288,7 +289,7 @@ export default function AreaSelectScreen({
             name: meta?.name || "Unknown",
             rate: (entry.rate * 100).toFixed(1),
             levels: `${entry.levels.min}-${entry.levels.max}`,
-            image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${entry.id}.png`,
+            image: getPokemonIcon(entry.id),
           };
         })
         .sort((a: any, b: any) => parseFloat(b.rate) - parseFloat(a.rate));
@@ -358,9 +359,22 @@ export default function AreaSelectScreen({
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <View style={styles.encounterItem}>
-                  <Text style={styles.encounterName}>
-                    {item.name.toUpperCase()}
-                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <ImageBackground
+                      source={{ uri: item.image }}
+                      style={{ width: 40, height: 40 }}
+                      imageStyle={{ resizeMode: "contain" }}
+                    />
+                    <Text style={styles.encounterName}>
+                      {item.name.toUpperCase()}
+                    </Text>
+                  </View>
                   <View style={styles.encounterMeta}>
                     <Text style={styles.encounterLevels}>
                       Lv. {item.levels}
