@@ -1,6 +1,8 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +17,8 @@ import {
 } from "react-native";
 import StatusModal from "../components/statusModal";
 import ExpBar from "../components/expBar";
+import { useAuth } from "../context/AuthContext";
+import { useTeam } from "../hooks/useTeam";
 import { supabase } from "../lib/supabase";
 import { colors } from "../theme/color";
 import { PokemonTeamScreenProps } from "../types/navigation";
@@ -55,12 +59,28 @@ export default function PokemonTeamScreen({
   route,
   navigation,
 }: PokemonTeamScreenProps) {
-  const { initialTeam, onSave } = route.params;
-  const [team, setTeam] = useState<Pokemon[]>(initialTeam);
+  const { onSave } = route.params;
+  const { user } = useAuth();
+  const { team: dbTeam, refetch, loading: isLoadingTeam } = useTeam(user?.id ?? "");
+  const [team, setTeam] = useState<Pokemon[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
+
+  // Sync internal state with DB team on refetch
+  React.useEffect(() => {
+    if (dbTeam.length > 0) {
+      setTeam(dbTeam);
+    }
+  }, [dbTeam]);
+
+  // Refresh team when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [])
+  );
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -185,14 +205,12 @@ export default function PokemonTeamScreen({
           <View style={styles.hpTextRow}>
             <Text style={styles.hpLabel}>HP</Text>
             <Text style={styles.hpValue}>
-              {item.hp}/{item.maxHp}
+              {Math.ceil(item.hp)}/{item.maxHp}
             </Text>
           </View>
 
-          <Text style={styles.level}>Lv. {item.level}</Text>
-
           {/* EXP Bar */}
-          <View style={{ width: "100%", marginTop: -4, marginBottom: 8 }}>
+          <View style={{ width: "100%", marginTop: 10, marginBottom: 4 }}>
             <ExpBar
               exp={
                 item.experience -
@@ -204,6 +222,8 @@ export default function PokemonTeamScreen({
               }
             />
           </View>
+
+          <Text style={styles.level}>Lv. {item.level}</Text>
         </TouchableOpacity>
 
         <View style={styles.controls}>
@@ -212,7 +232,7 @@ export default function PokemonTeamScreen({
             onPress={() => swap(index, index - 1)}
             style={[styles.arrowButton, index === 0 && styles.disabledArrow]}
           >
-            <Text style={styles.arrowText}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -223,7 +243,7 @@ export default function PokemonTeamScreen({
               index === team.length - 1 && styles.disabledArrow,
             ]}
           >
-            <Text style={styles.arrowText}>→</Text>
+            <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -237,6 +257,14 @@ export default function PokemonTeamScreen({
       </View>
     );
   };
+
+  if (isLoadingTeam && team.length === 0) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -257,17 +285,43 @@ export default function PokemonTeamScreen({
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveButton, isSaving && styles.disabledButton]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Team Order</Text>
+        <View style={styles.footerButtons}>
+          {team.length < 6 && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                playClick();
+                const teamIds = team
+                  .map((p) => p.id)
+                  .filter((id): id is string | number => id !== undefined);
+
+                navigation.navigate("SelectFromPC", {
+                  currentTeamIds: teamIds,
+                  teamLength: team.length,
+                });
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="white" />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              isSaving && styles.disabledButton,
+              team.length === 6 && { flex: 1 },
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Order</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <StatusModal
@@ -288,6 +342,12 @@ export default function PokemonTeamScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.bg,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.bg,
   },
   headerInfo: {
@@ -406,15 +466,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   level: {
-    color: "#818CF8",
+    color: "#9CA3AF",
     fontSize: 12,
-    fontWeight: "800",
-    marginTop: 4,
+    fontWeight: "700",
+    marginTop: 2,
     marginBottom: 8,
   },
   controls: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
     marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: "#1F2937",
@@ -424,18 +484,13 @@ const styles = StyleSheet.create({
   },
   arrowButton: {
     backgroundColor: "#1F2937",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 36,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#374151",
-  },
-  arrowText: {
-    color: "white",
-    fontSize: 22,
-    fontWeight: "bold",
   },
   disabledArrow: {
     opacity: 0.1,
@@ -462,7 +517,33 @@ const styles = StyleSheet.create({
     borderTopColor: "#1F2937",
     backgroundColor: "#030712",
   },
+  footerButtons: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  addButton: {
+    backgroundColor: "#10B981",
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  addButtonText: {
+    color: "white",
+    fontWeight: "900",
+    fontSize: 16,
+    textTransform: "uppercase",
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: "#818CF8",
     paddingVertical: 18,
     borderRadius: 20,
@@ -479,8 +560,8 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "white",
     fontWeight: "900",
-    fontSize: 18,
-    letterSpacing: 1.5,
+    fontSize: 16,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
 });

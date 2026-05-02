@@ -8,8 +8,12 @@ export type StatStages = {
   speed: number;
 };
 
+export type WeatherCondition = "rain" | "sun" | "sandstorm" | "hail" | null;
+
 export type BattleState = {
   player: Pokemon;
+  team: Pokemon[];
+  activePlayerIndex: number;
   enemy: Pokemon;
   turn: "player" | "enemy";
   log: string[];
@@ -19,4 +23,6 @@ export type BattleState = {
   hitSide: "player" | "enemy" | null;
   playerStages: StatStages;
   enemyStages: StatStages;
+  weather: WeatherCondition;
+  weatherTurns: number;
 };

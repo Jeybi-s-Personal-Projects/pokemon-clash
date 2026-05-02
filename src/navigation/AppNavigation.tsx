@@ -12,6 +12,7 @@ import LoginScreen from "@/src/screens/LoginScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
 import PokemonStatsScreen from "@/src/screens/PokemonStatsScreen";
 import PokemonTeamScreen from "@/src/screens/PokemonTeamScreen";
+import SelectFromPCScreen from "@/src/screens/SelectFromPCScreen";
 import RegionSelectScreen from "@/src/screens/RegionSelectScreen";
 import SelectPokemonScreen from "@/src/screens/SelectPokemonScreen";
 import SignupScreen from "@/src/screens/SignupScreen";
@@ -38,22 +39,12 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Login"
             component={LoginScreen}
-            options={{
-              title: "",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Signup"
-            options={{
-              title: "",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
             component={SignupScreen}
+            options={{ headerShown: false }}
           />
         </>
       ) : (
@@ -62,12 +53,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Dashboard"
             component={DashboardScreen}
-            options={{
-              title: "",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen name="SelectPokemon" component={SelectPokemonScreen} />
           <Stack.Screen
@@ -109,6 +95,16 @@ export default function AppNavigator() {
               headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
             }}
             component={PokemonTeamScreen}
+          />
+          <Stack.Screen
+            name="SelectFromPC"
+            options={{
+              title: "PC Selection",
+              headerStyle: { backgroundColor: "#111827" },
+              headerTintColor: "#F9FAFB",
+              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
+            }}
+            component={SelectFromPCScreen}
           />
           <Stack.Screen
             name="EncounterFlow"

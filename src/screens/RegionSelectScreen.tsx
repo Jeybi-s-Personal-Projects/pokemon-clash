@@ -1,7 +1,10 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import { colors } from "@/src/theme/color";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useRef, useState } from "react";
+
 import {
-  Dimensions,
+  Animated,
+  ImageBackground,
   Platform,
   Pressable,
   ScrollView,
@@ -12,18 +15,30 @@ import {
 } from "react-native";
 import type { Region } from "../encounter/batchGenerator";
 import { RegionSelectScreenProps } from "../types/navigation";
+
+// ─── Assets ───────────────────────────────────────────────────────────────────
+
+const REGION_IMAGES: Record<string, any> = {
+  gen1: require("../../assets/regions/1.jpg"),
+  gen2: require("../../assets/regions/2.jpg"),
+  gen3: require("../../assets/regions/3.jpg"),
+  gen4: require("../../assets/regions/4.jpg"),
+  gen5: require("../../assets/regions/5.jpg"),
+  gen6: require("../../assets/regions/6.jpg"),
+  gen7: require("../../assets/regions/7.jpg"),
+  gen8: require("../../assets/regions/8.jpg"),
+  gen9: require("../../assets/regions/9.jpg"),
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type RegionConfig = {
   id: string;
   label: string;
-  subtitle: string;
   generation: string;
-  color: string;
-  accent: string;
-  textColor: string;
-  starters: string;
+  description: string;
   available: boolean;
+  accentColor: string;
 };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -32,68 +47,74 @@ const REGIONS: RegionConfig[] = [
   {
     id: "gen1",
     label: "Kanto",
-    subtitle: "Pallet Town",
-    generation: "Generation I",
-    color: "#1a3a5c",
-    accent: "#e84040",
-    textColor: "#e8f4ff",
-    starters: "Bulbasaur · Charmander · Squirtle",
+    generation: "GEN I",
+    description: "The original region · 151 Pokémon",
     available: true,
+    accentColor: "#e8534a",
   },
   {
     id: "gen2",
     label: "Johto",
-    subtitle: "New Bark Town",
-    generation: "Generation II",
-    color: "#2a4a2a",
-    accent: "#f0c040",
-    textColor: "#e8ffe8",
-    starters: "Chikorita · Cyndaquil · Totodile",
+    generation: "GEN II",
+    description: "Land of tradition · 100 Pokémon",
     available: true,
+    accentColor: "#7b68ee",
   },
   {
     id: "gen3",
     label: "Hoenn",
-    subtitle: "Littleroot Town",
-    generation: "Generation III",
-    color: "#1a2a4a",
-    accent: "#4090e0",
-    textColor: "#e0eeff",
-    starters: "Treecko · Torchic · Mudkip",
+    generation: "GEN III",
+    description: "Sea & sky · 135 Pokémon",
     available: false,
+    accentColor: "#4a9eda",
   },
   {
     id: "gen4",
     label: "Sinnoh",
-    subtitle: "Twinleaf Town",
-    generation: "Generation IV",
-    color: "#2a1a4a",
-    accent: "#a060e0",
-    textColor: "#ede8ff",
-    starters: "Turtwig · Chimchar · Piplup",
+    generation: "GEN IV",
+    description: "Myths & mountains · 107 Pokémon",
     available: false,
+    accentColor: "#5b8dd9",
   },
   {
     id: "gen5",
     label: "Unova",
-    subtitle: "Nuvema Town",
-    generation: "Generation V",
-    color: "#3a2a1a",
-    accent: "#e08020",
-    textColor: "#fff0e0",
-    starters: "Snivy · Tepig · Oshawott",
+    generation: "GEN V",
+    description: "Urban adventure · 156 Pokémon",
     available: false,
+    accentColor: "#a0a0a0",
   },
   {
     id: "gen6",
     label: "Kalos",
-    subtitle: "Vaniville Town",
-    generation: "Generation VI",
-    color: "#3a1a2a",
-    accent: "#e040a0",
-    textColor: "#ffe8f4",
-    starters: "Chespin · Fennekin · Froakie",
+    generation: "GEN VI",
+    description: "Beauty & elegance · 72 Pokémon",
     available: false,
+    accentColor: "#e8a0c8",
+  },
+  {
+    id: "gen7",
+    label: "Alola",
+    generation: "GEN VII",
+    description: "Island paradise · 88 Pokémon",
+    available: false,
+    accentColor: "#f5c542",
+  },
+  {
+    id: "gen8",
+    label: "Galar",
+    generation: "GEN VIII",
+    description: "Industrial wilds · 96 Pokémon",
+    available: false,
+    accentColor: "#7ecba1",
+  },
+  {
+    id: "gen9",
+    label: "Paldea",
+    generation: "GEN IX",
+    description: "Open horizons · 103 Pokémon",
+    available: false,
+    accentColor: "#e07b54",
   },
 ];
 
@@ -108,72 +129,120 @@ function RegionCard({
   onPress: () => void;
   isSelected: boolean;
 }) {
-  const [pressed, setPressed] = useState(false);
-  const { width } = Dimensions.get("window");
-  const cardWidth = (width - 16 * 2 - 12) / 2;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const image = REGION_IMAGES[region.id];
+
+  function handlePressIn() {
+    if (!region.available) return;
+    Animated.spring(scaleAnim, {
+      toValue: 0.975,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 2,
+    }).start();
+  }
+
+  function handlePressOut() {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 4,
+    }).start();
+  }
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={() => region.available && setPressed(true)}
-      onPressOut={() => setPressed(false)}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={!region.available}
-      style={[
-        styles.regionCard,
-        {
-          width: cardWidth,
-          opacity: region.available ? 1 : 0.4,
-          transform: [{ scale: pressed ? 0.97 : 1 }],
-          borderColor: isSelected ? region.accent : "#222",
-          backgroundColor: region.color,
-        },
-      ]}
     >
-      {/* Accent Bar */}
-      <View style={[styles.accentBar, { backgroundColor: region.accent }]} />
+      <Animated.View
+        style={[
+          styles.regionCard,
+          { transform: [{ scale: scaleAnim }] },
+          isSelected && {
+            borderColor: region.accentColor,
+            shadowColor: region.accentColor,
+            shadowOpacity: 0.6,
+            shadowRadius: 12,
+            elevation: 10,
+          },
+          !region.available && { opacity: 0.45 },
+        ]}
+      >
+        {/* Background image */}
+        <ImageBackground
+          source={image}
+          style={StyleSheet.absoluteFill}
+          imageStyle={{ borderRadius: 14 }}
+        >
+          {/* Dark gradient overlay — stronger at bottom for text legibility */}
+          <View style={styles.gradientOverlay} />
 
-      {/* Header */}
-      <View style={styles.cardHeader}>
-        <MaterialCommunityIcons
-          name="map-marker-radius"
-          size={18}
-          color={region.accent}
-        />
+          {/* Top row: generation badge */}
+          <View style={styles.cardTop}>
+            <View
+              style={[
+                styles.genBadge,
+                {
+                  borderColor: "white",
+                },
+              ]}
+            >
+              <Text style={[styles.genBadgeText, { color: "white" }]}>
+                {region.generation}
+              </Text>
+            </View>
 
-        <Text style={styles.regionName}>{region.label}</Text>
+            {!region.available && (
+              <View style={styles.comingSoonBadge}>
+                <Ionicons
+                  name="lock-closed"
+                  size={9}
+                  color="#aaa"
+                  style={{ marginRight: 3 }}
+                />
+                <Text style={styles.comingSoonText}>Coming Soon</Text>
+              </View>
+            )}
+          </View>
 
-        {region.available && (
-          <Ionicons
-            name="checkmark-circle"
-            size={16}
-            color="#22c55e"
-            style={{ marginLeft: "auto" }}
-          />
-        )}
-      </View>
+          {/* Bottom row: region name + description + arrow */}
+          <View style={styles.cardBottom}>
+            <View style={styles.cardBottomText}>
+              <Text style={styles.regionLabel}>{region.label}</Text>
+              <Text style={styles.regionDescription}>{region.description}</Text>
+            </View>
 
-      <Text style={styles.regionSubtitle}>{region.subtitle}</Text>
-
-      {/* Generation */}
-      <View style={styles.genBadge}>
-        <Text style={styles.genText}>{region.generation}</Text>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Starters */}
-      <View style={styles.startersRow}>
-        <MaterialCommunityIcons name="pokeball" size={14} color="#9aa4b2" />
-        <Text style={styles.startersText}>{region.starters}</Text>
-      </View>
-
-      {!region.available && (
-        <View style={styles.lockedBadge}>
-          <Ionicons name="lock-closed" size={12} color="#aaa" />
-          <Text style={styles.lockedText}>Coming Soon</Text>
-        </View>
-      )}
+            {region.available && (
+              <View
+                style={[
+                  styles.arrowButton,
+                  { backgroundColor: region.accentColor },
+                ]}
+              >
+                <Ionicons name="arrow-forward" size={15} color="#fff" />
+              </View>
+            )}
+          </View>
+        </ImageBackground>
+      </Animated.View>
     </Pressable>
+  );
+}
+
+// ─── Decorative Pokéball bg circle ────────────────────────────────────────────
+
+function PokeballDecor() {
+  return (
+    <View style={styles.pokeballDecor} pointerEvents="none">
+      <View style={styles.pokeballOuter}>
+        <View style={styles.pokeballDivider} />
+        <View style={styles.pokeballCenter} />
+      </View>
+    </View>
   );
 }
 
@@ -183,26 +252,21 @@ export default function RegionSelectScreen({
   navigation,
   route,
 }: RegionSelectScreenProps) {
-  const { player } = route.params;
+  const { team } = route.params;
   const [selected, setSelected] = useState<string | null>(null);
 
   function handleSelect(region: RegionConfig) {
     if (!region.available) return;
-
     setSelected(region.id);
-
     setTimeout(() => {
       navigation.navigate("AreaSelect", {
         region: region.id as Region,
-        player,
+        team,
       });
     }, 200);
   }
 
-  const rows: RegionConfig[][] = [];
-  for (let i = 0; i < REGIONS.length; i += 2) {
-    rows.push(REGIONS.slice(i, i + 2));
-  }
+  const availableCount = REGIONS.filter((r) => r.available).length;
 
   return (
     <View style={styles.root}>
@@ -212,29 +276,33 @@ export default function RegionSelectScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>Select Region</Text>
-          <Text style={styles.subtitle}>
-            Where will you begin your journey?
-          </Text>
+          <PokeballDecor />
+
+          <View style={styles.headerMeta}>
+            <Text style={styles.eyebrow}>
+              {availableCount} of {REGIONS.length} available
+            </Text>
+          </View>
+
+          <Text style={styles.title}>Choose Your{"\n"}Region</Text>
+          <Text style={styles.subtitle}>Where will your adventure begin?</Text>
         </View>
 
-        <View style={styles.grid}>
-          {rows.map((row, rowIdx) => (
-            <View key={rowIdx} style={styles.row}>
-              {row.map((region) => (
-                <RegionCard
-                  key={region.id}
-                  region={region}
-                  onPress={() => handleSelect(region)}
-                  isSelected={selected === region.id}
-                />
-              ))}
-            </View>
+        {/* ── Cards ── */}
+        <View style={styles.list}>
+          {REGIONS.map((region) => (
+            <RegionCard
+              key={region.id}
+              region={region}
+              onPress={() => handleSelect(region)}
+              isSelected={selected === region.id}
+            />
           ))}
         </View>
 
-        <Text style={styles.footer}>More regions coming soon...</Text>
+        <Text style={styles.footer}>More regions arriving soon ✦</Text>
       </ScrollView>
     </View>
   );
@@ -245,130 +313,211 @@ export default function RegionSelectScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0a0e1a",
+    backgroundColor: "#080c18",
   },
 
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 48,
   },
+
+  // ── Header ──
 
   header: {
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === "ios" ? 64 : 44,
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    marginBottom: 20,
+    overflow: "hidden",
+    backgroundColor: "#5651c370",
+  },
+
+  pokeballDecor: {
+    position: "absolute",
+    top: -80,
+    right: -80,
+    opacity: 0.06,
+  },
+
+  pokeballOuter: {
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 18,
+    borderColor: "#fff",
+    overflow: "hidden",
     alignItems: "center",
+    justifyContent: "center",
   },
 
-  title: {
-    fontSize: 20,
-    color: "#fff",
-    marginBottom: 4,
+  pokeballDivider: {
+    position: "absolute",
+    width: "100%",
+    height: 18,
+    backgroundColor: "#fff",
+    top: "50%",
+    marginTop: -9,
   },
 
-  subtitle: {
-    fontSize: 13,
-    color: "#8b98a5",
+  pokeballCenter: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 18,
+    borderColor: "#fff",
+    backgroundColor: "#080c18",
+    zIndex: 2,
   },
 
-  grid: {
-    paddingHorizontal: 16,
-  },
-
-  row: {
+  headerMeta: {
     flexDirection: "row",
-    gap: 12,
+    alignItems: "center",
     marginBottom: 12,
   },
 
-  regionName: {
-    fontSize: 16,
-    color: "#fff",
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#e8534a",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+
+  title: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: "#ffffff",
+    lineHeight: 40,
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: "#6b7a8d",
+    letterSpacing: 0.2,
+  },
+
+  // ── List ──
+
+  list: {
+    paddingHorizontal: 16,
+    gap: 14,
+  },
+
+  // ── Card ──
+
+  regionCard: {
+    height: 140,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    overflow: "hidden",
+    backgroundColor: "#111826",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    // simulate gradient: transparent top → dark bottom
+    backgroundColor: "transparent",
+    borderRadius: 14,
+    // layered using two views below
+  },
+
+  cardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    // subtle top scrim
+    backgroundColor: "rgba(0,0,0,0.10)",
+  },
+
+  genBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+
+  genBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+  },
+
+  comingSoonBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#ffffff18",
+  },
+
+  comingSoonText: {
+    fontSize: 10,
+    color: "#aaa",
+    fontWeight: "600",
+    letterSpacing: 0.4,
+  },
+
+  cardBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 20,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+
+  cardBottomText: {
+    flex: 1,
+  },
+
+  regionLabel: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: -0.3,
     marginBottom: 2,
   },
 
-  regionSubtitle: {
-    fontSize: 12,
-    color: "#9aa4b2",
-    marginBottom: 8,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#222",
-    marginBottom: 8,
-  },
-
-  startersText: {
+  regionDescription: {
     fontSize: 11,
-    color: "#6b7280",
+    color: "#ffffffaa",
+    letterSpacing: 0.2,
   },
 
-  lockedText: {
-    fontSize: 11,
-    color: "#6b7280",
-    marginTop: 6,
+  arrowButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+    marginBottom: 2,
   },
+
+  // ── Footer ──
 
   footer: {
     textAlign: "center",
     fontSize: 12,
-    color: "#6b7280",
-    marginTop: 8,
-  },
-  accentBar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-
-  genBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.08)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-
-  genText: {
-    fontSize: 10,
-    color: "#cbd5e1",
-  },
-
-  startersRow: {
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
-  },
-
-  lockedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-  },
-
-  regionCard: {
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    overflow: "hidden",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    color: "#3d4a5c",
+    marginTop: 28,
+    letterSpacing: 0.5,
   },
 });

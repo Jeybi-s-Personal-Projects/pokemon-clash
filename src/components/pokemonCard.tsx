@@ -5,13 +5,13 @@ import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
 import ExpBar from "./expBar";
 import HpBar from "./hpBar";
-
 type Props = {
   pokemon: Pokemon;
   isBack?: boolean;
   isAttacking?: boolean;
   isDancing?: boolean;
   isHit?: boolean;
+  isEntering?: boolean;
   stages?: StatStages;
   exp?: number;
   maxExp?: number;
@@ -47,12 +47,71 @@ const StatIndicator = ({ label, stage }: { label: string; stage: number }) => {
   );
 };
 
+const StatusBadge = ({
+  status,
+  isConfused,
+}: {
+  status?: string | null;
+  isConfused?: boolean;
+}) => {
+  if (!status && !isConfused) return null;
+
+  const getStatusColor = (s: string) => {
+    switch (s) {
+      case "paralysis":
+        return "#FBBF24"; // Yellow
+      case "poison":
+        return "#A78BFA"; // Purple
+      case "burn":
+        return "#F87171"; // Red
+      case "sleep":
+        return "#9CA3AF"; // Gray
+      case "freeze":
+        return "#60A5FA"; // Blue
+      default:
+        return "#4B5563";
+    }
+  };
+
+  return (
+    <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+      {status && (
+        <View
+          style={{
+            backgroundColor: getStatusColor(status),
+            paddingHorizontal: 4,
+            borderRadius: 3,
+          }}
+        >
+          <Text style={{ fontSize: 8, fontWeight: "900", color: "white" }}>
+            {status.substring(0, 3).toUpperCase()}
+          </Text>
+        </View>
+      )}
+      {isConfused && (
+        <View
+          style={{
+            backgroundColor: "#ea0dc9",
+            paddingHorizontal: 4,
+            borderRadius: 3,
+          }}
+        >
+          <Text style={{ fontSize: 8, fontWeight: "900", color: "white" }}>
+            CONF
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 export default function PokemonCard({
   pokemon,
   isBack,
   isAttacking,
   isDancing,
   isHit,
+  isEntering,
   stages,
   exp,
   maxExp,
@@ -140,31 +199,42 @@ export default function PokemonCard({
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const isFading = useRef(false);
 
+  // Separate effect to handle entering animation
+  useEffect(() => {
+    if (isEntering) {
+      opacityAnim.setValue(0);
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      opacityAnim.setValue(1);
+    }
+  }, [isEntering, pokemon.id]);
+
   useEffect(() => {
     if (pokemon.hp <= 0) {
-      if (isFading.current) return; // Prevent re-triggering mid-animation
+      if (isFading.current) return;
       isFading.current = true;
 
-      // Wait for HP bar drain animation to finish before fading
       const delay = setTimeout(() => {
         Animated.timing(opacityAnim, {
           toValue: 0,
           duration: 1000,
           useNativeDriver: true,
         }).start(() => {
-          // Animation fully complete — no state change here to avoid flash
           isFading.current = false;
         });
-      }, 600); // Adjust this to match your HP bar drain duration
+      }, 600);
 
       return () => clearTimeout(delay);
     } else {
-      // Only reset if not currently in a fading state
-      if (!isFading.current) {
+      if (!isFading.current && !isEntering) {
         opacityAnim.setValue(1);
       }
     }
-  }, [pokemon.hp]);
+  }, [pokemon.hp, isEntering]);
 
   return (
     <View
@@ -179,27 +249,39 @@ export default function PokemonCard({
       <View
         style={{
           padding: 8,
-          width: isBack ? "40%" : "50%",
+          width: isBack ? "43%" : "50%",
           zIndex: 1,
           position: "absolute",
           top: isBack ? -20 : 0, // Adjusted top
           [isBack ? "right" : "left"]: 10,
+          backgroundColor: "#0000007c",
+          paddingHorizontal: 20,
+          borderTopEndRadius: 20,
+          borderBottomStartRadius: 20,
+          borderWidth: 1,
+          borderColor: "#ffffff73",
         }}
       >
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
-            {pokemon.name.toUpperCase()}
-            {pokemon.isShiny && (
-              <View>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
+              {pokemon.name.toUpperCase()}
+              {pokemon.isShiny && (
                 <Ionicons
                   name="star"
                   size={12}
                   color="#facc15"
                   style={{ marginLeft: 5 }}
                 />
-              </View>
-            )}{" "}
-          </Text>
+              )}
+            </Text>
+          </View>
 
           <Text style={{ fontSize: 14, color: "white" }}>
             lvl {pokemon.level}
@@ -231,20 +313,33 @@ export default function PokemonCard({
           )}
 
           {/* Enemy: stat stages then HP ratio */}
-          {!isBack && stages && (
+          {!isBack && (
             <View
               style={{
                 flexDirection: "row-reverse",
                 flexWrap: "wrap",
                 justifyContent: "flex-end",
                 flex: 1,
+                alignItems: "center",
               }}
             >
-              <StatIndicator label="ATK" stage={stages.attack} />
-              <StatIndicator label="DEF" stage={stages.defense} />
-              <StatIndicator label="SP.A" stage={stages.specialAttack} />
-              <StatIndicator label="SP.D" stage={stages.specialDefense} />
-              <StatIndicator label="SPD" stage={stages.speed} />
+              <View style={{ flexDirection: "row", gap: 4, marginLeft: 6 }}>
+                <StatusBadge
+                  status={pokemon.status}
+                  isConfused={
+                    !!(pokemon.confusionTurns && pokemon.confusionTurns > 0)
+                  }
+                />
+              </View>
+              {stages && (
+                <>
+                  <StatIndicator label="ATK" stage={stages.attack} />
+                  <StatIndicator label="DEF" stage={stages.defense} />
+                  <StatIndicator label="SP.A" stage={stages.specialAttack} />
+                  <StatIndicator label="SP.D" stage={stages.specialDefense} />
+                  <StatIndicator label="SPD" stage={stages.speed} />
+                </>
+              )}
             </View>
           )}
 
@@ -256,20 +351,32 @@ export default function PokemonCard({
         </View>
 
         {/* Row: stat stages for player only — below the HP+EXP row */}
-        {isBack && stages && (
+        {isBack && (
           <View
             style={{
               flexDirection: "row",
               flexWrap: "wrap",
               justifyContent: "flex-start",
               marginTop: 2,
+              alignItems: "center",
             }}
           >
-            <StatIndicator label="ATK" stage={stages.attack} />
-            <StatIndicator label="DEF" stage={stages.defense} />
-            <StatIndicator label="SP.A" stage={stages.specialAttack} />
-            <StatIndicator label="SP.D" stage={stages.specialDefense} />
-            <StatIndicator label="SPD" stage={stages.speed} />
+            <StatusBadge
+              status={pokemon.status}
+              isConfused={
+                !!(pokemon.confusionTurns && pokemon.confusionTurns > 0)
+              }
+            />
+            <View style={{ width: 4 }} />
+            {stages && (
+              <>
+                <StatIndicator label="ATK" stage={stages.attack} />
+                <StatIndicator label="DEF" stage={stages.defense} />
+                <StatIndicator label="SP.A" stage={stages.specialAttack} />
+                <StatIndicator label="SP.D" stage={stages.specialDefense} />
+                <StatIndicator label="SPD" stage={stages.speed} />
+              </>
+            )}
           </View>
         )}
       </View>
@@ -287,8 +394,10 @@ export default function PokemonCard({
         <Image
           source={{ uri: imageSource }}
           style={{
-            width: isBack ? 180 : 100,
-            height: isBack ? 180 : 100,
+            width: isBack ? 160 : 100,
+            marginRight: isBack ? 0 : 15,
+            marginLeft: isBack ? 15 : 0,
+            height: isBack ? 160 : 100,
             resizeMode: "contain",
           }}
         />

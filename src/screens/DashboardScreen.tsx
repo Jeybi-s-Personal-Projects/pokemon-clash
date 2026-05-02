@@ -1,15 +1,20 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import DashboardHeader from "../components/dashboardHeader";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { useTeam } from "../hooks/useTeam";
@@ -21,6 +26,16 @@ const clickSound = require("../../assets/sounds/buttonClick.mp3");
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, signOut } = useAuth();
   const { team, loading, refetch } = useTeam(user?.id ?? "");
+  const insets = useSafeAreaInsets();
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const screenWidth = Dimensions.get("window").width;
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    setActiveIndex(index);
+  };
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -37,113 +52,35 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       </View>
     );
 
+  // ...
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-
-          <Text style={styles.username}>
-            {user?.name ?? "Trainer"}{" "}
-            <Text style={{ color: "#818CF8" }}>✦</Text>
-          </Text>
-
-          <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
-            Ready for your next battle?
-          </Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <View style={styles.trainerBadge}>
-            <Ionicons name="ribbon" size={14} color="#818CF8" />
-            <Text style={styles.trainerBadgeText}>Elite Trainer</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={() => {
-              playClick();
-              signOut();
-              navigation.replace("Login");
-            }}
-          >
-            <Ionicons name="log-out-outline" size={16} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Stats Bar */}
-      <View style={styles.statsBar}>
-        <StatItem
-          icon="account-group"
-          label="Team"
-          value={`${team.length}/6`}
-          color="#818CF8"
-        />
-
-        <View style={styles.statDivider} />
-
-        <StatItem
-          icon="trending-up"
-          label="Top Lv."
-          value={team.length > 0 ? Math.max(...team.map((p) => p.level)) : 0}
-          color="#34d399"
-        />
-
-        <View style={styles.statDivider} />
-
-        <StatItem
-          icon="shape-outline"
-          label="Types"
-          value={[...new Set(team.flatMap((p) => p.type))].length}
-          color="#fbbf24"
-        />
-      </View>
-
-      {/* Section Header */}
-      <View style={styles.sectionHeader}>
-        {/* Title */}
-        <View>
-          <Text style={styles.sectionTitle}>Pokémon Team</Text>
-          <Text style={styles.sectionSub}>Manage your active party</Text>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.headerActions}>
-          <IconButton
-            icon="refresh"
-            color="#9CA3AF"
-            onPress={() => {
-              playClick();
-              refetch();
-            }}
-          />
-
-          <IconButton
-            icon="pencil"
-            color="#818CF8"
-            onPress={() => {
-              playClick();
-              navigation.navigate("PokemonTeam", {
-                initialTeam: team,
-                onSave: refetch,
-              });
-            }}
-          />
-
-          <IconButton
-            icon="view-grid"
-            color="#34d399"
-            onPress={() => {
-              playClick();
-              navigation.navigate("PokemonList", {
-                mode: "view",
-              });
-            }}
-          />
-        </View>
-      </View>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <DashboardHeader
+        userName={user?.name ?? "Trainer"}
+        team={team}
+        onLogout={() => {
+          playClick();
+          signOut();
+          navigation.replace("Login");
+        }}
+        onRefresh={() => {
+          playClick();
+          refetch();
+        }}
+        onEditTeam={() => {
+          playClick();
+          navigation.navigate("PokemonTeam", {
+            initialTeam: team,
+            onSave: refetch,
+          });
+        }}
+        onViewList={() => {
+          playClick();
+          navigation.navigate("PokemonList", {
+            mode: "view",
+          });
+        }}
+      />
 
       {team.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -166,33 +103,71 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={team}
-          keyExtractor={(_, i) => i.toString()}
-          numColumns={2}
-          contentContainerStyle={{ padding: 12, gap: 12 }}
-          columnWrapperStyle={{ gap: 12 }}
-          renderItem={({ item }) => (
-            <PokemonCard
-              pokemon={item}
-              onPress={() => {
-                playClick();
-                navigation.navigate("PokemonStats", { pokemon: item, onRelease: refetch });
-              }}
-            />
-          )}
-        />
+        <View style={styles.carouselContainer}>
+          <FlatList
+            data={team}
+            keyExtractor={(_, i) => i.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={styles.carouselContent}
+            renderItem={({ item }) => (
+              <View style={styles.cardWrapper}>
+                <PokemonCard
+                  pokemon={item}
+                  onPress={() => {
+                    playClick();
+                    navigation.navigate("PokemonStats", {
+                      pokemon: item,
+                      onRelease: refetch,
+                    });
+                  }}
+                />
+              </View>
+            )}
+          />
+          <View style={styles.pagination}>
+            {team.slice(0, 3).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor:
+                      i === activeIndex % 3 ? "#818CF8" : "#374151",
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
       )}
       <View style={styles.actionDock}>
+        <TouchableOpacity
+          style={[styles.battleButton, true && styles.disabled]}
+          onPress={() => {
+            playClick();
+            if (team.length === 0) return;
+
+            navigation.navigate("RegionSelect", {
+              team,
+            });
+          }}
+          disabled={true}
+        >
+          <MaterialCommunityIcons name="pokeball" size={20} color="#ffffff" />
+          <Text style={styles.actionText}>PVP Battle</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.exploreButton, team.length === 0 && styles.disabled]}
           onPress={() => {
             playClick();
             if (team.length === 0) return;
 
-            const playerPokemon = team[0];
             navigation.navigate("RegionSelect", {
-              player: playerPokemon,
+              team,
             });
           }}
           disabled={team.length === 0}
@@ -206,7 +181,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.bg, paddingVertical: 20 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -241,8 +216,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#111827",
     marginHorizontal: 16,
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 8,
+    paddingVertical: 8,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: "#1F2937",
@@ -281,7 +256,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 40,
   },
-  emptyEmoji: { fontSize: 56, marginBottom: 16 },
+  emptyEmoji: { fontSize: 56, marginBottom: 8 },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "bold",
@@ -314,15 +289,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   refreshButtonText: { color: "#9CA3AF", fontWeight: "bold", fontSize: 16 },
-  battleContainer: {
-    padding: 16,
-    paddingBottom: 70,
-    backgroundColor: "#030712",
-    borderTopWidth: 1,
-    borderTopColor: "#1F2937",
-    flexDirection: "row",
-    gap: 10,
-  },
 
   logoutButton: {
     backgroundColor: "#1F2937",
@@ -342,29 +308,31 @@ const styles = StyleSheet.create({
   actionDock: {
     flexDirection: "row",
     gap: 10,
-    padding: 16,
-    paddingBottom: 70,
+    padding: 8,
+    marginBottom: "auto",
     backgroundColor: "#030712",
     borderTopWidth: 1,
     borderTopColor: "#1F2937",
   },
-
   battleButton: {
     flex: 1,
-    backgroundColor: "#4338ca",
+    backgroundColor: "#818df8b4",
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ffffff70",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
-
   exploreButton: {
     flex: 1,
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#34d3998f",
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ffffff70",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -381,6 +349,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#374151",
     opacity: 0.6,
   },
+
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -417,40 +386,33 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  carouselContainer: {
+    height: 250,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderTopColor: colors.subtleNeonBlue,
+    borderBottomColor: colors.subtleNeonBlue,
+    backgroundColor: "#000000",
+  },
+  carouselContent: {
+    alignItems: "center",
+  },
+  cardWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
 });
-function IconButton({
-  icon,
-  onPress,
-  color,
-}: {
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  onPress: () => void;
-  color: string;
-}) {
-  return (
-    <TouchableOpacity onPress={onPress} style={styles.iconButton}>
-      <MaterialCommunityIcons name={icon} size={20} color={color} />
-    </TouchableOpacity>
-  );
-}
-function StatItem({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: string;
-  label: string;
-  value: string | number;
-  color: string;
-}) {
-  return (
-    <View style={{ alignItems: "center", flex: 1 }}>
-      <MaterialCommunityIcons name={icon as any} size={18} color={color} />
-      <Text style={{ fontSize: 18, fontWeight: "700", color, marginTop: 4 }}>
-        {value}
-      </Text>
-      <Text style={{ fontSize: 11, color: "#6B7280" }}>{label}</Text>
-    </View>
-  );
-}

@@ -9,6 +9,7 @@ export type RootStackParamList = {
   SelectPokemon: { team: Pokemon[] };
   Battle: {
     player: Pokemon;
+    team?: Pokemon[];
     enemy: Pokemon;
     onRun?: () => void;
     onSave?: () => void;
@@ -21,12 +22,12 @@ export type RootStackParamList = {
       item: { id: string; name: string; catchRate: number };
     };
   };
-  RegionSelect: { player: Pokemon };
-  AreaSelect: { region: Region; player: Pokemon };
+  RegionSelect: { team: Pokemon[] };
+  AreaSelect: { region: Region; team: Pokemon[] };
   EncounterFlow: {
     region: Region;
     area: Area;
-    player: Pokemon;
+    team: Pokemon[];
     catchResult?: {
       caught: boolean;
       caughtPokemon: { id: string } & Pokemon;
@@ -43,12 +44,16 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon; onRelease?: () => void };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
+  SelectFromPC: { currentTeamIds: (string | number)[]; teamLength: number };
   InventoryBag: {
+    player: Pokemon;
+    team?: Pokemon[];
     pokemon: Pokemon;
     fromScreen: "Battle" | "EncounterFlow";
   };
   CatchingScreen: {
     player: Pokemon;
+    team?: Pokemon[];
     enemy: Pokemon;
     item: { id: string; name: string; catchRate: number };
     fromScreen: "Battle" | "EncounterFlow";
@@ -72,6 +77,10 @@ export type DashboardScreenProps = NativeStackScreenProps<
 export type PokemonTeamScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "PokemonTeam"
+>;
+export type SelectFromPCScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "SelectFromPC"
 >;
 export type PokemonStatsScreenProps = NativeStackScreenProps<
   RootStackParamList,

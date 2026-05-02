@@ -145,7 +145,17 @@ export default function BattleButton({
         </View>
       )}
 
-      {icon && <View style={{ marginBottom: 4, alignItems: "center", justifyContent: "center" }}>{icon}</View>}
+      {icon && (
+        <View
+          style={{
+            marginBottom: 4,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {icon}
+        </View>
+      )}
       <Text
         style={[
           styles.label,
@@ -181,7 +191,6 @@ export default function BattleButton({
 const styles = StyleSheet.create({
   button: {
     margin: "1%",
-    backgroundColor: "#0D1117",
     borderWidth: 1.5,
     borderRadius: 20,
     justifyContent: "center",

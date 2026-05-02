@@ -21,10 +21,14 @@ type Props = {
 };
 
 const AREA_MESSAGES: Record<Area, string> = {
-  cave: "A Pokémon lurks in the dark...",
-  grass: "A wild Pokémon appeared!",
-  water: "A Pokémon surfaced from below!",
-  forest: "A Pokémon jumped from the trees!",
+  plains: "A wild Pokémon appeared!",
+  mountain: "A wild Pokémon appeared!",
+  water: "A wild Pokémon appeared!",
+  cave: "A wild Pokémon appeared!",
+  urban: "A wild Pokémon appeared!",
+  volcano: "A wild Pokémon appeared!",
+  training: "A wild Pokémon appeared!",
+  safari: "A wild Pokémon appeared!",
 };
 
 // Faster transition

@@ -10,7 +10,7 @@ export default function CatchingScreen({
   route,
   navigation,
 }: CatchingScreenProps) {
-  const { player, enemy, item } = route.params;
+  const { player, team, enemy, item } = route.params;
   const { user } = useAuth();
 
   const [message, setMessage] = useState(
