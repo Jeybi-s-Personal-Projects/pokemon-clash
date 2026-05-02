@@ -4,6 +4,7 @@ export const colors = {
   bgMuted: "#1F2937",
   bgTeal: "#16433a",
 
+  bgButtonStandard: "#253956",
   bgButton: "#0A0D2E",
   bgButtonSecondary: "#0e156cca",
 

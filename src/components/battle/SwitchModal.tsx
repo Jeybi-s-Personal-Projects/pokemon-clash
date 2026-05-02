@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   FlatList,
+  Image,
   Modal,
   StyleSheet,
   Text,
@@ -9,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Pokemon } from "../../types/pokemon";
+import { getPokemonIcon } from "../../utils/pokemonImageUtils";
 
 interface SwitchModalProps {
   visible: boolean;
@@ -53,6 +55,11 @@ export const SwitchModal = ({
                   disabled={isCurrent || isFainted}
                   style={[styles.item, isFainted && styles.fainted]}
                 >
+                  <Image
+                    source={{ uri: getPokemonIcon(item.speciesId) }}
+                    style={styles.pokemonIcon}
+                    resizeMode="contain"
+                  />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.name}>
                       {item.name} {isCurrent && "(On Field)"}
@@ -103,17 +110,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   container: {
-    backgroundColor: "#1F2937",
+    backgroundColor: "#1d2633",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 20,
     maxHeight: "80%",
+    paddingVertical: 4,
+    paddingHorizontal: 24,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
+    marginTop: 8,
   },
   title: {
     color: "white",
@@ -124,12 +133,22 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   item: {
+    backgroundColor: "#253956",
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: "#374151",
+    borderWidth: 1,
+    borderColor: "#ffffff80",
+    borderRadius: 10,
     gap: 12,
+    marginBottom: 8,
+  },
+  pokemonIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 14,
   },
   fainted: {
     opacity: 0.5,

@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import {
   Animated,
   FlatList,
+  Image,
   ImageBackground,
   Modal,
   Platform,
@@ -366,10 +367,9 @@ export default function AreaSelectScreen({
                       gap: 8,
                     }}
                   >
-                    <ImageBackground
+                    <Image
                       source={{ uri: item.image }}
-                      style={{ width: 40, height: 40 }}
-                      imageStyle={{ resizeMode: "contain" }}
+                      style={{ width: 40, height: 40, resizeMode: "contain" }}
                     />
                     <Text style={styles.encounterName}>
                       {item.name.toUpperCase()}
