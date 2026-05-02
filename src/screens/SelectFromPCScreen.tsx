@@ -40,7 +40,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function SelectFromPCScreen({ route, navigation }: any) {
-  const { teamLength } = route.params;
+  const { teamLength, replacedId, replacedOrder } = route.params;
   const { user } = useAuth();
   const [pcPokemon, setPcPokemon] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,19 +84,38 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
     setIsProcessing(true);
 
     try {
-      const nextOrder = (teamLength || 0) + 1;
+      if (replacedId && replacedOrder) {
+        // SWAP LOGIC
+        // 1. Send the current team member to PC
+        const { error: error1 } = await supabase
+          .from("pokemon")
+          .update({ pk_order: null })
+          .eq("id", replacedId);
+          
+        if (error1) throw error1;
 
-      const { error } = await supabase
-        .from("pokemon")
-        .update({ pk_order: nextOrder })
-        .eq("id", p.id);
+        // 2. Bring the new member to the team at the same spot
+        const { error: error2 } = await supabase
+          .from("pokemon")
+          .update({ pk_order: replacedOrder })
+          .eq("id", p.id);
 
-      if (error) throw error;
+        if (error2) throw error2;
+      } else {
+        // ADD LOGIC
+        const nextOrder = (teamLength || 0) + 1;
+        const { error } = await supabase
+          .from("pokemon")
+          .update({ pk_order: nextOrder })
+          .eq("id", p.id);
 
-      // Successfully added to team
+        if (error) throw error;
+      }
+
+      // Successfully finished
       navigation.goBack();
     } catch (e) {
-      console.error("Error adding to team:", e);
+      console.error("Error updating team:", e);
       setIsProcessing(false);
     }
   };
@@ -149,9 +168,14 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Select from PC</Text>
+        <Text style={styles.title}>
+            {replacedId ? "Select Replacement" : "Select from PC"}
+        </Text>
         <Text style={styles.subtitle}>
-          Choose a Pokémon to add to your team.
+          {replacedId 
+            ? "Choose a Pokémon to take this spot in your team."
+            : "Choose a Pokémon to add to your team."
+          }
         </Text>
       </View>
 
