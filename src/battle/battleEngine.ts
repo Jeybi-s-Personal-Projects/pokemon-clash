@@ -55,8 +55,13 @@ export function dealDamage(
     defenseStage = defenderStages.specialDefense;
   }
 
-  const effectiveAttack = calculateStatWithStages(attackStat, attackStage);
+  let effectiveAttack = calculateStatWithStages(attackStat, attackStage);
   const effectiveDefense = calculateStatWithStages(defenseStat, defenseStage);
+
+  // Burn penalty: Attack reduced by 50% (physical moves only)
+  if (attacker.status === "burn" && move.damageClass !== "special") {
+    effectiveAttack = Math.floor(effectiveAttack * 0.5);
+  }
 
   // Advanced damage formula
   const baseDamage =
@@ -86,8 +91,11 @@ export function determineTurnOrder(
   if (ePriority > pPriority) return "enemy";
 
   // Priorities are equal, check speed
-  const pSpeed = calculateStatWithStages(player.speed, playerStages.speed);
-  const eSpeed = calculateStatWithStages(enemy.speed, enemyStages.speed);
+  let pSpeed = calculateStatWithStages(player.speed, playerStages.speed);
+  let eSpeed = calculateStatWithStages(enemy.speed, enemyStages.speed);
+
+  if (player.status === "paralysis") pSpeed = Math.floor(pSpeed * 0.5);
+  if (enemy.status === "paralysis") eSpeed = Math.floor(eSpeed * 0.5);
 
   if (pSpeed > eSpeed) return "player";
   if (eSpeed > pSpeed) return "enemy";

@@ -48,6 +48,64 @@ const StatIndicator = ({ label, stage }: { label: string; stage: number }) => {
   );
 };
 
+const StatusBadge = ({
+  status,
+  isConfused,
+}: {
+  status?: string | null;
+  isConfused?: boolean;
+}) => {
+  if (!status && !isConfused) return null;
+
+  const getStatusColor = (s: string) => {
+    switch (s) {
+      case "paralysis":
+        return "#FBBF24"; // Yellow
+      case "poison":
+        return "#A78BFA"; // Purple
+      case "burn":
+        return "#F87171"; // Red
+      case "sleep":
+        return "#9CA3AF"; // Gray
+      case "freeze":
+        return "#60A5FA"; // Blue
+      default:
+        return "#4B5563";
+    }
+  };
+
+  return (
+    <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+      {status && (
+        <View
+          style={{
+            backgroundColor: getStatusColor(status),
+            paddingHorizontal: 4,
+            borderRadius: 3,
+          }}
+        >
+          <Text style={{ fontSize: 8, fontWeight: "900", color: "white" }}>
+            {status.substring(0, 3).toUpperCase()}
+          </Text>
+        </View>
+      )}
+      {isConfused && (
+        <View
+          style={{
+            backgroundColor: "#ea0dc9",
+            paddingHorizontal: 4,
+            borderRadius: 3,
+          }}
+        >
+          <Text style={{ fontSize: 8, fontWeight: "900", color: "white" }}>
+            CONF
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 export default function PokemonCard({
   pokemon,
   isBack,
@@ -199,20 +257,32 @@ export default function PokemonCard({
           [isBack ? "right" : "left"]: 10,
         }}
       >
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
-            {pokemon.name.toUpperCase()}
-            {pokemon.isShiny && (
-              <View>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
+              {pokemon.name.toUpperCase()}
+              {pokemon.isShiny && (
                 <Ionicons
                   name="star"
                   size={12}
                   color="#facc15"
                   style={{ marginLeft: 5 }}
                 />
-              </View>
-            )}{" "}
-          </Text>
+              )}
+            </Text>
+            <StatusBadge
+              status={pokemon.status}
+              isConfused={
+                !!(pokemon.confusionTurns && pokemon.confusionTurns > 0)
+              }
+            />
+          </View>
 
           <Text style={{ fontSize: 14, color: "white" }}>
             lvl {pokemon.level}

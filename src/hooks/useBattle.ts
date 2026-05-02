@@ -20,6 +20,7 @@ import {
 } from "../utils/experienceCalculator";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { applyStatChanges, delay } from "../utils/battleUtils";
+import { MOVE_STATUS_MAP, getStatusDuration } from "../utils/statusUtils";
 
 const initialStages: StatStages = {
   attack: 0,
@@ -507,6 +508,9 @@ export function useBattle({
     let nextPlayerStages = currentState.playerStages;
     let nextEnemyStages = currentState.enemyStages;
     let nextDefenderHp = defender.hp;
+    let nextDefenderStatus = defender.status;
+    let nextDefenderStatusTurns = defender.statusTurns;
+    let nextDefenderConfusionTurns = defender.confusionTurns;
 
     if (move.power === 0) {
       setState((s) => ({ ...s, dancingSide: attackerSide }));
@@ -535,6 +539,38 @@ export function useBattle({
       }
 
       nextDefenderHp = Math.max(0, defender.hp - damage);
+    }
+
+    // Handle Status Infliction
+    const statusEffect = MOVE_STATUS_MAP[move.name.toLowerCase()];
+    if (statusEffect && nextDefenderHp > 0) {
+      const roll = Math.random() * 100;
+      if (roll < statusEffect.chance) {
+        if (statusEffect.isVolatile) {
+          if (!nextDefenderConfusionTurns) {
+            nextDefenderConfusionTurns = getStatusDuration("confusion");
+            setCurrentMessage(null);
+            setCurrentMessage(`${defender.name.toUpperCase()} became confused!`);
+            await delay(1200);
+          }
+        } else if (!nextDefenderStatus) {
+          nextDefenderStatus = statusEffect.status;
+          nextDefenderStatusTurns = getStatusDuration(statusEffect.status);
+          
+          let statusMsg = "";
+          switch (nextDefenderStatus) {
+            case "poison": statusMsg = `${defender.name.toUpperCase()} was poisoned!`; break;
+            case "burn": statusMsg = `${defender.name.toUpperCase()} was burned!`; break;
+            case "paralysis": statusMsg = `${defender.name.toUpperCase()} is paralyzed! It may be unable to move!`; break;
+            case "sleep": statusMsg = `${defender.name.toUpperCase()} fell asleep!`; break;
+            case "freeze": statusMsg = `${defender.name.toUpperCase()} was frozen solid!`; break;
+          }
+          
+          setCurrentMessage(null);
+          setCurrentMessage(statusMsg);
+          await delay(1200);
+        }
+      }
     }
 
     let moveLogs: string[] = [];
@@ -569,10 +605,16 @@ export function useBattle({
     const nextPlayer = {
       ...currentState.player,
       hp: isPlayerAttacking ? currentState.player.hp : nextDefenderHp,
+      status: isPlayerAttacking ? currentState.player.status : nextDefenderStatus,
+      statusTurns: isPlayerAttacking ? currentState.player.statusTurns : nextDefenderStatusTurns,
+      confusionTurns: isPlayerAttacking ? currentState.player.confusionTurns : nextDefenderConfusionTurns,
     };
     const nextEnemy = {
       ...currentState.enemy,
       hp: isPlayerAttacking ? nextDefenderHp : currentState.enemy.hp,
+      status: isPlayerAttacking ? nextDefenderStatus : currentState.enemy.status,
+      statusTurns: isPlayerAttacking ? nextDefenderStatusTurns : currentState.enemy.statusTurns,
+      confusionTurns: isPlayerAttacking ? nextDefenderConfusionTurns : currentState.enemy.confusionTurns,
     };
 
     const nextTeam = [...currentState.team];
@@ -644,6 +686,103 @@ export function useBattle({
     for (const turn of turns) {
       if (currentState.player.hp <= 0 || currentState.enemy.hp <= 0) break;
 
+      const activeAttacker = turn.side === "player" ? currentState.player : currentState.enemy;
+      
+      // 1. Status Checks (Can Move?)
+      let skipTurn = false;
+      
+      // Sleep check
+      if (activeAttacker.status === "sleep") {
+        if (activeAttacker.statusTurns && activeAttacker.statusTurns > 0) {
+          setCurrentMessage(`${activeAttacker.name.toUpperCase()} is fast asleep!`);
+          await delay(1200);
+          
+          const updatedAttacker = { ...activeAttacker, statusTurns: activeAttacker.statusTurns - 1 };
+          if (turn.side === "player") {
+            currentState = { ...currentState, player: updatedAttacker };
+          } else {
+            currentState = { ...currentState, enemy: updatedAttacker };
+          }
+          skipTurn = true;
+        } else {
+          setCurrentMessage(`${activeAttacker.name.toUpperCase()} woke up!`);
+          await delay(1200);
+          const updatedAttacker = { ...activeAttacker, status: null, statusTurns: 0 };
+          if (turn.side === "player") {
+            currentState = { ...currentState, player: updatedAttacker };
+          } else {
+            currentState = { ...currentState, enemy: updatedAttacker };
+          }
+        }
+      }
+      
+      // Freeze check
+      if (!skipTurn && activeAttacker.status === "freeze") {
+        if (Math.random() < 0.2) {
+          setCurrentMessage(`${activeAttacker.name.toUpperCase()} thawed out!`);
+          await delay(1200);
+          const updatedAttacker = { ...activeAttacker, status: null };
+          if (turn.side === "player") {
+            currentState = { ...currentState, player: updatedAttacker };
+          } else {
+            currentState = { ...currentState, enemy: updatedAttacker };
+          }
+        } else {
+          setCurrentMessage(`${activeAttacker.name.toUpperCase()} is frozen solid!`);
+          await delay(1200);
+          skipTurn = true;
+        }
+      }
+      
+      // Paralysis check
+      if (!skipTurn && activeAttacker.status === "paralysis") {
+        if (Math.random() < 0.25) {
+          setCurrentMessage(`${activeAttacker.name.toUpperCase()} is paralyzed! It can't move!`);
+          await delay(1200);
+          skipTurn = true;
+        }
+      }
+      
+      // Confusion check
+      if (!skipTurn && activeAttacker.confusionTurns && activeAttacker.confusionTurns > 0) {
+        setCurrentMessage(`${activeAttacker.name.toUpperCase()} is confused!`);
+        await delay(1200);
+        
+        const updatedAttacker = { ...activeAttacker, confusionTurns: activeAttacker.confusionTurns - 1 };
+        if (turn.side === "player") currentState = { ...currentState, player: updatedAttacker };
+        else currentState = { ...currentState, enemy: updatedAttacker };
+        
+        if (updatedAttacker.confusionTurns === 0) {
+           setCurrentMessage(`${activeAttacker.name.toUpperCase()} snapped out of its confusion!`);
+           await delay(1200);
+        } else if (Math.random() < 0.5) {
+          setCurrentMessage(`It hurt itself in its confusion!`);
+          await delay(600);
+          
+          // Confusion damage: Power 40 physical move
+          const confDamage = Math.floor(((((2 * activeAttacker.level) / 5 + 2) * 40 * (activeAttacker.attack / activeAttacker.defense)) / 50 + 2));
+          const damagedAttacker = { ...updatedAttacker, hp: Math.max(0, updatedAttacker.hp - confDamage) };
+          
+          if (turn.side === "player") {
+            currentState = { ...currentState, player: damagedAttacker, hitSide: "player" };
+          } else {
+            currentState = { ...currentState, enemy: damagedAttacker, hitSide: "enemy" };
+          }
+          setState(currentState);
+          await delay(600);
+          setState(s => ({ ...s, hitSide: null }));
+          skipTurn = true;
+        }
+      }
+
+      if (skipTurn) {
+        setState(currentState);
+        const winner = isGameOver(currentState);
+        if (winner) { handleWinner(winner, currentState); return; }
+        continue;
+      }
+
+      // 2. Decrement PP for player
       if (turn.side === "player") {
         const updatedMoves = [...currentState.player.moves];
         const moveIdx = currentState.player.moves.findIndex(
@@ -671,8 +810,33 @@ export function useBattle({
       await delay(1000);
     }
 
-    if (currentState.player.hp <= 0) {
-      setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
+    // 3. End of Turn Damage (Poison / Burn)
+    let finalState = { ...currentState };
+    const participants: ("player" | "enemy")[] = ["player", "enemy"];
+    
+    for (const side of participants) {
+      const p = side === "player" ? finalState.player : finalState.enemy;
+      if (p.hp > 0 && (p.status === "poison" || p.status === "burn")) {
+        const damage = Math.floor(p.maxHp / 8);
+        const nextHp = Math.max(0, p.hp - damage);
+        
+        setCurrentMessage(`${p.name.toUpperCase()} was hurt by its ${p.status}!`);
+        await delay(1200);
+        
+        if (side === "player") finalState = { ...finalState, player: { ...p, hp: nextHp }, hitSide: "player" };
+        else finalState = { ...finalState, enemy: { ...p, hp: nextHp }, hitSide: "enemy" };
+        
+        setState(finalState);
+        await delay(600);
+        setState(s => ({ ...s, hitSide: null }));
+        
+        const winner = isGameOver(finalState);
+        if (winner) { handleWinner(winner, finalState); return; }
+      }
+    }
+
+    if (finalState.player.hp <= 0) {
+      setCurrentMessage(`${finalState.player.name.toUpperCase()} fainted!`);
       await delay(1200);
       setSwitchModalVisible(true);
     } else {
