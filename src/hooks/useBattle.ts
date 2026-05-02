@@ -324,162 +324,220 @@ export function useBattle({
         `The wild ${currentState.enemy.name.toUpperCase()} fainted!`,
       );
 
-      const expGain = calculateExpGain(
+      const baseExpGain = calculateExpGain(
         currentState.enemy.level,
         currentState.enemy.speciesId,
         true,
       );
-      await delay(1200);
-      setCurrentMessage(
-        `${currentState.player.name.toUpperCase()} gained ${expGain} EXP!`,
-      );
 
-      const levelUp = checkLevelUp(currentState.player, expGain);
-      let updatedPlayer = { ...currentState.player };
+      const finalTeam = [...currentState.team];
+      let didActivePlayerEvolve = false;
 
-      if (levelUp) {
-        await delay(1200);
-        setCurrentMessage(
-          `${currentState.player.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
-        );
+      // 1. Process EXP for all team members
+      for (let i = 0; i < finalTeam.length; i++) {
+        const p = finalTeam[i];
+        if (p.hp <= 0) continue; // Fainted Pokemon don't get EXP
 
-        updatedPlayer = {
-          ...currentState.player,
-          level: levelUp.newLevel,
-          experience: levelUp.totalExp,
-          ...levelUp.stats,
-        };
+        const isActive = i === currentState.activePlayerIndex;
+        const sharedExp = isActive ? baseExpGain : Math.floor(baseExpGain * 0.5);
 
-        if (levelUp.newMoves.length > 0) {
-          for (const move of levelUp.newMoves) {
+        if (sharedExp <= 0) continue;
+
+        const levelUp = checkLevelUp(p, sharedExp);
+        let updatedPokemon = { ...p };
+
+        if (levelUp) {
+          updatedPokemon = {
+            ...p,
+            level: levelUp.newLevel,
+            experience: levelUp.totalExp,
+            ...levelUp.stats,
+          };
+
+          // Detailed logs and interactions only for active pokemon
+          if (isActive) {
             await delay(1200);
             setCurrentMessage(
-              `${currentState.player.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+              `${p.name.toUpperCase()} gained ${sharedExp} EXP!`,
             );
-            if (updatedPlayer.moves.length < 4) {
-              updatedPlayer.moves = [...updatedPlayer.moves, move];
-              await supabase.from("pokemon_moves").insert({
-                pokemon_id: updatedPlayer.id,
-                move_name: move.name,
-                move_power: move.power,
-                move_pp: move.pp,
-                move_type: move.type ?? "normal",
-                move_damageClass: move.damageClass,
-                move_accuracy: move.accuracy,
-                move_statChanges: JSON.stringify(move.statChanges),
-                move_description: move.description,
-                move_priority: move.priority,
-              });
-            } else {
-              setCurrentMessage(
-                `${currentState.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
-              );
-              await delay(1500);
-              setCurrentMessage(
-                `But ${currentState.player.name.toUpperCase()} already knows 4 moves!`,
-              );
-              await delay(1500);
+            await delay(1200);
+            setCurrentMessage(
+              `${p.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
+            );
 
-              const newMoveset = await promptMoveReplacement(move);
-              updatedPlayer.moves = newMoveset;
+            // Handle new moves
+            if (levelUp.newMoves.length > 0) {
+              for (const move of levelUp.newMoves) {
+                await delay(1200);
+                setCurrentMessage(
+                  `${p.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+                );
+                if (updatedPokemon.moves.length < 4) {
+                  updatedPokemon.moves = [...updatedPokemon.moves, move];
+                  await supabase.from("pokemon_moves").insert({
+                    pokemon_id: updatedPokemon.id,
+                    move_name: move.name,
+                    move_power: move.power,
+                    move_pp: move.pp,
+                    move_type: move.type ?? "normal",
+                    move_damageClass: move.damageClass,
+                    move_accuracy: move.accuracy,
+                    move_statChanges: JSON.stringify(move.statChanges),
+                    move_description: move.description,
+                    move_priority: move.priority,
+                  });
+                } else {
+                  setCurrentMessage(
+                    `${p.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
+                  );
+                  await delay(1500);
+                  setCurrentMessage(
+                    `But ${p.name.toUpperCase()} already knows 4 moves!`,
+                  );
+                  await delay(1500);
+
+                  const newMoveset = await promptMoveReplacement(move);
+                  updatedPokemon.moves = newMoveset;
+                }
+              }
             }
+
+            // Check for Evolution
+            const evolutionTargetId = checkEvolution(
+              updatedPokemon,
+              updatedPokemon.level,
+            );
+            if (evolutionTargetId) {
+              setCurrentMessage(
+                `What? ${updatedPokemon.name.toUpperCase()} is evolving!`,
+              );
+              await delay(2000);
+
+              const newSpeciesData = await fetchPokemon(
+                evolutionTargetId.toString(),
+              );
+
+              const evolve = new Promise<void>((resolve) => {
+                setEvolvingPokemon({
+                  oldName: updatedPokemon.name,
+                  newSpeciesId: evolutionTargetId,
+                  newName: newSpeciesData.name,
+                  spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
+                });
+                setEvolutionVisible(true);
+                setResolveEvolution({ resolve });
+              });
+
+              await evolve;
+
+              updatedPokemon = {
+                ...updatedPokemon,
+                speciesId: evolutionTargetId,
+                name: newSpeciesData.name,
+                type: newSpeciesData.types.map((t: any) => t.type.name),
+                frontImage: newSpeciesData.sprites.other.showdown.front_default,
+                backImage: newSpeciesData.sprites.other.showdown.back_default,
+                hp: calculateHp(
+                  newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+                    .base_stat,
+                  updatedPokemon.level,
+                ),
+                maxHp: calculateHp(
+                  newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+                    .base_stat,
+                  updatedPokemon.level,
+                ),
+                attack: calculateStat(
+                  newSpeciesData.stats.find((s: any) => s.stat.name === "attack")
+                    .base_stat,
+                  updatedPokemon.level,
+                ),
+                defense: calculateStat(
+                  newSpeciesData.stats.find((s: any) => s.stat.name === "defense")
+                    .base_stat,
+                  updatedPokemon.level,
+                ),
+                specialAttack: calculateStat(
+                  newSpeciesData.stats.find(
+                    (s: any) => s.stat.name === "special-attack",
+                  ).base_stat,
+                  updatedPokemon.level,
+                ),
+                specialDefense: calculateStat(
+                  newSpeciesData.stats.find(
+                    (s: any) => s.stat.name === "special-defense",
+                  ).base_stat,
+                  updatedPokemon.level,
+                ),
+                speed: calculateStat(
+                  newSpeciesData.stats.find((s: any) => s.stat.name === "speed")
+                    .base_stat,
+                  updatedPokemon.level,
+                ),
+              };
+
+              didActivePlayerEvolve = true;
+              setCurrentMessage(
+                `${p.name.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
+              );
+              await delay(2000);
+              if (onToggleAutoBattle) onToggleAutoBattle(false);
+            }
+          }
+        } else {
+          updatedPokemon.experience += sharedExp;
+          if (isActive) {
+            await delay(1200);
+            setCurrentMessage(
+              `${p.name.toUpperCase()} gained ${sharedExp} EXP!`,
+            );
           }
         }
 
-        const evolutionTargetId = checkEvolution(
-          updatedPlayer,
-          updatedPlayer.level,
-        );
-        if (evolutionTargetId) {
-          setCurrentMessage(
-            `What? ${updatedPlayer.name.toUpperCase()} is evolving!`,
-          );
-          await delay(2000);
-
-          const newSpeciesData = await fetchPokemon(
-            evolutionTargetId.toString(),
-          );
-
-          const evolve = new Promise<void>((resolve) => {
-            setEvolvingPokemon({
-              oldName: updatedPlayer.name,
-              newSpeciesId: evolutionTargetId,
-              newName: newSpeciesData.name,
-              spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
-            });
-            setEvolutionVisible(true);
-            setResolveEvolution({ resolve });
-          });
-
-          await evolve;
-
-          updatedPlayer = {
-            ...updatedPlayer,
-            speciesId: evolutionTargetId,
-            name: newSpeciesData.name,
-            type: newSpeciesData.types.map((t: any) => t.type.name),
-            frontImage: newSpeciesData.sprites.other.showdown.front_default,
-            backImage: newSpeciesData.sprites.other.showdown.back_default,
-            hp: calculateHp(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            maxHp: calculateHp(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            attack: calculateStat(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "attack")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            defense: calculateStat(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "defense")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            specialAttack: calculateStat(
-              newSpeciesData.stats.find(
-                (s: any) => s.stat.name === "special-attack",
-              ).base_stat,
-              updatedPlayer.level,
-            ),
-            specialDefense: calculateStat(
-              newSpeciesData.stats.find(
-                (s: any) => s.stat.name === "special-defense",
-              ).base_stat,
-              updatedPlayer.level,
-            ),
-            speed: calculateStat(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "speed")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-          };
-
-          setCurrentMessage(
-            `${evolvingPokemon?.oldName.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
-          );
-          await delay(2000);
-          if (onToggleAutoBattle) onToggleAutoBattle(false);
-        }
-      } else {
-        updatedPlayer.experience += expGain;
+        finalTeam[i] = updatedPokemon;
       }
 
-      const finalTeam = [...currentState.team];
-      finalTeam[currentState.activePlayerIndex] = updatedPlayer;
+      // 2. Summary for bench
+      const benchLeveledUp = finalTeam.filter(
+        (p, idx) =>
+          idx !== currentState.activePlayerIndex &&
+          p.level > currentState.team[idx].level,
+      );
 
-      setState((s) => ({ ...s, player: updatedPlayer, team: finalTeam }));
+      if (benchLeveledUp.length > 0) {
+        await delay(1200);
+        setCurrentMessage("Other team members gained experience!");
+        await delay(1500);
+      }
+
+      const updatedActivePlayer = finalTeam[currentState.activePlayerIndex];
+
+      setState((s) => ({
+        ...s,
+        player: updatedActivePlayer,
+        team: finalTeam,
+      }));
+
       await delay(1500);
-      if (onBattleEnd) onBattleEnd("player", finalTeam, false, currentState.activePlayerIndex);
+      if (onBattleEnd)
+        onBattleEnd(
+          "player",
+          finalTeam,
+          didActivePlayerEvolve,
+          currentState.activePlayerIndex,
+        );
     } else {
+      // Enemy won
       setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
       setState((s) => ({ ...s, hitSide: "player" }));
       await delay(2000);
-      if (onBattleEnd) onBattleEnd("enemy", currentState.team, false, currentState.activePlayerIndex);
+      if (onBattleEnd)
+        onBattleEnd(
+          "enemy",
+          currentState.team,
+          false,
+          currentState.activePlayerIndex,
+        );
     }
   };
 

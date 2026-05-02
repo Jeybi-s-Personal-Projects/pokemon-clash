@@ -170,17 +170,16 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       setLocalTeam(updatedTeam);
       setActiveIndex(newIndex);
 
+      // Always save progress after a battle to preserve EXP and Levels for the whole team
+      await syncAllProgress(updatedTeam);
+
       if (winner === "enemy") {
-        await syncAllProgress(updatedTeam);
         reset();
         navigation.navigate("Dashboard" as any);
         return;
       }
 
-      if (didEvolve) {
-        await syncAllProgress(updatedTeam);
-      }
-
+      // Wait a bit then go back to transition for the next encounter
       setTimeout(() => {
         advance();
         setScreen("transition");
