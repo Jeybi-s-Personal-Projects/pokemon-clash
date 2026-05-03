@@ -28,6 +28,10 @@ export const colors = {
   success: "#22C55E",
 
   //modal
+  modalBorder: "#ffffff80",
+  modalBorderSubtle: "rgba(255, 255, 255, 0.3)",
   modalOverlay: "#0606069b",
   modalBackground: "#111827",
+  modalBackgroundPrimary: "#0A0D2E",
+  modalContent: "#253956",
 };

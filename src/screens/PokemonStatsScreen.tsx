@@ -1,3 +1,5 @@
+import { colors } from "@/src/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
@@ -13,6 +15,8 @@ import {
 import StatusModal from "../components/statusModal";
 import { supabase } from "../lib/supabase";
 
+import { MOVES } from "../data/pokemon/moves/moves";
+import { SPECIES } from "../data/pokemon/species/species";
 import { PokemonStatsScreenProps } from "../types/navigation";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
@@ -118,10 +122,13 @@ export default function PokemonStatsScreen({
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header / Image Section */}
         <View
-          style={[styles.imageContainer, { borderColor: accentColor + "44" }]}
+          style={[
+            styles.imageContainer,
+            { borderColor: colors.modalBorderSubtle },
+          ]}
         >
           <View
-            style={[styles.glow, { backgroundColor: accentColor + "22" }]}
+            style={[styles.glow, { backgroundColor: accentColor + "50" }]}
           />
           <Image
             source={{ uri: pokemon.frontImage }}
@@ -129,27 +136,37 @@ export default function PokemonStatsScreen({
             resizeMode="contain"
           />
           <Text style={styles.name}>{pokemon.name}</Text>
-          <View style={styles.typeBadges}>
-            {pokemon.type.map((t: string) => (
-              <View
-                key={t}
-                style={[
-                  styles.badge,
-                  { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
-                ]}
-              >
-                <Text
+          <View style={styles.badgeContainer}>
+            <View style={styles.typeBadges}>
+              {pokemon.type.map((t: string) => (
+                <View
+                  key={t}
                   style={[
-                    styles.badgeText,
-                    { color: TYPE_COLORS[t] ?? "#888" },
+                    styles.badge,
+                    { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
                   ]}
                 >
-                  {t}
-                </Text>
-              </View>
-            ))}
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      { color: TYPE_COLORS[t] ?? "#888" },
+                    ]}
+                  >
+                    {t}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.level}>Level {pokemon.level}</Text>
           </View>
-          <Text style={styles.level}>Level {pokemon.level}</Text>
+
+          {SPECIES[pokemon.speciesId]?.flavor_text && (
+            <View style={styles.flavorTextContainer}>
+              <Text style={styles.flavorText}>
+                {SPECIES[pokemon.speciesId].flavor_text}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Stats Section */}
@@ -178,13 +195,130 @@ export default function PokemonStatsScreen({
         {/* Moves Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Moves</Text>
-          <View style={styles.movesGrid}>
-            {pokemon.moves.map((move: any, index: number) => (
-              <View key={index} style={styles.moveCard}>
-                <Text style={styles.moveName}>{move.name}</Text>
-                <Text style={styles.movePower}>PWR: {move.power}</Text>
-              </View>
-            ))}
+          <View style={styles.movesList}>
+            {pokemon.moves.map((move: any, index: number) => {
+              const details = MOVES[move.name.toLowerCase()];
+              const moveType = details?.type || move.type || "normal";
+              const typeColor = TYPE_COLORS[moveType] ?? "#888";
+
+              return (
+                <View key={index} style={styles.moveDetailCard}>
+                  <View style={styles.moveHeader}>
+                    <View
+                      style={[
+                        styles.moveTypeBadge,
+                        { backgroundColor: typeColor },
+                      ]}
+                    >
+                      <Text style={styles.moveTypeBadgeText}>{moveType}</Text>
+                    </View>
+                    <Text style={styles.moveNameDetail}>{move.name}</Text>
+                    <Text style={styles.moveClassText}>
+                      {details?.damageClass === "physical" ? (
+                        <View
+                          style={{
+                            width: 50,
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <MaterialCommunityIcons
+                            name="brightness-5"
+                            size={24}
+                            color="orange"
+                          />
+                          <Text
+                            style={{
+                              color: "white",
+                              fontSize: 8,
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Physical
+                          </Text>
+                        </View>
+                      ) : details?.damageClass === "special" ? (
+                        <View
+                          style={{
+                            width: 50,
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <MaterialCommunityIcons
+                            name="radar"
+                            size={20}
+                            color="#d8a6f9"
+                          />
+                          <Text
+                            style={{
+                              color: "white",
+                              fontSize: 8,
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Special
+                          </Text>
+                        </View>
+                      ) : (
+                        <View
+                          style={{
+                            width: 50,
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <MaterialCommunityIcons
+                            name="auto-mode"
+                            size={20}
+                            color="yellow"
+                          />
+                          <Text
+                            style={{
+                              color: "white",
+                              fontSize: 8,
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Status
+                          </Text>
+                        </View>
+                      )}
+                    </Text>
+                  </View>
+
+                  <View style={styles.moveStatsRow}>
+                    <Text style={styles.moveStatItem}>
+                      Power:{" "}
+                      <Text style={styles.whiteText}>
+                        {details?.power || "-"}
+                      </Text>
+                    </Text>
+                    <Text style={styles.moveStatItem}>
+                      Accuracy:{" "}
+                      <Text style={styles.whiteText}>
+                        {details?.accuracy ? `${details.accuracy}%` : "-"}
+                      </Text>
+                    </Text>
+                    <Text style={styles.moveStatItem}>
+                      PP:{" "}
+                      <Text style={styles.whiteText}>
+                        {move.pp}/{move.maxPp}
+                      </Text>
+                    </Text>
+                  </View>
+
+                  {details?.description && (
+                    <Text style={styles.moveDescription}>
+                      {details.description.replace(
+                        /\$effect_chance/g,
+                        details.effectChance?.toString() || "",
+                      )}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -263,7 +397,7 @@ export default function PokemonStatsScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030712",
+    backgroundColor: "black",
   },
   scrollContent: {
     padding: 20,
@@ -271,7 +405,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignItems: "center",
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
     padding: 30,
     borderWidth: 1,
@@ -281,10 +415,10 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    top: -20,
+    width: 300,
+    height: 180,
+    borderRadius: 10,
+    top: 10,
     alignSelf: "center",
   },
   sprite: {
@@ -297,6 +431,10 @@ const styles = StyleSheet.create({
     color: "white",
     textTransform: "capitalize",
     marginTop: 10,
+  },
+  badgeContainer: {
+    flexDirection: "row",
+    gap: 15,
   },
   typeBadges: {
     flexDirection: "row",
@@ -319,13 +457,30 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: "600",
   },
+  flavorTextContainer: {
+    marginTop: 10,
+    backgroundColor: colors.modalContent,
+    padding: 20,
+    borderTopStartRadius: 20,
+    borderBottomEndRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.modalBorder,
+    textAlign: "center",
+  },
+  flavorText: {
+    color: "#D1D5DB",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
   section: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 40,
     borderWidth: 1,
-    borderColor: "#1F2937",
+    borderColor: colors.modalBorderSubtle,
   },
   sectionTitle: {
     fontSize: 20,
@@ -366,30 +521,60 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "right",
   },
-  movesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+  movesList: {
+    gap: 12,
   },
-  moveCard: {
-    width: "48%",
-    backgroundColor: "#1F2937",
-    padding: 12,
-    borderRadius: 12,
+  moveDetailCard: {
+    backgroundColor: colors.modalContent,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorder,
   },
-  moveName: {
+  moveHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  moveTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  moveTypeBadgeText: {
+    fontSize: 10,
+    fontWeight: "bold",
     color: "white",
-    fontSize: 14,
+    textTransform: "uppercase",
+  },
+  moveNameDetail: {
+    color: "white",
+    fontSize: 16,
     fontWeight: "bold",
     textTransform: "capitalize",
+    flex: 1,
   },
-  movePower: {
-    color: "#818CF8",
+  moveClassText: {
+    fontSize: 16,
+  },
+  moveStatsRow: {
+    flexDirection: "row",
+    gap: 15,
+    marginBottom: 8,
+  },
+  moveStatItem: {
+    color: "#9CA3AF",
     fontSize: 12,
-    marginTop: 4,
-    fontWeight: "600",
+  },
+  whiteText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  moveDescription: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    lineHeight: 18,
   },
   footer: {
     position: "absolute",
@@ -436,18 +621,18 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: colors.modalOverlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.border,
     alignItems: "center",
   },
   modalTitle: {
