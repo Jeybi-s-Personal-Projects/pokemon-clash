@@ -116,13 +116,19 @@ export default function PokemonTeamScreen({
     setIsSaving(true);
 
     try {
-      const syncData = team.map((p, index) => ({
-        id: p.id,
-        pk_order: index + 1,
-      }));
+      // Use individual updates instead of upsert to avoid NOT NULL constraint violations
+      // for columns like pk_name which are not included in the sync data.
+      const updatePromises = team.map((p, index) =>
+        supabase
+          .from("pokemon")
+          .update({ pk_order: index + 1 })
+          .eq("id", p.id)
+      );
 
-      const { error } = await supabase.from("pokemon").upsert(syncData);
-      if (error) throw error;
+      const results = await Promise.all(updatePromises);
+      const firstError = results.find((r) => r.error)?.error;
+      
+      if (firstError) throw firstError;
 
       playClick("medium");
       setStatusMessage("Team order saved successfully!");
