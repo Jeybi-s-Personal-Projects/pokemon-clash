@@ -127,46 +127,72 @@ export default function PokemonStatsScreen({
             { borderColor: colors.modalBorderSubtle },
           ]}
         >
-          <View
-            style={[styles.glow, { backgroundColor: accentColor + "50" }]}
-          />
+          <View style={[styles.glow, { backgroundColor: accentColor + "50" }]}>
+            <MaterialCommunityIcons
+              name="pokeball"
+              size={280}
+              color="white"
+              style={{ opacity: 0.05 }}
+            />
+          </View>
           <Image
             source={{ uri: pokemon.frontImage }}
             style={styles.sprite}
             resizeMode="contain"
           />
-          <Text style={styles.name}>{pokemon.name}</Text>
-          <View style={styles.badgeContainer}>
-            <View style={styles.typeBadges}>
-              {pokemon.type.map((t: string) => (
-                <View
-                  key={t}
-                  style={[
-                    styles.badge,
-                    { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
-                  ]}
-                >
-                  <Text
+          <View style={styles.nameContainer}>
+            <Text style={styles.name}>{pokemon.name}</Text>
+            <View style={styles.badgeContainer}>
+              <View style={styles.typeBadges}>
+                {pokemon.type.map((t: string) => (
+                  <View
+                    key={t}
                     style={[
-                      styles.badgeText,
-                      { color: TYPE_COLORS[t] ?? "#888" },
+                      styles.badge,
+                      { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
                     ]}
                   >
-                    {t}
-                  </Text>
-                </View>
-              ))}
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        { color: TYPE_COLORS[t] ?? "#888" },
+                      ]}
+                    >
+                      {t}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
             <Text style={styles.level}>Level {pokemon.level}</Text>
           </View>
 
           {SPECIES[pokemon.speciesId]?.flavor_text && (
             <View style={styles.flavorTextContainer}>
+              <Text style={styles.pokedexTitle}>Pokedex Entry:</Text>
               <Text style={styles.flavorText}>
                 {SPECIES[pokemon.speciesId].flavor_text}
               </Text>
             </View>
           )}
+          <View style={styles.abilityRow}>
+            {SPECIES[pokemon.speciesId]?.abilities && (
+              <View style={styles.abilityContainer}>
+                <Text style={styles.abilityTitle}>Ability</Text>
+                <Text style={styles.flavorText}>
+                  {SPECIES[pokemon.speciesId].abilities[0]}
+                </Text>
+              </View>
+            )}
+            {SPECIES[pokemon.speciesId]?.abilities && (
+              <View style={styles.abilityContainer}>
+                <Text style={styles.abilityTitle}>Hidden Ability</Text>
+                <Text style={styles.flavorText}>
+                  {SPECIES[pokemon.speciesId].abilities[1]}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Stats Section */}
@@ -215,73 +241,33 @@ export default function PokemonStatsScreen({
                     <Text style={styles.moveNameDetail}>{move.name}</Text>
                     <Text style={styles.moveClassText}>
                       {details?.damageClass === "physical" ? (
-                        <View
-                          style={{
-                            width: 50,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
+                        <View style={styles.moveAttackTypeContainer}>
                           <MaterialCommunityIcons
                             name="brightness-5"
-                            size={24}
+                            size={16}
                             color="orange"
                           />
-                          <Text
-                            style={{
-                              color: "white",
-                              fontSize: 8,
-                              fontStyle: "italic",
-                            }}
-                          >
+                          <Text style={styles.moveAttackTypeText}>
                             Physical
                           </Text>
                         </View>
                       ) : details?.damageClass === "special" ? (
-                        <View
-                          style={{
-                            width: 50,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
+                        <View style={styles.moveAttackTypeContainer}>
                           <MaterialCommunityIcons
                             name="radar"
-                            size={20}
+                            size={16}
                             color="#d8a6f9"
                           />
-                          <Text
-                            style={{
-                              color: "white",
-                              fontSize: 8,
-                              fontStyle: "italic",
-                            }}
-                          >
-                            Special
-                          </Text>
+                          <Text style={styles.moveAttackTypeText}>Special</Text>
                         </View>
                       ) : (
-                        <View
-                          style={{
-                            width: 50,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
+                        <View style={styles.moveAttackTypeContainer}>
                           <MaterialCommunityIcons
                             name="auto-mode"
-                            size={20}
+                            size={16}
                             color="yellow"
                           />
-                          <Text
-                            style={{
-                              color: "white",
-                              fontSize: 8,
-                              fontStyle: "italic",
-                            }}
-                          >
-                            Status
-                          </Text>
+                          <Text style={styles.moveAttackTypeText}>Status</Text>
                         </View>
                       )}
                     </Text>
@@ -407,7 +393,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
-    padding: 30,
+    padding: 20,
     borderWidth: 1,
     position: "relative",
     overflow: "hidden",
@@ -415,9 +401,11 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    width: 300,
+    width: 280,
     height: 180,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     top: 10,
     alignSelf: "center",
   },
@@ -425,21 +413,33 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
   },
+  nameContainer: {
+    marginTop: 30,
+    height: 60,
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    borderBottomColor: colors.borderSubtle,
+  },
   name: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: "bold",
     color: "white",
     textTransform: "capitalize",
-    marginTop: 10,
   },
   badgeContainer: {
-    flexDirection: "row",
-    gap: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 60,
   },
   typeBadges: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
+    flexDirection: "column",
+    gap: 4,
   },
   badge: {
     paddingHorizontal: 12,
@@ -447,14 +447,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 8,
     fontWeight: "bold",
     textTransform: "uppercase",
   },
   level: {
     color: "#9CA3AF",
-    fontSize: 16,
-    marginTop: 8,
+    fontSize: 12,
     fontWeight: "600",
   },
   flavorTextContainer: {
@@ -464,8 +463,44 @@ const styles = StyleSheet.create({
     borderTopStartRadius: 20,
     borderBottomEndRadius: 20,
     borderWidth: 1,
-    borderColor: colors.modalBorder,
+    borderColor: colors.modalBorderSubtle,
     textAlign: "center",
+  },
+  abilityRow: {
+    width: "100%",
+    flexDirection: "row",
+    gap: "5%",
+  },
+  abilityTitle: {
+    textAlign: "left",
+    color: "#fe6060",
+    fontSize: 16,
+    fontWeight: "bold",
+    borderBottomWidth: 1,
+    paddingBottom: 5,
+    borderColor: colors.modalBorderSubtle,
+    marginBottom: 5,
+  },
+  abilityContainer: {
+    marginTop: 10,
+    width: "47.5%",
+    backgroundColor: colors.modalContent,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+    textAlign: "center",
+  },
+  pokedexTitle: {
+    textAlign: "left",
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "bold",
+    borderBottomWidth: 1,
+    paddingBottom: 10,
+    borderColor: colors.modalBorderSubtle,
+    marginBottom: 10,
   },
   flavorText: {
     color: "#D1D5DB",
@@ -559,6 +594,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   moveStatsRow: {
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.modalBorderSubtle,
     flexDirection: "row",
     gap: 15,
     marginBottom: 8,
@@ -575,6 +613,18 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontSize: 12,
     lineHeight: 18,
+  },
+  moveAttackTypeContainer: {
+    width: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 4,
+  },
+  moveAttackTypeText: {
+    color: "white",
+    fontSize: 8,
+    fontStyle: "italic",
   },
   footer: {
     position: "absolute",
@@ -632,7 +682,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.modalBorder,
     alignItems: "center",
   },
   modalTitle: {
