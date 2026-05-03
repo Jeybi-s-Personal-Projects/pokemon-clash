@@ -12,6 +12,7 @@ type Props = {
   isDancing?: boolean;
   isHit?: boolean;
   isEntering?: boolean;
+  isCaught?: boolean;
   stages?: StatStages;
   exp?: number;
   maxExp?: number;
@@ -112,6 +113,7 @@ export default function PokemonCard({
   isDancing,
   isHit,
   isEntering,
+  isCaught,
   stages,
   exp,
   maxExp,
@@ -208,13 +210,19 @@ export default function PokemonCard({
         duration: 400,
         useNativeDriver: true,
       }).start();
+    } else if (isCaught) {
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     } else {
       opacityAnim.setValue(1);
     }
-  }, [isEntering, pokemon.id]);
+  }, [isEntering, isCaught, pokemon.id]);
 
   useEffect(() => {
-    if (pokemon.hp <= 0) {
+    if (pokemon.hp <= 0 && !isCaught) {
       if (isFading.current) return;
       isFading.current = true;
 

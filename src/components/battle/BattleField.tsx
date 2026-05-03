@@ -13,6 +13,7 @@ interface BattleFieldProps {
   dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
   isPlayerEntering?: boolean;
+  isEnemyCaught?: boolean;
 }
 
 const bg = require("@/assets/backgrounds/background-grass.jpg");
@@ -26,6 +27,7 @@ export const BattleField = ({
   dancingSide,
   hitSide,
   isPlayerEntering,
+  isEnemyCaught,
 }: BattleFieldProps) => {
   return (
     <View style={styles.container}>
@@ -36,6 +38,7 @@ export const BattleField = ({
         isAttacking={attackingSide === "enemy"}
         isDancing={dancingSide === "enemy"}
         isHit={hitSide === "enemy"}
+        isCaught={isEnemyCaught}
       />
       <View style={styles.spacer} />
       <PokemonCard

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, StyleSheet, Text, View } from "react-native";
 import { BattleField } from "../components/battle/BattleField";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,13 @@ const initialStages = {
   specialAttack: 0,
   specialDefense: 0,
   speed: 0,
+};
+
+const BALL_IMAGES: Record<string, any> = {
+  "poke-ball": require("../../assets/items/pokeball.png"),
+  "great-ball": require("../../assets/items/greatball.png"),
+  "ultra-ball": require("../../assets/items/ultraball.png"),
+  "master-ball": require("../../assets/items/masterball.png"),
 };
 
 export default function CatchingScreen({
@@ -27,9 +34,13 @@ export default function CatchingScreen({
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isEnemyCaught, setIsEnemyCaught] = useState(false);
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+  // Animations
+  const ballAnim = useRef(new Animated.ValueXY({ x: -100, y: 300 })).current;
+  const ballOpacity = useRef(new Animated.Value(0)).current;
+  const ballRotation = useRef(new Animated.Value(0)).current;
+  const ballScale = useRef(new Animated.Value(1)).current;
 
   const cursorOpacity = useRef(new Animated.Value(1)).current;
 
@@ -49,39 +60,112 @@ export default function CatchingScreen({
     { resetBeforeIteration: true },
   ).start();
 
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
   useEffect(() => {
     async function runSequence() {
-      // 1. Initial Shake delay
-      await delay(1000);
-
-      // 2. Logic (Simulate or actual)
-
-      const chance = item.id === "master-ball" ? 1.0 : 0.7;
+      // --- 1. DETERMINE OUTCOME EARLY (BUT DON'T SHOW YET) ---
+      const chance =
+        item.id === "master-ball" ? 1.0 : (item.catchRate || 1) * 0.4;
       const success = Math.random() < chance;
 
-      if (success && user) {
-        try {
-          const { teamFull } = await savePokemon(enemy, user.id);
-          setIsSuccess(true);
-          setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
-          await delay(1500);
+      // --- 2. PLAY ANIMATION (SAME FOR BOTH SUCCESS & FAILURE) ---
+      await delay(500);
 
-          setStatusMessage(
-            `Success! ${enemy.name.toUpperCase()} was added to your collection.${
-              teamFull
-                ? "\n\nYour team was full, so it was sent to the PC."
-                : ""
-            }`,
-          );
-          setStatusVisible(true);
-        } catch (error) {
-          console.error("Save failed", error);
-          setMessage("Something went wrong...");
-          await delay(1500);
-          navigation.goBack();
+      // THROW: Adjust 'x' (left/right) and 'y' (up/down) to target the wild Pokemon sprite
+      // Positive X: Right, Negative X: Left
+      // Positive Y: Down, Negative Y: Up
+      ballOpacity.setValue(1);
+      Animated.parallel([
+        Animated.timing(ballAnim, {
+          toValue: { x: 60, y: -60 }, // TARGET POSITION - Edit these numbers to move the ball
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ballRotation, {
+          toValue: 1, // Spin amount
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(ballScale, {
+            toValue: 1.5,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballScale, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+
+      await delay(800); // Wait for throw to land
+
+      // Reset rotation value to 0 so wobble starts from upright position
+      // (1 and 0 are both 0/360 degrees, so this is a seamless reset)
+      ballRotation.setValue(0);
+
+      // HIT & CAPTURE: Fast fade the wild Pokemon
+      setIsEnemyCaught(true); 
+      await delay(500);
+      // WOBBLE: The suspense shakes (Plays for both)
+      const wobble = () => {
+        return Animated.sequence([
+          Animated.timing(ballRotation, {
+            toValue: 0.1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballRotation, {
+            toValue: -0.1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballRotation, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]);
+      };
+
+      for (let i = 0; i < 3; i++) {
+        await new Promise((resolve) => wobble().start(resolve));
+        await delay(200);
+      }
+
+      // --- 3. HANDLE FINAL OUTCOME ---
+      if (success) {
+        if (user) {
+          try {
+            const { teamFull } = await savePokemon(enemy, user.id);
+            setIsSuccess(true);
+            setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
+            await delay(1500);
+
+            setStatusMessage(
+              `Success! ${enemy.name.toUpperCase()} was added to your collection.${
+                teamFull
+                  ? "\n\nYour team was full, so it was sent to the PC."
+                  : ""
+              }`,
+            );
+            setStatusVisible(true);
+          } catch (error) {
+            console.error("Save failed", error);
+            setMessage("Something went wrong...");
+            await delay(1500);
+            navigation.goBack();
+          }
         }
       } else {
+        // BREAK FREE LOGIC
         setIsSuccess(false);
+        setIsEnemyCaught(false); // Make enemy visible again
+        ballOpacity.setValue(0); // Hide ball
         setMessage(`OH NO! The ${enemy.name.toUpperCase()} broke free!`);
         await delay(1500);
         setStatusMessage(`The Pokémon broke free! Returning to battle...`);
@@ -95,13 +179,16 @@ export default function CatchingScreen({
   const handleCloseModal = () => {
     setStatusVisible(false);
     if (isSuccess) {
-      // Clear the entire battle stack and return to Dashboard
       navigation.popToTop();
     } else {
-      // Go back to the battle screen directly (skipping the Bag)
       navigation.pop(1);
     }
   };
+
+  const spin = ballRotation.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-360deg", "360deg"],
+  });
 
   return (
     <View style={styles.container}>
@@ -114,10 +201,33 @@ export default function CatchingScreen({
           attackingSide={null}
           dancingSide={null}
           hitSide={null}
+          isEnemyCaught={isEnemyCaught}
         />
+
+        {/* The Animated Pokéball */}
+        <Animated.View
+          style={[
+            styles.ballContainer,
+            {
+              opacity: ballOpacity,
+              transform: [
+                { translateX: ballAnim.x },
+                { translateY: ballAnim.y },
+                { rotate: spin },
+                { scale: ballScale },
+              ],
+            },
+          ]}
+        >
+          <Image
+            source={BALL_IMAGES[item.id] || BALL_IMAGES["poke-ball"]}
+            style={styles.ballImage}
+            resizeMode="contain"
+          />
+        </Animated.View>
       </View>
 
-      {/* Message Box (Mimic BattleActions style) */}
+      {/* Message Box */}
       <View style={styles.logBox}>
         <View style={styles.messageBox}>
           <Text style={styles.messageText}>
@@ -149,6 +259,23 @@ const styles = StyleSheet.create({
   },
   battleArena: {
     flex: 1,
+    position: "relative",
+  },
+  ballContainer: {
+    position: "absolute",
+    zIndex: 20,
+    top: "50%",
+    left: "50%",
+    width: 60,
+    height: 60,
+    marginLeft: -30, // Offset to center correctly
+    marginTop: -30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  ballImage: {
+    width: 50,
+    height: 50,
   },
   logBox: {
     borderTopWidth: 2,
@@ -156,6 +283,7 @@ const styles = StyleSheet.create({
     padding: 24,
     height: 280,
     width: "100%",
+    backgroundColor: "#080B14",
   },
   messageBox: {
     borderWidth: 2,
