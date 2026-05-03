@@ -5,6 +5,7 @@ import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
+import { SPECIES } from "../data/pokemon/species/species";
 
 const initialStages = {
   attack: 0,
@@ -65,10 +66,22 @@ export default function CatchingScreen({
 
   useEffect(() => {
     async function runSequence() {
-      // --- 1. DETERMINE OUTCOME EARLY (BUT DON'T SHOW YET) ---
-      const chance =
-        item.id === "master-ball" ? 1.0 : (item.catchRate || 1) * 0.4;
-      const success = Math.random() < chance;
+      // --- 1. AUTHENTIC CATCH RATE CALCULATION ---
+      const baseCatchRate = SPECIES[enemy.speciesId]?.capture_rate || 50;
+      const ballModifier = item.catchRate || 1;
+      
+      // Status Bonus
+      let statusBonus = 1;
+      if (enemy.status === "sleep" || enemy.status === "freeze") statusBonus = 2.0;
+      else if (enemy.status) statusBonus = 1.5;
+
+      // Formula: a = ((3 * MaxHP - 2 * CurrentHP) * CatchRate * BallModifier) / (3 * MaxHP) * StatusModifier
+      const a = (
+        ((3 * enemy.maxHp - 2 * enemy.hp) * baseCatchRate * ballModifier) / (3 * enemy.maxHp)
+      ) * statusBonus;
+
+      // Final Probability P = a / 255
+      const success = item.id === "master-ball" ? true : Math.random() * 255 < a;
 
       // --- 2. PLAY ANIMATION (SAME FOR BOTH SUCCESS & FAILURE) ---
       await delay(500);
@@ -105,12 +118,12 @@ export default function CatchingScreen({
       await delay(800); // Wait for throw to land
 
       // Reset rotation value to 0 so wobble starts from upright position
-      // (1 and 0 are both 0/360 degrees, so this is a seamless reset)
       ballRotation.setValue(0);
 
       // HIT & CAPTURE: Fast fade the wild Pokemon
       setIsEnemyCaught(true); 
       await delay(500);
+
       // WOBBLE: The suspense shakes (Plays for both)
       const wobble = () => {
         return Animated.sequence([
@@ -132,6 +145,7 @@ export default function CatchingScreen({
         ]);
       };
 
+      // Play 3 wobbles
       for (let i = 0; i < 3; i++) {
         await new Promise((resolve) => wobble().start(resolve));
         await delay(200);
