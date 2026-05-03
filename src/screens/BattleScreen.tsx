@@ -1,9 +1,17 @@
-import React, { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
-import { setAudioModeAsync } from "expo-audio";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import BattleActions from "../components/battleActions";
 import EvolutionModal from "../components/evolutionModal";
+import PokemonCard from "../components/pokemonCard";
 import StatusModal from "../components/statusModal";
 import { BattleField } from "../components/battle/BattleField";
 import { SwitchModal } from "../components/battle/SwitchModal";
@@ -13,6 +21,9 @@ import { WeatherIndicator } from "../components/battle/WeatherIndicator";
 import { useBattle } from "../hooks/useBattle";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
+import { getExpForLevel } from "../utils/experienceCalculator";
+
+import { setAudioModeAsync } from "expo-audio";
 
 // ─── Inner Battle component ──────────────────────────────────────────────────
 
@@ -26,6 +37,7 @@ interface BattleProps {
     didEvolve: boolean,
     activeIndex: number,
   ) => void;
+  onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onRun?: (finalTeam: Pokemon[]) => void;
   onBagPress?: (player: Pokemon, team: Pokemon[], currentEnemy: Pokemon) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
@@ -37,6 +49,7 @@ export function Battle({
   team,
   enemy,
   onBattleEnd,
+  onCheckpoint,
   onRun,
   onBagPress,
   catchPending,
@@ -52,6 +65,7 @@ export function Battle({
     team,
     enemy,
     onBattleEnd,
+    onCheckpoint,
     onSave,
     catchPending,
     onToggleAutoBattle,
@@ -145,6 +159,7 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
     enemy, 
     onRun, 
     onBattleEnd: onBattleEndProp, 
+    onCheckpoint,
     isAutoBattle, 
     onToggleAutoBattle 
   } = route.params as any;
@@ -171,6 +186,7 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
         if (onBattleEndProp) onBattleEndProp(winner, finalTeam, didEvolve, activeIndex);
         else setTimeout(() => navigation.goBack(), 2000);
       }}
+      onCheckpoint={onCheckpoint}
       onRun={(finalTeam) => {
         if (onRun) onRun(finalTeam);
         else navigation.goBack();

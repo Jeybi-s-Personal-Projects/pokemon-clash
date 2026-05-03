@@ -89,13 +89,20 @@ export default function SelectFromPCScreen({
 
     try {
       if (replacedId && replacedOrder) {
-        // BATCH SWAP LOGIC: Use a single upsert call for efficiency
-        const { error } = await supabase.from("pokemon").upsert([
-          { id: replacedId, pk_order: null }, // Send old to PC
-          { id: p.id, pk_order: replacedOrder }, // Set new member spot
-        ]);
+        // SWAP LOGIC: Use individual updates to avoid NOT NULL constraints
+        const { error: error1 } = await supabase
+          .from("pokemon")
+          .update({ pk_order: null })
+          .eq("id", replacedId);
 
-        if (error) throw error;
+        if (error1) throw error1;
+
+        const { error: error2 } = await supabase
+          .from("pokemon")
+          .update({ pk_order: replacedOrder })
+          .eq("id", p.id);
+
+        if (error2) throw error2;
       } else {
         // ADD LOGIC
         const nextOrder = (teamLength || 0) + 1;

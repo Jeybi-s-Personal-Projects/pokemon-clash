@@ -69,6 +69,11 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const [localTeam, setLocalTeam] = useState<Pokemon[]>(initialTeam);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
+  const [screen, setScreen] = useState<Screen>("transition");
+  const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
+    null,
+  );
+  const [isLoadingMoves, setIsLoadingMoves] = useState(false);
 
   // Clear catchPending after it's been "consumed" by the state
   useEffect(() => {
@@ -80,12 +85,6 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       return () => clearTimeout(timer);
     }
   }, [route.params.catchPending, navigation]);
-
-  const [screen, setScreen] = useState<Screen>("transition");
-  const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
-    null,
-  );
-  const [isLoadingMoves, setIsLoadingMoves] = useState(false);
 
   const { currentEncounter, isReady, isInitialLoading, advance, reset } =
     useEncounterQueue(region, area);
@@ -156,6 +155,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
     }
   };
 
+  const checkpointProgress = async (finalTeam: Pokemon[]) => {
+    await syncAllProgress(finalTeam);
+  };
+
   const handleTransitionReady = useCallback(() => {
     setScreen("battle");
   }, []);
@@ -178,7 +181,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         return;
       }
 
-      // Session continues - No sync here
+      // Session continues - No automatic sync here
       setTimeout(() => {
         advance();
         setScreen("transition");
@@ -219,6 +222,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         team={localTeam}
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
+        onCheckpoint={checkpointProgress}
         onRun={handleExit}
         onBagPress={(p, t, e) =>
           navigation.navigate("InventoryBag", {

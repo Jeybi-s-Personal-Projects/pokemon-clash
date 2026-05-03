@@ -41,6 +41,7 @@ interface UseBattleOptions {
     didEvolve: boolean,
     activeIndex: number,
   ) => void;
+  onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onSave?: () => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onToggleAutoBattle?: (v: boolean) => void;
@@ -51,6 +52,7 @@ export function useBattle({
   team,
   enemy,
   onBattleEnd,
+  onCheckpoint,
   onSave,
   catchPending,
   onToggleAutoBattle,
@@ -338,7 +340,8 @@ export function useBattle({
       );
 
       const finalTeam = [...currentState.team];
-      let didAnyEvolve = false;
+      let hasMilestone = false;
+      const newMovesToSave: any[] = [];
 
       // 1. Process EXP for all team members
       for (let i = 0; i < finalTeam.length; i++) {
@@ -354,6 +357,7 @@ export function useBattle({
         let updatedPokemon = { ...p };
 
         if (levelUp) {
+          hasMilestone = true; // Level up is a milestone
           updatedPokemon = {
             ...p,
             level: levelUp.newLevel,
@@ -378,7 +382,9 @@ export function useBattle({
                 setCurrentMessage(
                   `${updatedPokemon.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
                 );
-                await supabase.from("pokemon_moves").insert({
+                
+                // Add to batch save list
+                newMovesToSave.push({
                   pokemon_id: updatedPokemon.id,
                   move_name: move.name,
                   move_power: move.power,
@@ -404,6 +410,7 @@ export function useBattle({
 
                 const newMoveset = await promptMoveReplacement(move, updatedPokemon);
                 updatedPokemon.moves = newMoveset;
+                // Note: manual replacement handles its own DB update inside handleMoveSelection
               }
             }
           }
@@ -482,7 +489,6 @@ export function useBattle({
               ),
             };
 
-            didAnyEvolve = true;
             setCurrentMessage(
               `${updatedPokemon.name.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
             );
@@ -509,12 +515,22 @@ export function useBattle({
         }));
       }
 
+      // 2. Batch Save Milestones
+      if (newMovesToSave.length > 0) {
+        const { error } = await supabase.from("pokemon_moves").insert(newMovesToSave);
+        if (error) console.error("Error batch saving moves:", error);
+      }
+
+      if (hasMilestone && onCheckpoint) {
+        await onCheckpoint(finalTeam);
+      }
+
       await delay(1500);
       if (onBattleEnd)
         onBattleEnd(
           "player",
           finalTeam,
-          didAnyEvolve,
+          hasMilestone, // Use hasMilestone to signal potential evolution/change
           currentState.activePlayerIndex,
         );
     } else {
