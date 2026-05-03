@@ -13,7 +13,7 @@ const WEATHER_CONFIG = {
     icon: "weather-pouring",
     color: "#60A5FA",
     label: "RAIN",
-    bg: "rgba(96, 165, 250, 0.2)",
+    bg: "rgba(96, 165, 250, 0.9)",
   },
   sun: {
     icon: "weather-sunny",
@@ -44,7 +44,7 @@ export const WeatherIndicator = ({ weather, turns }: WeatherIndicatorProps) => {
     <View
       style={[
         styles.container,
-        { borderColor: config.color, backgroundColor: config.bg },
+        { borderColor: config.color, backgroundColor: "#0000007c" },
       ]}
     >
       <MaterialCommunityIcons

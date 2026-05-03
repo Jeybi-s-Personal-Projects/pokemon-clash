@@ -1,10 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
-import PokemonCard from "../components/pokemonCard";
+import { BattleField } from "../components/battle/BattleField";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
+
+const initialStages = {
+  attack: 0,
+  defense: 0,
+  specialAttack: 0,
+  specialDefense: 0,
+  speed: 0,
+};
 
 export default function CatchingScreen({
   route,
@@ -98,13 +106,14 @@ export default function CatchingScreen({
   return (
     <View style={styles.container}>
       <View style={styles.battleArena}>
-        <PokemonCard pokemon={enemy} isHit={false} isAttacking={false} />
-        <View style={{ height: 100 }} />
-        <PokemonCard
-          pokemon={player}
-          isBack={true}
-          isHit={false}
-          isAttacking={false}
+        <BattleField
+          player={player}
+          enemy={enemy}
+          playerStages={initialStages}
+          enemyStages={initialStages}
+          attackingSide={null}
+          dancingSide={null}
+          hitSide={null}
         />
       </View>
 
@@ -140,9 +149,6 @@ const styles = StyleSheet.create({
   },
   battleArena: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    backgroundColor: "#1F2937",
   },
   logBox: {
     borderTopWidth: 2,
