@@ -1,11 +1,12 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, StyleSheet, Text, View } from "react-native";
 import { BattleField } from "../components/battle/BattleField";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
+import { SPECIES } from "../data/pokemon/species/species";
 import { savePokemon } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
-import { SPECIES } from "../data/pokemon/species/species";
 
 const initialStages = {
   attack: 0,
@@ -22,6 +23,105 @@ const BALL_IMAGES: Record<string, any> = {
   "master-ball": require("../../assets/items/masterball.png"),
 };
 
+// Star config: angle (degrees from center) and slight offset
+const STARS = [
+  { angle: -60, delay: 0 },
+  { angle: -90, delay: 80 },
+  { angle: -120, delay: 160 },
+];
+
+function StarBurst({
+  visible,
+  ballPosition,
+}: {
+  visible: boolean;
+  ballPosition: { x: number; y: number };
+}) {
+  const anims = useRef(
+    STARS.map(() => ({
+      opacity: new Animated.Value(0),
+      translateY: new Animated.Value(0),
+      translateX: new Animated.Value(0),
+      scale: new Animated.Value(0.3),
+    })),
+  ).current;
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const animations = STARS.map((star, i) => {
+      const radians = (star.angle * Math.PI) / 180;
+      const distance = 55;
+      const targetX = Math.cos(radians) * distance;
+      const targetY = Math.sin(radians) * distance;
+
+      return Animated.sequence([
+        Animated.delay(star.delay),
+        Animated.parallel([
+          Animated.timing(anims[i].opacity, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i].scale, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i].translateX, {
+            toValue: targetX,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i].translateY, {
+            toValue: targetY,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(anims[i].opacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]);
+    });
+
+    Animated.stagger(60, animations).start();
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <>
+      {STARS.map((_, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.star,
+            {
+              left: ballPosition.x,
+              top: ballPosition.y,
+              opacity: anims[i].opacity,
+              transform: [
+                { translateX: anims[i].translateX },
+                { translateY: anims[i].translateY },
+                { scale: anims[i].scale },
+              ],
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="star-four-points"
+            size={18}
+            color="#FFD700"
+          />
+        </Animated.View>
+      ))}
+    </>
+  );
+}
+
 export default function CatchingScreen({
   route,
   navigation,
@@ -36,14 +136,26 @@ export default function CatchingScreen({
   const [statusMessage, setStatusMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isEnemyCaught, setIsEnemyCaught] = useState(false);
+  const [showStars, setShowStars] = useState(false);
 
   // Animations
   const ballAnim = useRef(new Animated.ValueXY({ x: -100, y: 300 })).current;
   const ballOpacity = useRef(new Animated.Value(0)).current;
   const ballRotation = useRef(new Animated.Value(0)).current;
   const ballScale = useRef(new Animated.Value(1)).current;
-
   const cursorOpacity = useRef(new Animated.Value(1)).current;
+  const isMounted = useRef(true);
+
+  // Ball screen position for star origin
+  // These match the ballContainer style: centered in the arena
+  const BALL_SCREEN_X = -9; // adjust if needed
+  const BALL_SCREEN_Y = -9;
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   Animated.loop(
     Animated.sequence([
@@ -66,39 +178,35 @@ export default function CatchingScreen({
 
   useEffect(() => {
     async function runSequence() {
-      // --- 1. AUTHENTIC CATCH RATE CALCULATION ---
       const baseCatchRate = SPECIES[enemy.speciesId]?.capture_rate || 50;
       const ballModifier = item.catchRate || 1;
-      
-      // Status Bonus
+
       let statusBonus = 1;
-      if (enemy.status === "sleep" || enemy.status === "freeze") statusBonus = 2.0;
+      if (enemy.status === "sleep" || enemy.status === "freeze")
+        statusBonus = 2.0;
       else if (enemy.status) statusBonus = 1.5;
 
-      // Formula: a = ((3 * MaxHP - 2 * CurrentHP) * CatchRate * BallModifier) / (3 * MaxHP) * StatusModifier
-      const a = (
-        ((3 * enemy.maxHp - 2 * enemy.hp) * baseCatchRate * ballModifier) / (3 * enemy.maxHp)
-      ) * statusBonus;
+      const a =
+        (((3 * enemy.maxHp - 2 * enemy.hp) * baseCatchRate * ballModifier) /
+          (3 * enemy.maxHp)) *
+        statusBonus;
 
-      // Final Probability P = a / 255
-      const success = item.id === "master-ball" ? true : Math.random() * 255 < a;
+      const success =
+        item.id === "master-ball" ? true : Math.random() * 255 < a;
 
-      // --- 2. PLAY ANIMATION (SAME FOR BOTH SUCCESS & FAILURE) ---
       await delay(500);
+      if (!isMounted.current) return;
 
-      // THROW: Adjust 'x' (left/right) and 'y' (up/down) to target the wild Pokemon sprite
-      // Positive X: Right, Negative X: Left
-      // Positive Y: Down, Negative Y: Up
       ballOpacity.setValue(1);
       Animated.parallel([
         Animated.timing(ballAnim, {
-          toValue: { x: 60, y: -60 }, // TARGET POSITION - Edit these numbers to move the ball
-          duration: 800,
+          toValue: { x: 60, y: -60 },
+          duration: 600,
           useNativeDriver: true,
         }),
         Animated.timing(ballRotation, {
-          toValue: 1, // Spin amount
-          duration: 800,
+          toValue: 2,
+          duration: 600,
           useNativeDriver: true,
         }),
         Animated.sequence([
@@ -115,18 +223,16 @@ export default function CatchingScreen({
         ]),
       ]).start();
 
-      await delay(800); // Wait for throw to land
+      await delay(800);
+      if (!isMounted.current) return;
 
-      // Reset rotation value to 0 so wobble starts from upright position
       ballRotation.setValue(0);
-
-      // HIT & CAPTURE: Fast fade the wild Pokemon
-      setIsEnemyCaught(true); 
+      setIsEnemyCaught(true);
       await delay(500);
+      if (!isMounted.current) return;
 
-      // WOBBLE: The suspense shakes (Plays for both)
-      const wobble = () => {
-        return Animated.sequence([
+      const wobble = () =>
+        Animated.sequence([
           Animated.timing(ballRotation, {
             toValue: 0.1,
             duration: 400,
@@ -143,22 +249,28 @@ export default function CatchingScreen({
             useNativeDriver: true,
           }),
         ]);
-      };
 
-      // Play 3 wobbles
       for (let i = 0; i < 3; i++) {
         await new Promise((resolve) => wobble().start(resolve));
         await delay(200);
+        if (!isMounted.current) return;
       }
 
-      // --- 3. HANDLE FINAL OUTCOME ---
       if (success) {
         if (user) {
           try {
             const { teamFull } = await savePokemon(enemy, user.id);
             setIsSuccess(true);
             setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
-            await delay(1500);
+
+            // 🌟 Trigger star burst
+            setShowStars(true);
+            await delay(800);
+            if (!isMounted.current) return;
+            setShowStars(false);
+
+            await delay(700);
+            if (!isMounted.current) return;
 
             setStatusMessage(
               `Success! ${enemy.name.toUpperCase()} was added to your collection.${
@@ -172,18 +284,22 @@ export default function CatchingScreen({
             console.error("Save failed", error);
             setMessage("Something went wrong...");
             await delay(1500);
+            if (!isMounted.current) return;
+            route.params.onCatchFailed?.();
             navigation.goBack();
           }
         }
       } else {
-        // BREAK FREE LOGIC
         setIsSuccess(false);
-        setIsEnemyCaught(false); // Make enemy visible again
-        ballOpacity.setValue(0); // Hide ball
+        setIsEnemyCaught(false);
+        ballOpacity.setValue(0);
         setMessage(`OH NO! The ${enemy.name.toUpperCase()} broke free!`);
+
         await delay(1500);
-        setStatusMessage(`The Pokémon broke free! Returning to battle...`);
-        setStatusVisible(true);
+        if (!isMounted.current) return;
+
+        route.params.onCatchFailed?.();
+        navigation.goBack();
       }
     }
 
@@ -239,9 +355,14 @@ export default function CatchingScreen({
             resizeMode="contain"
           />
         </Animated.View>
+
+        {/* ⭐ Star burst overlay — positioned at ball's resting spot */}
+        <StarBurst
+          visible={showStars}
+          ballPosition={{ x: "65%" as any, y: "40%" as any }}
+        />
       </View>
 
-      {/* Message Box */}
       <View style={styles.logBox}>
         <View style={styles.messageBox}>
           <Text style={styles.messageText}>
@@ -282,7 +403,7 @@ const styles = StyleSheet.create({
     left: "50%",
     width: 60,
     height: 60,
-    marginLeft: -30, // Offset to center correctly
+    marginLeft: -30,
     marginTop: -30,
     justifyContent: "center",
     alignItems: "center",
@@ -290,6 +411,13 @@ const styles = StyleSheet.create({
   ballImage: {
     width: 50,
     height: 50,
+  },
+  // Star sits at the same anchor as the ball
+  star: {
+    position: "absolute",
+    zIndex: 30,
+    marginLeft: -9, // half of icon size 18
+    marginTop: -9,
   },
   logBox: {
     borderTopWidth: 2,

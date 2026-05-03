@@ -99,6 +99,7 @@ export default function InventoryBagScreen({
       enemy: pokemon,
       item: { id: item.id, name: item.name, catchRate: item.catchRate },
       fromScreen: fromScreen,
+      onCatchFailed: route.params.onCatchFailed,
     });
   };
 
