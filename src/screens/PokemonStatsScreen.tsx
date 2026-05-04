@@ -176,20 +176,22 @@ export default function PokemonStatsScreen({
             </View>
           )}
           <View style={styles.abilityRow}>
-            {SPECIES[pokemon.speciesId]?.abilities && (
+            {pokemon.ability ? (
               <View style={styles.abilityContainer}>
                 <Text style={styles.abilityTitle}>Ability</Text>
-                <Text style={styles.flavorText}>
-                  {SPECIES[pokemon.speciesId].abilities[0]}
+                <Text style={styles.abilityName}>
+                  {pokemon.ability}
                 </Text>
+                {SPECIES[pokemon.speciesId]?.abilities && 
+                 pokemon.ability === SPECIES[pokemon.speciesId].abilities[SPECIES[pokemon.speciesId].abilities.length - 1] && 
+                 SPECIES[pokemon.speciesId].abilities.length > 1 && (
+                  <Text style={styles.hiddenAbilityTag}>(Hidden)</Text>
+                )}
               </View>
-            )}
-            {SPECIES[pokemon.speciesId]?.abilities && (
+            ) : (
               <View style={styles.abilityContainer}>
-                <Text style={styles.abilityTitle}>Hidden Ability</Text>
-                <Text style={styles.flavorText}>
-                  {SPECIES[pokemon.speciesId].abilities[1]}
-                </Text>
+                <Text style={styles.abilityTitle}>Ability</Text>
+                <Text style={styles.abilityName}>None</Text>
               </View>
             )}
           </View>
@@ -481,16 +483,30 @@ const styles = StyleSheet.create({
     borderColor: colors.modalBorderSubtle,
     marginBottom: 5,
   },
+  abilityName: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "600",
+    textTransform: "capitalize",
+    textAlign: "center",
+  },
+  hiddenAbilityTag: {
+    color: "#facc15",
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 2,
+    fontStyle: "italic",
+  },
   abilityContainer: {
     marginTop: 10,
-    width: "47.5%",
+    width: "100%",
     backgroundColor: colors.modalContent,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
-    textAlign: "center",
   },
   pokedexTitle: {
     textAlign: "left",

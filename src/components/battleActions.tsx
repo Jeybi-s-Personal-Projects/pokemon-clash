@@ -190,6 +190,9 @@ export default function BattleActions({
 
       {currentLog ? (
         <View style={[styles.logBox]}>
+          <View style={styles.logDesign}>
+            <MaterialCommunityIcons name="pokeball" size={160} color="white" />
+          </View>
           <Text style={styles.logText}>{currentLog}</Text>
           <Animated.View
             style={[styles.cursorArrow, { opacity: cursorOpacity }]}
@@ -273,7 +276,8 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
     height: 280,
-    backgroundColor: "#080B14",
+    backgroundColor: colors.modalContent,
+
     borderTopWidth: 1,
   },
   containerText: {
@@ -294,7 +298,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontFamily: "monospace",
     fontSize: 9,
-    color: "#555",
+    color: "white",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -324,6 +328,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
     gap: 10,
+  },
+  logDesign: {
+    position: "absolute",
+    opacity: 0.15,
+    top: 0,
   },
   logText: {
     fontFamily: "monospace",

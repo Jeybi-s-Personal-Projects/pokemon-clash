@@ -34,6 +34,7 @@ export type Pokemon = {
   frontImage: string;
   backImage: string;
   isShiny?: boolean;
+  ability?: string;
   moves: Move[];
   cry: string;
   status?: StatusCondition;
