@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { OpponentInfoModal } from "@/src/components/battle/OpponentInfoModal";
 import { BattleField } from "../components/battle/BattleField";
 import { MoveLearningModal } from "../components/battle/MoveLearningModal";
 import { SwitchModal } from "../components/battle/SwitchModal";
@@ -8,7 +9,6 @@ import { WeatherIndicator } from "../components/battle/WeatherIndicator";
 import BattleActions from "../components/battleActions";
 import EvolutionModal from "../components/evolutionModal";
 import StatusModal from "../components/statusModal";
-
 import { useBattle } from "../hooks/useBattle";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
@@ -71,6 +71,7 @@ export function Battle({
   });
 
   const { state, currentMessage } = battle;
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
@@ -99,6 +100,13 @@ export function Battle({
         dancingSide={state.dancingSide}
         hitSide={state.hitSide}
         isPlayerEntering={battle.isPlayerEntering}
+        onEnemyPress={() => setInfoModalVisible(true)}
+      />
+
+      <OpponentInfoModal
+        visible={infoModalVisible}
+        pokemon={state.enemy}
+        onClose={() => setInfoModalVisible(false)}
       />
 
       {/* 2. Action Menu / Log */}

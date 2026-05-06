@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { StatStages } from "../../battle/battleTypes";
 import { Pokemon } from "../../types/pokemon";
 import { getExpForLevel } from "../../utils/experienceCalculator";
@@ -14,6 +14,7 @@ interface BattleFieldProps {
   hitSide: "player" | "enemy" | null;
   isPlayerEntering?: boolean;
   isEnemyCaught?: boolean;
+  onEnemyPress?: () => void;
 }
 
 const bg = require("@/assets/backgrounds/background-grass.jpg");
@@ -28,18 +29,21 @@ export const BattleField = ({
   hitSide,
   isPlayerEntering,
   isEnemyCaught,
+  onEnemyPress,
 }: BattleFieldProps) => {
   return (
     <View style={styles.container}>
       <Image source={bg} style={styles.background} />
-      <PokemonCard
-        pokemon={enemy}
-        stages={enemyStages}
-        isAttacking={attackingSide === "enemy"}
-        isDancing={dancingSide === "enemy"}
-        isHit={hitSide === "enemy"}
-        isCaught={isEnemyCaught}
-      />
+      <TouchableOpacity onPress={onEnemyPress} activeOpacity={0.9}>
+        <PokemonCard
+          pokemon={enemy}
+          stages={enemyStages}
+          isAttacking={attackingSide === "enemy"}
+          isDancing={dancingSide === "enemy"}
+          isHit={hitSide === "enemy"}
+          isCaught={isEnemyCaught}
+        />
+      </TouchableOpacity>
       <View style={styles.spacer} />
       <PokemonCard
         pokemon={player}
