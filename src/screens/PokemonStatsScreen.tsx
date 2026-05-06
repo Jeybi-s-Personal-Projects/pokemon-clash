@@ -15,6 +15,7 @@ import {
 import StatusModal from "../components/statusModal";
 import { supabase } from "../lib/supabase";
 
+import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
 import { MOVES } from "../data/pokemon/moves/moves";
 import { SPECIES } from "../data/pokemon/species/species";
 import { PokemonStatsScreenProps } from "../types/navigation";
@@ -179,14 +180,18 @@ export default function PokemonStatsScreen({
             {pokemon.ability ? (
               <View style={styles.abilityContainer}>
                 <Text style={styles.abilityTitle}>Ability</Text>
-                <Text style={styles.abilityName}>
-                  {pokemon.ability}
+                <Text style={styles.abilityName}>{pokemon.ability}</Text>
+                <Text style={styles.abilityDescription}>
+                  {ABILITIES[pokemon.ability?.toLowerCase()]?.flavorText || "No description available."}
                 </Text>
-                {SPECIES[pokemon.speciesId]?.abilities && 
-                 pokemon.ability === SPECIES[pokemon.speciesId].abilities[SPECIES[pokemon.speciesId].abilities.length - 1] && 
-                 SPECIES[pokemon.speciesId].abilities.length > 1 && (
-                  <Text style={styles.hiddenAbilityTag}>(Hidden)</Text>
-                )}
+                {SPECIES[pokemon.speciesId]?.abilities &&
+                  pokemon.ability ===
+                    SPECIES[pokemon.speciesId].abilities[
+                      SPECIES[pokemon.speciesId].abilities.length - 1
+                    ] &&
+                  SPECIES[pokemon.speciesId].abilities.length > 1 && (
+                    <Text style={styles.hiddenAbilityTag}>(Hidden)</Text>
+                  )}
               </View>
             ) : (
               <View style={styles.abilityContainer}>
@@ -489,6 +494,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "capitalize",
     textAlign: "center",
+  },
+  abilityDescription: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 6,
+    fontStyle: "italic",
+    paddingHorizontal: 5,
   },
   hiddenAbilityTag: {
     color: "#facc15",
