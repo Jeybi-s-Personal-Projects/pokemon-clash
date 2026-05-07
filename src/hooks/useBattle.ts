@@ -125,17 +125,19 @@ export function useBattle({
   };
 
   /**
-   * Reverts the active Mega-Evolved Pokémon back to its base form in a given team array.
-   * Preserves the current HP value (so a fainted mega stays fainted after revert).
-   * Resets isMega / basePlayer state as a side-effect.
+   * Reverts any Mega-Evolved Pokémon in the team back to its base form.
+   * Finds the Pokémon that is currently in Mega form based on the basePlayer state.
    */
   const revertMegaInTeam = (teamToRevert: Pokemon[]): Pokemon[] => {
     if (!isMega || !basePlayer) return teamToRevert;
-    return teamToRevert.map((p, i) =>
-      i === state.activePlayerIndex
-        ? { ...basePlayer, hp: p.hp, maxHp: basePlayer.maxHp }
-        : p,
-    );
+
+    return teamToRevert.map((p) => {
+      // Check if this Pokémon is the one that Mega Evolved (match by ID and state)
+      if (p.id === basePlayer.id && p.name.includes("Mega ")) {
+        return { ...basePlayer, hp: p.hp, maxHp: basePlayer.maxHp };
+      }
+      return p;
+    });
   };
 
   const resetMegaState = () => {
