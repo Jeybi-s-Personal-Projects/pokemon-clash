@@ -1,6 +1,6 @@
 import { colors } from "@/src/theme/color";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -47,7 +47,22 @@ export const MoveLearningModal = ({
   newMove,
   onSelect,
 }: MoveLearningModalProps) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Reset lock whenever the modal becomes visible for a new move
+  useEffect(() => {
+    if (visible) {
+      setIsProcessing(false);
+    }
+  }, [visible]);
+
   if (!newMove) return null;
+
+  const handleSelect = (index: number | "skip") => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    onSelect(index);
+  };
 
   const newMoveDetails = MOVES[newMove.name.toLowerCase()];
   const newMoveType = newMove.type || "normal";
@@ -57,19 +72,28 @@ export const MoveLearningModal = ({
     switch (damageClass) {
       case "physical":
         return (
-          <MaterialCommunityIcons
-            name="brightness-5"
-            size={16}
-            color="orange"
-          />
+          <View style={styles.moveClassContainer}>
+            <Text style={styles.moveAttackTypeText}>Physical</Text>
+            <MaterialCommunityIcons
+              name="brightness-5"
+              size={16}
+              color="orange"
+            />
+          </View>
         );
       case "special":
         return (
-          <MaterialCommunityIcons name="radar" size={16} color="#d8a6f9" />
+          <View style={styles.moveClassContainer}>
+            <Text style={styles.moveAttackTypeText}>Special</Text>
+            <MaterialCommunityIcons name="radar" size={16} color="#d8a6f9" />
+          </View>
         );
       default:
         return (
-          <MaterialCommunityIcons name="auto-mode" size={16} color="yellow" />
+          <View style={styles.moveClassContainer}>
+            <Text style={styles.moveAttackTypeText}>Status</Text>
+            <MaterialCommunityIcons name="auto-mode" size={16} color="yellow" />
+          </View>
         );
     }
   };
@@ -78,6 +102,7 @@ export const MoveLearningModal = ({
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
+          <Text style={styles.pokemonName}>{pokemon.name.toUpperCase()}</Text>
           <Text style={styles.title}>NEW MOVE LEARNED</Text>
 
           <View style={[styles.newMoveCard, { borderColor: newMoveColor }]}>
@@ -85,12 +110,7 @@ export const MoveLearningModal = ({
               <Text style={styles.newMoveName}>
                 {newMove.name.toUpperCase()}
               </Text>
-              <View style={styles.moveClassContainer}>
-                {renderMoveCategoryIcon(newMoveDetails?.damageClass)}
-                <Text style={styles.moveAttackTypeText}>
-                  {newMoveDetails?.damageClass || "Status"}
-                </Text>
-              </View>
+              {renderMoveCategoryIcon(newMoveDetails?.damageClass)}
             </View>
             <View style={styles.moveStatsRow}>
               <Text style={styles.moveStat}>PWR: {newMove.power || "-"}</Text>
@@ -102,7 +122,7 @@ export const MoveLearningModal = ({
             <Text style={styles.description}>{newMove.description}</Text>
           </View>
 
-          <Text style={styles.subtitle}>Replace a move:</Text>
+          <Text style={styles.subtitle}>Replace existing move:</Text>
           <ScrollView style={styles.movesList}>
             {pokemon.moves.map((move, index) => {
               const details = MOVES[move.name.toLowerCase()];
@@ -111,16 +131,15 @@ export const MoveLearningModal = ({
               return (
                 <TouchableOpacity
                   key={index}
-                  onPress={() => onSelect(index)}
+                  onPress={() => handleSelect(index)}
+                  disabled={isProcessing}
                   style={[styles.moveButton, { borderColor: typeColor }]}
                 >
                   <View style={styles.moveHeader}>
                     <Text style={styles.moveName}>
                       {move.name.toUpperCase()}
                     </Text>
-                    <View style={styles.moveClassContainer}>
-                      {renderMoveCategoryIcon(details?.damageClass)}
-                    </View>
+                    {renderMoveCategoryIcon(details?.damageClass)}
                   </View>
                   <View style={styles.moveStatsRow}>
                     <Text style={styles.moveStat}>
@@ -142,7 +161,8 @@ export const MoveLearningModal = ({
           </ScrollView>
 
           <TouchableOpacity
-            onPress={() => onSelect("skip")}
+            onPress={() => handleSelect("skip")}
+            disabled={isProcessing}
             style={styles.skipButton}
           >
             <Text style={styles.skipText}>
@@ -176,6 +196,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 5,
+  },
+  pokemonName: {
+    color: "#FBBF24",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 2,
+    textTransform: "uppercase",
   },
   subtitle: {
     color: "#fe6060",
@@ -222,11 +250,6 @@ const styles = StyleSheet.create({
   movesList: {
     flexGrow: 0,
   },
-  moveDesc: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    lineHeight: 16,
-  },
   moveButton: {
     backgroundColor: colors.modalContent,
     padding: 14,
@@ -239,15 +262,21 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
   },
+  moveAttackTypeText: {
+    color: "#9CA3AF",
+    fontSize: 8,
+    fontStyle: "italic",
+  },
   moveClassContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  moveAttackTypeText: {
+  moveDesc: {
     color: "#9CA3AF",
-    fontSize: 10,
-    fontStyle: "italic",
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
   },
   skipButton: {
     marginTop: 15,
@@ -257,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   skipText: {
-    color: "#FCA5A5",
+    color: "white",
     fontWeight: "bold",
   },
 });
