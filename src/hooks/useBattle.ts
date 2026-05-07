@@ -131,13 +131,16 @@ export function useBattle({
    */
   const revertMegaInTeam = (teamToRevert: Pokemon[]): Pokemon[] => {
     if (!isMega || !basePlayer) return teamToRevert;
-    setIsMega(false);
-    setBasePlayer(null);
     return teamToRevert.map((p, i) =>
       i === state.activePlayerIndex
         ? { ...basePlayer, hp: p.hp, maxHp: basePlayer.maxHp }
         : p,
     );
+  };
+
+  const resetMegaState = () => {
+    setIsMega(false);
+    setBasePlayer(null);
   };
   // ...
 
@@ -627,9 +630,15 @@ export function useBattle({
 
       // 2. Batch Save Milestones
       if (newMovesToSave.length > 0) {
+        // De-duplicate: Ensure only unique (pokemon_id, move_name) pairs exist
+        const uniqueMoves = Array.from(
+          new Map(
+            newMovesToSave.map((m) => [`${m.pokemon_id}-${m.move_name}`, m])
+          ).values()
+        );
         const { error } = await supabase
           .from("pokemon_moves")
-          .insert(newMovesToSave);
+          .insert(uniqueMoves);
         if (error) console.error("Error batch saving moves:", error);
       }
 
@@ -641,6 +650,7 @@ export function useBattle({
 
       // Revert Mega Evolution before ending the battle
       const teamForEnd = revertMegaInTeam(finalTeam);
+      resetMegaState();
 
       if (onBattleEnd)
         onBattleEnd(
@@ -657,6 +667,7 @@ export function useBattle({
 
       // Revert Mega Evolution before ending the battle
       const teamForEnd = revertMegaInTeam(currentState.team);
+      resetMegaState();
 
       if (onBattleEnd)
         onBattleEnd("enemy", teamForEnd, false, currentState.activePlayerIndex);

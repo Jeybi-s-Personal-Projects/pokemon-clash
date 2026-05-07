@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -172,14 +173,23 @@ export default function BattleActions({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onMegaEvolve}
-            style={[styles.toggleButton, { borderColor: colors.neonOrange }]}
+            style={[
+              styles.toggleButton,
+              {
+                borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+              },
+            ]}
           >
-            <MaterialCommunityIcons
-              name="auto-fix"
-              size={12}
-              color={colors.neonOrange}
+            <Image
+              source={require("@/assets/icons/mega-evolution-icon.png")}
+              style={{ width: 14, height: 14 }}
             />
-            <Text style={[styles.toggleText, { color: colors.neonOrange }]}>
+            <Text
+              style={[
+                styles.toggleText,
+                { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+              ]}
+            >
               MEGA
             </Text>
           </TouchableOpacity>

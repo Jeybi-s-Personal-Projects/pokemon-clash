@@ -1249,6 +1249,26 @@ export const ITEMS: Item[] = [
     },
   },
   {
+    id: "dragonitite",
+    name: "Dragonitite",
+    gen: 6,
+    category: {
+      category: "mega-stone",
+      megaOf: "dragonite",
+      megaForm: "mega-dragonite",
+    },
+  },
+  {
+    id: "skarmorite",
+    name: "Skarmorite",
+    gen: 6,
+    category: {
+      category: "mega-stone",
+      megaOf: "skarmorite",
+      megaForm: "mega-skarmorite",
+    },
+  },
+  {
     id: "mewtwonite-x",
     name: "Mewtwonite X",
     gen: 6,

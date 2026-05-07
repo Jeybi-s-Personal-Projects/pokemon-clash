@@ -417,6 +417,7 @@ export default function PokemonStatsScreen({
 
       <ItemEquipModal
         visible={itemModalVisible}
+        speciesId={pokemonState.speciesId}
         onSelect={handleEquipItem}
         onClose={() => setItemModalVisible(false)}
       />

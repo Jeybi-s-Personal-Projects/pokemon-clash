@@ -10,9 +10,11 @@ import {
 } from "react-native";
 import { ITEMS } from "../data/items/items";
 import { colors } from "../theme/color";
+import { isMegaStoneCompatible } from "../utils/megaStoneCompatibility";
 
 interface ItemEquipModalProps {
   visible: boolean;
+  speciesId: number;
   onSelect: (itemId: string | null) => void;
   onClose: () => void;
 }
@@ -27,6 +29,7 @@ const CATEGORIES: { key: ItemCategory; label: string }[] = [
 
 export function ItemEquipModal({
   visible,
+  speciesId,
   onSelect,
   onClose,
 }: ItemEquipModalProps) {
@@ -39,9 +42,13 @@ export function ItemEquipModal({
       const matchesSearch = item.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+
+      const isCompatible =
+        category !== "mega-stone" || isMegaStoneCompatible(item.id, speciesId);
+
+      return matchesCategory && matchesSearch && isCompatible;
     });
-  }, [category, searchQuery]);
+  }, [category, searchQuery, speciesId]);
 
   const getItemDescription = (item: any) => {
     return (

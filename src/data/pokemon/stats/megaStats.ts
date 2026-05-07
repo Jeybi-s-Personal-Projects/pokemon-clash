@@ -272,7 +272,8 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     },
     types: ["fairy", "flying"],
     ability: "magic-guard",
-    spriteUrl: "https://play.pokemonshowdown.com/sprites/ani/clefable-mega.gif",
+    spriteUrl:
+      "https://play.pokemonshowdown.com/sprites/-back/clefable-mega.gif",
   },
 
   // Mega Starmie (NEW in Z-A)
@@ -287,11 +288,12 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     },
     types: ["water", "psychic"],
     ability: "analytic",
-    spriteUrl: "https://play.pokemonshowdown.com/sprites/ani/starmie-mega.gif",
+    spriteUrl:
+      "https://play.pokemonshowdown.com/sprites/ani-back/starmie-mega.gif",
   },
 
   // Mega Dragonite (NEW in Z-A)
-  dragonite: {
+  dragonitite: {
     baseStats: {
       hp: 91,
       attack: 124,
@@ -303,7 +305,7 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     types: ["dragon", "flying"],
     ability: "multiscale",
     spriteUrl:
-      "https://play.pokemonshowdown.com/sprites/ani/dragonite-mega.gif",
+      "https://play.pokemonshowdown.com/sprites/ani-back/dragonite-mega.gif",
   },
 
   // ==================
@@ -422,7 +424,8 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     },
     types: ["grass", "fairy"],
     ability: "flower-veil",
-    spriteUrl: "https://play.pokemonshowdown.com/sprites/ani/meganium-mega.gif",
+    spriteUrl:
+      "https://play.pokemonshowdown.com/sprites/ani-back/meganium-mega.gif",
   },
 
   // Mega Feraligatr (NEW in Z-A)
@@ -438,7 +441,7 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     types: ["water", "dragon"],
     ability: "strong-jaw",
     spriteUrl:
-      "https://play.pokemonshowdown.com/sprites/ani/feraligatr-mega.gif",
+      "https://play.pokemonshowdown.com/sprites/ani-back/feraligatr-mega.gif",
   },
 
   // Mega Skarmory (NEW in Z-A)
@@ -453,6 +456,7 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     },
     types: ["steel", "flying"],
     ability: "sturdy",
-    spriteUrl: "https://play.pokemonshowdown.com/sprites/ani/skarmory-mega.gif",
+    spriteUrl:
+      "https://play.pokemonshowdown.com/sprites/ani-back/skarmory-mega.gif",
   },
 };
