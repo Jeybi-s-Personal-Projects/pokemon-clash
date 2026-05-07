@@ -1,11 +1,19 @@
-import { Pokemon } from "../types/pokemon";
 import { MEGA_STATS } from "../data/pokemon/stats/megaStats";
+import { Pokemon } from "../types/pokemon";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
+
+/**
+ * Reverts a Mega Evolved Pokémon to its base form.
+ */
+export function revertMegaEvolution(basePokemon: Pokemon): Pokemon {
+  return { ...basePokemon };
+}
 
 /**
  * Handles the logic for Mega Evolution.
  */
 export async function applyMegaEvolution(pokemon: Pokemon): Promise<Pokemon> {
+  // ...
   const heldItem = pokemon.heldItem;
   if (!heldItem || !MEGA_STATS[heldItem]) {
     return pokemon;

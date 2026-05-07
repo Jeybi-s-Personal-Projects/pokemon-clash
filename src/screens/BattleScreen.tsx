@@ -128,6 +128,8 @@ export function Battle({
           )
         }
         onRun={() => onRun?.(state.team)}
+        onMegaEvolve={battle.handleMegaEvolution}
+        canMegaEvolve={battle.canMegaEvolve}
         disabled={
           !!state.attackingSide ||
           !!state.dancingSide ||

@@ -47,6 +47,10 @@ interface UseBattleOptions {
   onToggleAutoBattle?: (v: boolean) => void;
 }
 
+import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
+import { MEGA_STATS } from "../data/pokemon/stats/megaStats";
+// ... (imports)
+
 export function useBattle({
   player,
   team,
@@ -74,6 +78,45 @@ export function useBattle({
     weather: null,
     weatherTurns: 0,
   });
+
+  const [canMegaEvolve, setCanMegaEvolve] = useState(false);
+  const [isMega, setIsMega] = useState(false);
+  const [basePlayer, setBasePlayer] = useState<Pokemon | null>(null);
+
+  // Check for mega evolution on switch or initialization
+  useEffect(() => {
+    if (!isMega && state.player.heldItem && MEGA_STATS[state.player.heldItem]) {
+        setCanMegaEvolve(true);
+    } else {
+        setCanMegaEvolve(false);
+    }
+  }, [state.player.id, state.player.heldItem, isMega]);
+
+  const handleMegaEvolution = async () => {
+    if (!canMegaEvolve) return;
+
+    // Store base version before evolving
+    setBasePlayer(state.player);
+
+    const evolvedPokemon = await applyMegaEvolution(state.player);
+    
+    // Update player and team in state
+    const nextTeam = [...state.team];
+    nextTeam[state.activePlayerIndex] = evolvedPokemon;
+
+    setState(prev => ({
+        ...prev,
+        player: evolvedPokemon,
+        team: nextTeam
+    }));
+
+    setIsMega(true);
+    setCanMegaEvolve(false);
+    setCurrentMessage(`${evolvedPokemon.name.toUpperCase()} has Mega Evolved!`);
+    await delay(1500);
+    setCurrentMessage(null);
+  };
+// ...
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
   const [isPlayerEntering, setIsPlayerEntering] = useState(false);
@@ -1147,5 +1190,8 @@ export function useBattle({
     resolveEvolution,
     // Penalty
     processTurnPenalty,
+    // Mega Evolution
+    canMegaEvolve,
+    handleMegaEvolution,
   };
 }

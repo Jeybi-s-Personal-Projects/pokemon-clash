@@ -23,7 +23,8 @@ export const MEGA_STATS: Record<string, MegaStats> = {
       speed: 100,
     },
     types: ["fire", "dragon"],
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/mega-charizard-x.gif",
+    spriteUrl:
+      "https://play.pokemonshowdown.com/sprites/xyani-back/charizard-megax.gif",
   },
   // Example for Charizard Y
   "charizardite-y": {
@@ -36,7 +37,8 @@ export const MEGA_STATS: Record<string, MegaStats> = {
       speed: 100,
     },
     types: ["fire", "flying"],
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/mega-charizard-y.gif",
+    spriteUrl:
+      "https://play.pokemonshowdown.com/sprites/xyani-back/charizard-megay.gif",
   },
   // Add other Mega Stones as needed...
 };

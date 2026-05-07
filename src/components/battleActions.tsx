@@ -24,6 +24,8 @@ type Props = {
   currentLog?: string | null;
   isAutoBattle?: boolean;
   onToggleAutoBattle?: (value: boolean) => void;
+  onMegaEvolve?: () => void;
+  canMegaEvolve?: boolean;
 };
 
 const ACTION_CONFIG = [
@@ -63,6 +65,8 @@ export default function BattleActions({
   currentLog,
   isAutoBattle = false,
   onToggleAutoBattle,
+  onMegaEvolve,
+  canMegaEvolve,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -164,6 +168,22 @@ export default function BattleActions({
             </Text>
           </TouchableOpacity>
         )}
+        {canMegaEvolve && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onMegaEvolve}
+            style={[styles.toggleButton, { borderColor: colors.neonOrange }]}
+          >
+            <MaterialCommunityIcons
+              name="auto-fix"
+              size={12}
+              color={colors.neonOrange}
+            />
+            <Text style={[styles.toggleText, { color: colors.neonOrange }]}>
+              MEGA
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
@@ -174,7 +194,7 @@ export default function BattleActions({
         >
           <MaterialCommunityIcons
             name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
-            size={16}
+            size={12}
             color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
           />
           <Text
