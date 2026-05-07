@@ -15,6 +15,8 @@ import {
 import StatusModal from "../components/statusModal";
 import { supabase } from "../lib/supabase";
 
+import { ItemEquipModal } from "@/src/components/ItemEquipModal";
+import { ITEMS } from "@/src/data/items/items";
 import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
 import { MOVES } from "../data/pokemon/moves/moves";
 import { SPECIES } from "../data/pokemon/species/species";
@@ -47,11 +49,13 @@ export default function PokemonStatsScreen({
   route,
   navigation,
 }: PokemonStatsScreenProps) {
-  const { pokemon, onRelease } = route.params;
-  const primaryType = pokemon.type[0];
+  const { pokemon, onRelease } = route.params as any;
+  const [pokemonState, setPokemon] = useState(pokemon);
+  const primaryType = pokemonState.type[0];
   const accentColor = TYPE_COLORS[primaryType] ?? "#888";
 
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [itemModalVisible, setItemModalVisible] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -65,14 +69,39 @@ export default function PokemonStatsScreen({
     player.play();
   };
 
+  const handleEquipItem = async (itemId: string | null) => {
+    playClick();
+    setItemModalVisible(false);
+
+    try {
+      const { error } = await supabase
+        .from("pokemon")
+        .update({ pk_held_item: itemId })
+        .eq("id", pokemon.id);
+
+      if (error) throw error;
+
+      // Updating local state to reflect change
+      const updatedPokemon = { ...pokemon, heldItem: itemId || undefined };
+      setPokemon(updatedPokemon);
+      navigation.setParams({ pokemon: updatedPokemon });
+
+      setStatusMessage(itemId ? "Item equipped!" : "Item unequipped!");
+      setStatusType("success");
+      setStatusVisible(true);
+    } catch (error: any) {
+      setStatusMessage(error.message);
+      setStatusType("error");
+      setStatusVisible(true);
+    }
+  };
+
   const handleRelease = async () => {
     playClick();
     setConfirmVisible(false);
     setIsReleasing(true);
 
     try {
-      // Supabase CASCADE delete should handle moves if set up,
-      // but we'll just delete the pokemon.
       const { error } = await supabase
         .from("pokemon")
         .delete()
@@ -182,7 +211,8 @@ export default function PokemonStatsScreen({
                 <Text style={styles.abilityTitle}>Ability</Text>
                 <Text style={styles.abilityName}>{pokemon.ability}</Text>
                 <Text style={styles.abilityDescription}>
-                  {ABILITIES[pokemon.ability?.toLowerCase()]?.flavorText || "No description available."}
+                  {ABILITIES[pokemon.ability?.toLowerCase()]?.flavorText ||
+                    "No description available."}
                 </Text>
                 {SPECIES[pokemon.speciesId]?.abilities &&
                   pokemon.ability ===
@@ -314,6 +344,39 @@ export default function PokemonStatsScreen({
             })}
           </View>
         </View>
+
+        <View style={styles.section}>
+          {/* Item Held Section */}
+          <View style={styles.itemContainer}>
+            <Text style={styles.abilityTitle}>Item Held</Text>
+            {pokemon.heldItem ? (
+              <View style={styles.itemBox}>
+                <Text style={styles.abilityName}>
+                  {ITEMS[pokemon.heldItem]?.name}
+                </Text>
+                <Text style={styles.abilityDescription}>
+                  {ITEMS[pokemon.heldItem]?.description}
+                </Text>
+                <TouchableOpacity
+                  style={styles.equipButton}
+                  onPress={() => setItemModalVisible(true)}
+                >
+                  <Text style={styles.equipButtonText}>Change Item</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.itemBox}>
+                <Text style={styles.abilityName}>None</Text>
+                <TouchableOpacity
+                  style={styles.equipButton}
+                  onPress={() => setItemModalVisible(true)}
+                >
+                  <Text style={styles.equipButtonText}>Choose Item</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
       {/* Footer Actions */}
@@ -340,6 +403,12 @@ export default function PokemonStatsScreen({
           </TouchableOpacity>
         </View>
       </View>
+
+      <ItemEquipModal
+        visible={itemModalVisible}
+        onSelect={handleEquipItem}
+        onClose={() => setItemModalVisible(false)}
+      />
 
       {/* Confirmation Modal */}
       <Modal transparent visible={confirmVisible} animationType="fade">
@@ -520,6 +589,31 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
+  },
+  itemContainer: {
+    marginTop: 20,
+    width: "100%",
+  },
+  itemBox: {
+    marginTop: 10,
+    backgroundColor: colors.modalContent,
+    padding: 15,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+    alignItems: "center",
+  },
+  equipButton: {
+    marginTop: 12,
+    backgroundColor: colors.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  equipButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 12,
   },
   pokedexTitle: {
     textAlign: "left",

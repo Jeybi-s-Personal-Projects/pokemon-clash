@@ -1,7 +1,14 @@
 import React from "react";
-import { Modal, Text, TouchableOpacity, View, StyleSheet, ScrollView } from "react-native";
-import { ITEMS } from "../../data/items/items";
-import { colors } from "../../theme/color";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { ITEMS } from "../data/items/items";
+import { colors } from "../theme/color";
 
 interface ItemEquipModalProps {
   visible: boolean;
@@ -9,7 +16,11 @@ interface ItemEquipModalProps {
   onClose: () => void;
 }
 
-export function ItemEquipModal({ visible, onSelect, onClose }: ItemEquipModalProps) {
+export function ItemEquipModal({
+  visible,
+  onSelect,
+  onClose,
+}: ItemEquipModalProps) {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
@@ -48,7 +59,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.85)",
+    backgroundColor: colors.modalOverlay,
     padding: 15,
   },
   container: {
@@ -70,12 +81,12 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   itemButton: {
-    backgroundColor: "#1F2937",
+    backgroundColor: colors.modalContent,
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorderSubtle,
   },
   itemName: {
     color: "white",

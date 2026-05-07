@@ -5,7 +5,7 @@ export interface Item {
 }
 
 export const ITEMS: Record<string, Item> = {
-  "leftovers": {
+  leftovers: {
     id: "leftovers",
     name: "Leftovers",
     description: "Gradually restores HP in battle.",
@@ -25,7 +25,7 @@ export const ITEMS: Record<string, Item> = {
     name: "Choice Band",
     description: "Boosts Attack but locks move selection.",
   },
-  "everstone": {
+  everstone: {
     id: "everstone",
     name: "Everstone",
     description: "Prevents evolution.",

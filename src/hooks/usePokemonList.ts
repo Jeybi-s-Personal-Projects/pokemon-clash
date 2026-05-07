@@ -41,6 +41,7 @@ export function usePokemonList(userId: string) {
         speed: p.pk_speed || 0,
         type: p.pk_types,
         ability: p.pk_ability,
+        heldItem: p.pk_held_item,
         frontImage: p.pk_front_image,
         backImage: p.pk_back_image,
         cry: p.pk_cry,
