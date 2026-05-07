@@ -1,3 +1,4 @@
+import { Audio } from "expo-av";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { fetchPokemon } from "../api/pokeApi";
@@ -81,6 +82,7 @@ export function useBattle({
 
   const [canMegaEvolve, setCanMegaEvolve] = useState(false);
   const [isMega, setIsMega] = useState(false);
+  const [isMegaEvolving, setIsMegaEvolving] = useState(false);
   const [basePlayer, setBasePlayer] = useState<Pokemon | null>(null);
 
   // Check for mega evolution on switch or initialization
@@ -94,6 +96,18 @@ export function useBattle({
 
   const handleMegaEvolution = async () => {
     if (!canMegaEvolve) return;
+
+    setIsMegaEvolving(true);
+
+    // Play sound
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("@/assets/sounds/mega-evolve.mp3"),
+      );
+      await sound.playAsync();
+    } catch (error) {
+      console.error("Failed to play sound", error);
+    }
 
     // Store base version before evolving
     setBasePlayer(state.player);
@@ -113,8 +127,12 @@ export function useBattle({
     setIsMega(true);
     setCanMegaEvolve(false);
     setCurrentMessage(`${evolvedPokemon.name.toUpperCase()} has Mega Evolved!`);
-    await delay(1500);
+
+    // Delay 5 seconds for glow/sound animation
+    await delay(5000);
+
     setCurrentMessage(null);
+    setIsMegaEvolving(false);
   };
 
   /**
@@ -1224,6 +1242,7 @@ export function useBattle({
     // Mega Evolution
     canMegaEvolve,
     handleMegaEvolution,
+    isMegaEvolving,
     revertMegaInTeam,
   };
 }
