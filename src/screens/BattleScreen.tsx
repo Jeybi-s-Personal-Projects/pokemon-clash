@@ -118,6 +118,7 @@ export function Battle({
       <PokemonStatsModal
         visible={statsModalVisible}
         pokemon={state.player}
+        stages={state.playerStages}
         onClose={() => setStatsModalVisible(false)}
       />
 
