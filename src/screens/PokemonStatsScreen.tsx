@@ -16,7 +16,7 @@ import StatusModal from "../components/statusModal";
 import { supabase } from "../lib/supabase";
 
 import { ItemEquipModal } from "@/src/components/ItemEquipModal";
-import { ITEMS } from "@/src/data/items/items";
+import { getItem } from "@/src/data/items/items";
 import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
 import { MOVES } from "../data/pokemon/moves/moves";
 import { SPECIES } from "../data/pokemon/species/species";
@@ -77,12 +77,12 @@ export default function PokemonStatsScreen({
       const { error } = await supabase
         .from("pokemon")
         .update({ pk_held_item: itemId })
-        .eq("id", pokemon.id);
+        .eq("id", pokemonState.id);
 
       if (error) throw error;
 
       // Updating local state to reflect change
-      const updatedPokemon = { ...pokemon, heldItem: itemId || undefined };
+      const updatedPokemon = { ...pokemonState, heldItem: itemId || undefined };
       setPokemon(updatedPokemon);
       navigation.setParams({ pokemon: updatedPokemon });
 
@@ -105,11 +105,11 @@ export default function PokemonStatsScreen({
       const { error } = await supabase
         .from("pokemon")
         .delete()
-        .eq("id", pokemon.id);
+        .eq("id", pokemonState.id);
 
       if (error) throw error;
 
-      setStatusMessage(`${pokemon.name} was released into the wild.`);
+      setStatusMessage(`${pokemonState.name} was released into the wild.`);
       setStatusType("success");
       setStatusVisible(true);
     } catch (error: any) {
@@ -119,6 +119,17 @@ export default function PokemonStatsScreen({
     } finally {
       setIsReleasing(false);
     }
+  };
+
+  const getItemDescription = (itemId: string) => {
+    const item = getItem(itemId);
+    if (!item) return "";
+    return (
+      item.description ||
+      (item.category as any).effect ||
+      (item.category as any).description ||
+      ""
+    );
   };
 
   const StatRow = ({
@@ -150,7 +161,6 @@ export default function PokemonStatsScreen({
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header / Image Section */}
         <View
           style={[
             styles.imageContainer,
@@ -166,15 +176,15 @@ export default function PokemonStatsScreen({
             />
           </View>
           <Image
-            source={{ uri: pokemon.frontImage }}
+            source={{ uri: pokemonState.frontImage }}
             style={styles.sprite}
             resizeMode="contain"
           />
           <View style={styles.nameContainer}>
-            <Text style={styles.name}>{pokemon.name}</Text>
+            <Text style={styles.name}>{pokemonState.name}</Text>
             <View style={styles.badgeContainer}>
               <View style={styles.typeBadges}>
-                {pokemon.type.map((t: string) => (
+                {pokemonState.type.map((t: string) => (
                   <View
                     key={t}
                     style={[
@@ -194,32 +204,32 @@ export default function PokemonStatsScreen({
                 ))}
               </View>
             </View>
-            <Text style={styles.level}>Level {pokemon.level}</Text>
+            <Text style={styles.level}>Level {pokemonState.level}</Text>
           </View>
 
-          {SPECIES[pokemon.speciesId]?.flavor_text && (
+          {SPECIES[pokemonState.speciesId]?.flavor_text && (
             <View style={styles.flavorTextContainer}>
               <Text style={styles.pokedexTitle}>Pokedex Entry:</Text>
               <Text style={styles.flavorText}>
-                {SPECIES[pokemon.speciesId].flavor_text}
+                {SPECIES[pokemonState.speciesId].flavor_text}
               </Text>
             </View>
           )}
           <View style={styles.abilityRow}>
-            {pokemon.ability ? (
+            {pokemonState.ability ? (
               <View style={styles.abilityContainer}>
                 <Text style={styles.abilityTitle}>Ability</Text>
-                <Text style={styles.abilityName}>{pokemon.ability}</Text>
+                <Text style={styles.abilityName}>{pokemonState.ability}</Text>
                 <Text style={styles.abilityDescription}>
-                  {ABILITIES[pokemon.ability?.toLowerCase()]?.flavorText ||
+                  {ABILITIES[pokemonState.ability?.toLowerCase()]?.flavorText ||
                     "No description available."}
                 </Text>
-                {SPECIES[pokemon.speciesId]?.abilities &&
-                  pokemon.ability ===
-                    SPECIES[pokemon.speciesId].abilities[
-                      SPECIES[pokemon.speciesId].abilities.length - 1
+                {SPECIES[pokemonState.speciesId]?.abilities &&
+                  pokemonState.ability ===
+                    SPECIES[pokemonState.speciesId].abilities[
+                      SPECIES[pokemonState.speciesId].abilities.length - 1
                     ] &&
-                  SPECIES[pokemon.speciesId].abilities.length > 1 && (
+                  SPECIES[pokemonState.speciesId].abilities.length > 1 && (
                     <Text style={styles.hiddenAbilityTag}>(Hidden)</Text>
                   )}
               </View>
@@ -232,34 +242,40 @@ export default function PokemonStatsScreen({
           </View>
         </View>
 
-        {/* Stats Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stats</Text>
-          <StatRow label="HP" value={pokemon.maxHp} color="#FF5959" />
-          <StatRow label="Attack" value={pokemon.attack || 0} color="#F08030" />
+          <StatRow label="HP" value={pokemonState.maxHp} color="#FF5959" />
+          <StatRow
+            label="Attack"
+            value={pokemonState.attack || 0}
+            color="#F08030"
+          />
           <StatRow
             label="Defense"
-            value={pokemon.defense || 0}
+            value={pokemonState.defense || 0}
             color="#F8D030"
           />
           <StatRow
             label="Sp. Atk"
-            value={pokemon.specialAttack || 0}
+            value={pokemonState.specialAttack || 0}
             color="#6890F0"
           />
           <StatRow
             label="Sp. Def"
-            value={pokemon.specialDefense || 0}
+            value={pokemonState.specialDefense || 0}
             color="#78C850"
           />
-          <StatRow label="Speed" value={pokemon.speed || 0} color="#F85888" />
+          <StatRow
+            label="Speed"
+            value={pokemonState.speed || 0}
+            color="#F85888"
+          />
         </View>
 
-        {/* Moves Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Moves</Text>
           <View style={styles.movesList}>
-            {pokemon.moves.map((move: any, index: number) => {
+            {pokemonState.moves.map((move: any, index: number) => {
               const details = MOVES[move.name.toLowerCase()];
               const moveType = details?.type || move.type || "normal";
               const typeColor = TYPE_COLORS[moveType] ?? "#888";
@@ -309,7 +325,6 @@ export default function PokemonStatsScreen({
                       )}
                     </Text>
                   </View>
-
                   <View style={styles.moveStatsRow}>
                     <Text style={styles.moveStatItem}>
                       Power:{" "}
@@ -330,7 +345,6 @@ export default function PokemonStatsScreen({
                       </Text>
                     </Text>
                   </View>
-
                   {details?.description && (
                     <Text style={styles.moveDescription}>
                       {details.description.replace(
@@ -346,16 +360,15 @@ export default function PokemonStatsScreen({
         </View>
 
         <View style={styles.section}>
-          {/* Item Held Section */}
           <View style={styles.itemContainer}>
             <Text style={styles.abilityTitle}>Item Held</Text>
-            {pokemon.heldItem ? (
+            {pokemonState.heldItem ? (
               <View style={styles.itemBox}>
                 <Text style={styles.abilityName}>
-                  {ITEMS[pokemon.heldItem]?.name}
+                  {getItem(pokemonState.heldItem)?.name || "Unknown Item"}
                 </Text>
                 <Text style={styles.abilityDescription}>
-                  {ITEMS[pokemon.heldItem]?.description}
+                  {getItemDescription(pokemonState.heldItem)}
                 </Text>
                 <TouchableOpacity
                   style={styles.equipButton}
@@ -379,7 +392,6 @@ export default function PokemonStatsScreen({
         </View>
       </ScrollView>
 
-      {/* Footer Actions */}
       <View style={styles.footer}>
         <View style={styles.footerButtons}>
           <TouchableOpacity
@@ -391,7 +403,6 @@ export default function PokemonStatsScreen({
           >
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.releaseButton}
             onPress={() => {
@@ -410,14 +421,13 @@ export default function PokemonStatsScreen({
         onClose={() => setItemModalVisible(false)}
       />
 
-      {/* Confirmation Modal */}
       <Modal transparent visible={confirmVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Release Pokemon?</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to release your {pokemon.name.toUpperCase()}
-              ? This action cannot be undone.
+              Are you sure you want to release your{" "}
+              {pokemonState.name.toUpperCase()}? This action cannot be undone.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -457,14 +467,8 @@ export default function PokemonStatsScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "black",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 120,
-  },
+  container: { flex: 1, backgroundColor: "black" },
+  scrollContent: { padding: 20, paddingBottom: 120 },
   imageContainer: {
     alignItems: "center",
     backgroundColor: colors.modalBackgroundPrimary,
@@ -485,10 +489,7 @@ const styles = StyleSheet.create({
     top: 10,
     alignSelf: "center",
   },
-  sprite: {
-    width: 150,
-    height: 150,
-  },
+  sprite: { width: 150, height: 150 },
   nameContainer: {
     marginTop: 30,
     height: 60,
@@ -513,25 +514,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     height: 60,
   },
-  typeBadges: {
-    flexDirection: "column",
-    gap: 4,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 8,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
-  level: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  typeBadges: { flexDirection: "column", gap: 4 },
+  badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 8, fontWeight: "bold", textTransform: "uppercase" },
+  level: { color: "#9CA3AF", fontSize: 12, fontWeight: "600" },
   flavorTextContainer: {
     marginTop: 10,
     backgroundColor: colors.modalContent,
@@ -542,11 +528,7 @@ const styles = StyleSheet.create({
     borderColor: colors.modalBorderSubtle,
     textAlign: "center",
   },
-  abilityRow: {
-    width: "100%",
-    flexDirection: "row",
-    gap: "5%",
-  },
+  abilityRow: { width: "100%", flexDirection: "row", gap: "5%" },
   abilityTitle: {
     textAlign: "left",
     color: "#fe6060",
@@ -590,10 +572,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },
-  itemContainer: {
-    marginTop: 20,
-    width: "100%",
-  },
+  itemContainer: { marginTop: 20, width: "100%" },
   itemBox: {
     marginTop: 10,
     backgroundColor: colors.modalContent,
@@ -610,11 +589,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
   },
-  equipButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
+  equipButtonText: { color: "white", fontWeight: "bold", fontSize: 12 },
   pokedexTitle: {
     textAlign: "left",
     color: "#ffffff",
@@ -649,17 +624,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#374151",
     paddingBottom: 8,
   },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  statLabel: {
-    color: "#9CA3AF",
-    width: 80,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  statRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  statLabel: { color: "#9CA3AF", width: 80, fontSize: 14, fontWeight: "600" },
   statBarBg: {
     flex: 1,
     height: 8,
@@ -668,10 +634,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     overflow: "hidden",
   },
-  statBarFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
+  statBarFill: { height: "100%", borderRadius: 4 },
   statValue: {
     color: "white",
     width: 35,
@@ -679,9 +642,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "right",
   },
-  movesList: {
-    gap: 12,
-  },
+  movesList: { gap: 12 },
   moveDetailCard: {
     backgroundColor: colors.modalContent,
     padding: 16,
@@ -689,11 +650,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.modalBorder,
   },
-  moveHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
+  moveHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   moveTypeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -713,9 +670,7 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
     flex: 1,
   },
-  moveClassText: {
-    fontSize: 16,
-  },
+  moveClassText: { fontSize: 16 },
   moveStatsRow: {
     paddingTop: 10,
     borderTopWidth: 1,
@@ -724,19 +679,9 @@ const styles = StyleSheet.create({
     gap: 15,
     marginBottom: 8,
   },
-  moveStatItem: {
-    color: "#9CA3AF",
-    fontSize: 12,
-  },
-  whiteText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  moveDescription: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  moveStatItem: { color: "#9CA3AF", fontSize: 12 },
+  whiteText: { color: "white", fontWeight: "bold" },
+  moveDescription: { color: "#9CA3AF", fontSize: 12, lineHeight: 18 },
   moveAttackTypeContainer: {
     width: 50,
     justifyContent: "center",
@@ -744,11 +689,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 4,
   },
-  moveAttackTypeText: {
-    color: "white",
-    fontSize: 8,
-    fontStyle: "italic",
-  },
+  moveAttackTypeText: { color: "white", fontSize: 8, fontStyle: "italic" },
   footer: {
     position: "absolute",
     bottom: 0,
@@ -760,10 +701,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#1F2937",
     paddingBottom: 70,
   },
-  footerButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
+  footerButtons: { flexDirection: "row", gap: 12 },
   backButton: {
     flex: 1,
     backgroundColor: "#1F2937",
@@ -773,11 +711,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#374151",
   },
-  backButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  backButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
   releaseButton: {
     flex: 1,
     backgroundColor: "#7F1D1D",
@@ -787,11 +721,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#991B1B",
   },
-  releaseButtonText: {
-    color: "#FCA5A5",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  releaseButtonText: { color: "#FCA5A5", fontWeight: "bold", fontSize: 16 },
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.modalOverlay,
@@ -821,11 +751,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
   },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
+  modalButtons: { flexDirection: "row", gap: 12, width: "100%" },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
@@ -833,19 +759,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#1F2937",
     alignItems: "center",
   },
-  cancelButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  cancelButtonText: { color: "white", fontWeight: "bold" },
   confirmButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: "#EF4444",
+    alignContent: "center",
     alignItems: "center",
   },
-  confirmButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  confirmButtonText: { color: "white", fontWeight: "bold" },
 });

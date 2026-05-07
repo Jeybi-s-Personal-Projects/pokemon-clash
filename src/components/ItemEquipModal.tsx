@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
+  FlatList,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,39 +17,107 @@ interface ItemEquipModalProps {
   onClose: () => void;
 }
 
+type ItemCategory = "berry" | "held-item" | "mega-stone";
+
+const CATEGORIES: { key: ItemCategory; label: string }[] = [
+  { key: "berry", label: "Berries" },
+  { key: "held-item", label: "Held Items" },
+  { key: "mega-stone", label: "Mega Stones" },
+];
+
 export function ItemEquipModal({
   visible,
   onSelect,
   onClose,
 }: ItemEquipModalProps) {
+  const [category, setCategory] = useState<ItemCategory>("held-item");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredItems = useMemo(() => {
+    return ITEMS.filter((item) => {
+      const matchesCategory = item.category.category === category;
+      const matchesSearch = item.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [category, searchQuery]);
+
+  const getItemDescription = (item: any) => {
+    return (
+      item.description ||
+      (item.category as any).effect ||
+      (item.category as any).description ||
+      ""
+    );
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Text style={styles.title}>CHOOSE ITEM</Text>
 
-          <ScrollView style={styles.list}>
-            {Object.values(ITEMS).map((item) => (
+          {/* Search Bar */}
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search items..."
+            placeholderTextColor="#6B7280"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+
+          {/* Categories */}
+          <View style={styles.tabRow}>
+            {CATEGORIES.map((tab) => (
               <TouchableOpacity
-                key={item.id}
+                key={tab.key}
+                style={[
+                  styles.tabButton,
+                  category === tab.key && styles.tabButtonActive,
+                ]}
+                onPress={() => {
+                  setCategory(tab.key);
+                  setSearchQuery(""); // Clear search when switching tabs
+                }}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    category === tab.key && styles.tabTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
                 style={styles.itemButton}
                 onPress={() => onSelect(item.id)}
               >
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDesc}>{item.description}</Text>
+                <Text style={styles.itemDesc}>{getItemDescription(item)}</Text>
               </TouchableOpacity>
-            ))}
+            )}
+          />
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.itemButton, styles.unequipButton]}
+              style={[styles.unequipButton]}
               onPress={() => onSelect(null)}
             >
               <Text style={styles.unequipText}>UNEQUIP ITEM</Text>
             </TouchableOpacity>
-          </ScrollView>
 
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Cancel</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -77,8 +146,40 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 15,
   },
-  list: {
-    flexGrow: 0,
+  searchInput: {
+    backgroundColor: colors.modalBackground,
+    color: "white",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+  },
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 15,
+  },
+  tabButton: {
+    flex: 1,
+    backgroundColor: colors.bgCard,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabButtonActive: {
+    backgroundColor: colors.accent + "22",
+    borderColor: colors.accent,
+  },
+  tabText: {
+    color: colors.textMuted,
+    fontWeight: "bold",
+    fontSize: 10,
+  },
+  tabTextActive: {
+    color: colors.accent,
   },
   itemButton: {
     backgroundColor: colors.modalContent,
@@ -98,24 +199,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  buttonContainer: {
+    height: 60,
+    flexDirection: "row",
+    paddingTop: 10,
+    gap: "4%",
+  },
   unequipButton: {
+    width: "48%",
+    padding: 16,
     backgroundColor: "#7F1D1D",
     borderColor: "#991B1B",
+    borderRadius: 10,
+  },
+  closeButton: {
+    width: "48%",
+    padding: 16,
+    backgroundColor: "#374151",
+    borderRadius: 10,
   },
   unequipText: {
-    color: "#FCA5A5",
+    color: "white",
     fontWeight: "bold",
     textAlign: "center",
   },
-  closeButton: {
-    marginTop: 15,
-    padding: 12,
-    alignItems: "center",
-    backgroundColor: "#374151",
-    borderRadius: 12,
-  },
+
   closeButtonText: {
     color: "white",
     fontWeight: "bold",
+    textAlign: "center",
   },
 });
