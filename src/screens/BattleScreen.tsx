@@ -80,8 +80,11 @@ export function Battle({
   // Handle Turn Penalty from CatchingScreen
   useEffect(() => {
     if (catchFailed) {
-      battle.processTurnPenalty();
-      onClearCatchFailed?.();
+      const timer = setTimeout(() => {
+        battle.processTurnPenalty();
+        onClearCatchFailed?.();
+      }, 500); // 500ms delay to allow component state to settle
+      return () => clearTimeout(timer);
     }
   }, [catchFailed]);
 
