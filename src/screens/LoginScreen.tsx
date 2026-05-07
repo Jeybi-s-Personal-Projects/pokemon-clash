@@ -1,3 +1,4 @@
+import { colors } from "@/src/theme/color";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
@@ -167,7 +168,7 @@ export default function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030712",
+    backgroundColor: colors.modalBackgroundPrimary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -191,8 +192,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#818CF8",
+    fontSize: 20,
+    color: colors.accent,
     textAlign: "center",
     fontWeight: "600",
     marginTop: 4,
@@ -202,19 +203,19 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   input: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
-    borderColor: "#1F2937",
+    borderColor: colors.modalBorderSubtle,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 10,
     marginBottom: 16,
     color: "white",
     fontSize: 16,
   },
   loginButton: {
-    backgroundColor: "#0A0D2E",
+    backgroundColor: colors.accent,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: 10,
     alignItems: "center",
     marginTop: 8,
     borderWidth: 1,
