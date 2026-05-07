@@ -15,6 +15,7 @@ interface BattleFieldProps {
   isPlayerEntering?: boolean;
   isEnemyCaught?: boolean;
   onEnemyPress?: () => void;
+  onPlayerPress?: () => void;
 }
 
 const bg = require("@/assets/backgrounds/background-grass.jpg");
@@ -30,6 +31,7 @@ export const BattleField = ({
   isPlayerEntering,
   isEnemyCaught,
   onEnemyPress,
+  onPlayerPress,
 }: BattleFieldProps) => {
   return (
     <View style={styles.container}>
@@ -45,23 +47,27 @@ export const BattleField = ({
         />
       </TouchableOpacity>
       <View style={styles.spacer} />
-      <PokemonCard
-        pokemon={player}
-        stages={playerStages}
-        isBack={true}
-        isAttacking={attackingSide === "player"}
-        isDancing={dancingSide === "player"}
-        isHit={hitSide === "player"}
-        isEntering={isPlayerEntering}
-        exp={
-          player.experience -
-          getExpForLevel(player.level, player.growthRate || "medium-fast")
-        }
-        maxExp={
-          getExpForLevel(player.level + 1, player.growthRate || "medium-fast") -
-          getExpForLevel(player.level, player.growthRate || "medium-fast")
-        }
-      />
+      <TouchableOpacity onPress={onPlayerPress} activeOpacity={0.9}>
+        <PokemonCard
+          pokemon={player}
+          stages={playerStages}
+          isBack={true}
+          isAttacking={attackingSide === "player"}
+          isDancing={dancingSide === "player"}
+          isHit={hitSide === "player"}
+          isEntering={isPlayerEntering}
+          exp={
+            player.experience -
+            getExpForLevel(player.level, player.growthRate || "medium-fast")
+          }
+          maxExp={
+            getExpForLevel(
+              player.level + 1,
+              player.growthRate || "medium-fast",
+            ) - getExpForLevel(player.level, player.growthRate || "medium-fast")
+          }
+        />
+      </TouchableOpacity>
     </View>
   );
 };

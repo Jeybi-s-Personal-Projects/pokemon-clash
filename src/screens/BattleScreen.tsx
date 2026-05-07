@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { OpponentInfoModal } from "@/src/components/battle/OpponentInfoModal";
+import { PokemonStatsModal } from "@/src/components/PokemonStatsModal";
 import { BattleField } from "../components/battle/BattleField";
 import { MoveLearningModal } from "../components/battle/MoveLearningModal";
 import { SwitchModal } from "../components/battle/SwitchModal";
@@ -72,6 +73,7 @@ export function Battle({
 
   const { state, currentMessage } = battle;
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [statsModalVisible, setStatsModalVisible] = useState(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
@@ -104,12 +106,19 @@ export function Battle({
         hitSide={state.hitSide}
         isPlayerEntering={battle.isPlayerEntering}
         onEnemyPress={() => setInfoModalVisible(true)}
+        onPlayerPress={() => setStatsModalVisible(true)}
       />
 
       <OpponentInfoModal
         visible={infoModalVisible}
         pokemon={state.enemy}
         onClose={() => setInfoModalVisible(false)}
+      />
+
+      <PokemonStatsModal
+        visible={statsModalVisible}
+        pokemon={state.player}
+        onClose={() => setStatsModalVisible(false)}
       />
 
       {/* 2. Action Menu / Log */}

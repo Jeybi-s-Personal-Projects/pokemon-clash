@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { SPECIES } from "../data/pokemon/species/species";
 import { fetchMoveBatch } from "../encounter/fetchWithCache";
 import { EncounterPokemon, MoveDetail } from "../encounter/types";
 import { useEncounterQueue } from "../hooks/useEncounterQueue";
@@ -8,7 +9,6 @@ import { EncounterFlowProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 import { getExpForLevel, getGrowthRate } from "../utils/experienceCalculator";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
-import { SPECIES } from "../data/pokemon/species/species";
 import { Battle } from "./BattleScreen";
 import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
 
@@ -21,13 +21,16 @@ type Screen = "transition" | "battle";
  */
 function getRandomAbility(speciesId: number): string {
   const speciesData = SPECIES[speciesId];
-  if (!speciesData || !speciesData.abilities || speciesData.abilities.length === 0) {
+  if (
+    !speciesData ||
+    !speciesData.abilities ||
+    speciesData.abilities.length === 0
+  ) {
     return "none";
   }
 
   const abilities = speciesData.abilities;
   if (abilities.length === 1) return abilities[0];
-
   // 10% chance for hidden ability (usually the last one in the list)
   const isHidden = Math.random() < 0.1;
   if (isHidden) {
