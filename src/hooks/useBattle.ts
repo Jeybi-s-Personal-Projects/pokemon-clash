@@ -47,8 +47,8 @@ interface UseBattleOptions {
   onToggleAutoBattle?: (v: boolean) => void;
 }
 
-import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
 import { MEGA_STATS } from "../data/pokemon/stats/megaStats";
+import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
 // ... (imports)
 
 export function useBattle({
@@ -86,9 +86,9 @@ export function useBattle({
   // Check for mega evolution on switch or initialization
   useEffect(() => {
     if (!isMega && state.player.heldItem && MEGA_STATS[state.player.heldItem]) {
-        setCanMegaEvolve(true);
+      setCanMegaEvolve(true);
     } else {
-        setCanMegaEvolve(false);
+      setCanMegaEvolve(false);
     }
   }, [state.player.id, state.player.heldItem, isMega]);
 
@@ -99,15 +99,15 @@ export function useBattle({
     setBasePlayer(state.player);
 
     const evolvedPokemon = await applyMegaEvolution(state.player);
-    
+
     // Update player and team in state
     const nextTeam = [...state.team];
     nextTeam[state.activePlayerIndex] = evolvedPokemon;
 
-    setState(prev => ({
-        ...prev,
-        player: evolvedPokemon,
-        team: nextTeam
+    setState((prev) => ({
+      ...prev,
+      player: evolvedPokemon,
+      team: nextTeam,
     }));
 
     setIsMega(true);
@@ -116,7 +116,23 @@ export function useBattle({
     await delay(1500);
     setCurrentMessage(null);
   };
-// ...
+
+  /**
+   * Reverts the active Mega-Evolved Pokémon back to its base form in a given team array.
+   * Preserves the current HP value (so a fainted mega stays fainted after revert).
+   * Resets isMega / basePlayer state as a side-effect.
+   */
+  const revertMegaInTeam = (teamToRevert: Pokemon[]): Pokemon[] => {
+    if (!isMega || !basePlayer) return teamToRevert;
+    setIsMega(false);
+    setBasePlayer(null);
+    return teamToRevert.map((p, i) =>
+      i === state.activePlayerIndex
+        ? { ...basePlayer, hp: p.hp, maxHp: basePlayer.maxHp }
+        : p,
+    );
+  };
+  // ...
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
   const [isPlayerEntering, setIsPlayerEntering] = useState(false);
@@ -329,6 +345,18 @@ export function useBattle({
 
     setSwitchModalVisible(false);
     const isForced = state.player.hp <= 0;
+
+    // If the fainted Pokémon was Mega Evolved, revert it in the team before switching
+    if (isForced && isMega && basePlayer) {
+      const revertedTeam = state.team.map((p, i) =>
+        i === state.activePlayerIndex
+          ? { ...basePlayer, hp: 0, maxHp: basePlayer.maxHp }
+          : p,
+      );
+      setState((s) => ({ ...s, team: revertedTeam }));
+      setIsMega(false);
+      setBasePlayer(null);
+    }
 
     setCurrentMessage(`Go! ${state.team[index].name.toUpperCase()}!`);
 
@@ -603,11 +631,15 @@ export function useBattle({
       }
 
       await delay(1500);
+
+      // Revert Mega Evolution before ending the battle
+      const teamForEnd = revertMegaInTeam(finalTeam);
+
       if (onBattleEnd)
         onBattleEnd(
           "player",
-          finalTeam,
-          hasMilestone, // Use hasMilestone to signal potential evolution/change
+          teamForEnd,
+          hasMilestone,
           currentState.activePlayerIndex,
         );
     } else {
@@ -615,13 +647,12 @@ export function useBattle({
       setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
       setState((s) => ({ ...s, hitSide: "player" }));
       await delay(2000);
+
+      // Revert Mega Evolution before ending the battle
+      const teamForEnd = revertMegaInTeam(currentState.team);
+
       if (onBattleEnd)
-        onBattleEnd(
-          "enemy",
-          currentState.team,
-          false,
-          currentState.activePlayerIndex,
-        );
+        onBattleEnd("enemy", teamForEnd, false, currentState.activePlayerIndex);
     }
   };
 
@@ -1193,5 +1224,6 @@ export function useBattle({
     // Mega Evolution
     canMegaEvolve,
     handleMegaEvolution,
+    revertMegaInTeam,
   };
 }

@@ -127,7 +127,7 @@ export function Battle({
             () => battle.processTurnPenalty(), // pass penalty as callback
           )
         }
-        onRun={() => onRun?.(state.team)}
+        onRun={() => onRun?.(battle.revertMegaInTeam(state.team))}
         onMegaEvolve={battle.handleMegaEvolution}
         canMegaEvolve={battle.canMegaEvolve}
         disabled={
