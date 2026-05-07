@@ -1,4 +1,3 @@
-import { Audio } from "expo-av";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { fetchPokemon } from "../api/pokeApi";
@@ -98,16 +97,6 @@ export function useBattle({
     if (!canMegaEvolve) return;
 
     setIsMegaEvolving(true);
-
-    // Play sound
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        require("@/assets/sounds/mega-evolve.mp3"),
-      );
-      await sound.playAsync();
-    } catch (error) {
-      console.error("Failed to play sound", error);
-    }
 
     // Store base version before evolving
     setBasePlayer(state.player);

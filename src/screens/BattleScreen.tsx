@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 import { OpponentInfoModal } from "@/src/components/battle/OpponentInfoModal";
 import { PokemonStatsModal } from "@/src/components/PokemonStatsModal";
+import { MegaEvolutionOverlay } from "@/src/components/battle/MegaEvolutionOverlay";
 import { BattleField } from "../components/battle/BattleField";
 import { MoveLearningModal } from "../components/battle/MoveLearningModal";
 import { SwitchModal } from "../components/battle/SwitchModal";
@@ -92,6 +93,10 @@ export function Battle({
 
   return (
     <View style={styles.container}>
+      <MegaEvolutionOverlay 
+        visible={battle.isMegaEvolving} 
+        pokemon={state.player}
+      />
       {/* 0. Weather Indicator */}
       <WeatherIndicator weather={state.weather} turns={state.weatherTurns} />
 
