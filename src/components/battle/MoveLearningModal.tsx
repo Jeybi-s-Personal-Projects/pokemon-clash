@@ -1,6 +1,38 @@
+import { colors } from "@/src/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { Modal, Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { MOVES } from "../../data/pokemon/moves/moves";
 import { Move, Pokemon } from "../../types/pokemon";
+
+// Use same type color map
+const TYPE_COLORS: Record<string, string> = {
+  fire: "#FF6B35",
+  water: "#4FC3F7",
+  grass: "#66BB6A",
+  electric: "#FFD54F",
+  psychic: "#F48FB1",
+  ice: "#80DEEA",
+  dragon: "#7986CB",
+  dark: "#616161",
+  fairy: "#F06292",
+  normal: "#BDBDBD",
+  fighting: "#EF5350",
+  flying: "#90CAF9",
+  poison: "#AB47BC",
+  ground: "#D4A574",
+  rock: "#8D6E63",
+  bug: "#AED581",
+  ghost: "#7E57C2",
+  steel: "#78909C",
+};
 
 interface MoveLearningModalProps {
   visible: boolean;
@@ -17,52 +49,104 @@ export const MoveLearningModal = ({
 }: MoveLearningModalProps) => {
   if (!newMove) return null;
 
+  const newMoveDetails = MOVES[newMove.name.toLowerCase()];
+  const newMoveType = newMove.type || "normal";
+  const newMoveColor = TYPE_COLORS[newMoveType] ?? "#888";
+
+  const renderMoveCategoryIcon = (damageClass: string | undefined) => {
+    switch (damageClass) {
+      case "physical":
+        return (
+          <MaterialCommunityIcons
+            name="brightness-5"
+            size={16}
+            color="orange"
+          />
+        );
+      case "special":
+        return (
+          <MaterialCommunityIcons name="radar" size={16} color="#d8a6f9" />
+        );
+      default:
+        return (
+          <MaterialCommunityIcons name="auto-mode" size={16} color="yellow" />
+        );
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>Learn a New Move?</Text>
-          <Text style={styles.subtitle}>
-            {pokemon.name.toUpperCase()} wants to learn {newMove.name.toUpperCase()}.
-            Select a move to replace:
-          </Text>
+          <Text style={styles.title}>NEW MOVE LEARNED</Text>
 
-          {/* New Move Info */}
-          <View style={styles.newMoveCard}>
-            <View style={styles.newMoveHeader}>
-              <Text style={styles.newMoveName}>{newMove.name.toUpperCase()}</Text>
-              <Text style={styles.newMoveType}>{newMove.type?.toUpperCase()}</Text>
+          <View style={[styles.newMoveCard, { borderColor: newMoveColor }]}>
+            <View style={styles.moveHeader}>
+              <Text style={styles.newMoveName}>
+                {newMove.name.toUpperCase()}
+              </Text>
+              <View style={styles.moveClassContainer}>
+                {renderMoveCategoryIcon(newMoveDetails?.damageClass)}
+                <Text style={styles.moveAttackTypeText}>
+                  {newMoveDetails?.damageClass || "Status"}
+                </Text>
+              </View>
             </View>
-            <View style={styles.newMoveStats}>
-              <Text style={styles.statText}>PWR: {newMove.power || "-"}</Text>
-              <Text style={styles.statText}>ACC: {newMove.accuracy || "-"}</Text>
-              <Text style={styles.statText}>PP: {newMove.pp}</Text>
+            <View style={styles.moveStatsRow}>
+              <Text style={styles.moveStat}>PWR: {newMove.power || "-"}</Text>
+              <Text style={styles.moveStat}>
+                ACC: {newMove.accuracy ? `${newMove.accuracy}%` : "-"}
+              </Text>
+              <Text style={styles.moveStat}>PP: {newMove.pp}</Text>
             </View>
-            <Text style={styles.description}>
-              {newMove.description || "No description available."}
-            </Text>
+            <Text style={styles.description}>{newMove.description}</Text>
           </View>
 
-          {/* Current Moves */}
-          <View style={styles.movesGrid}>
-            {pokemon.moves.map((move, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => onSelect(index)}
-                style={styles.moveButton}
-              >
-                <Text style={styles.moveName}>{move.name.toUpperCase()}</Text>
-                <Text style={styles.moveType}>{move.type?.toUpperCase()}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text style={styles.subtitle}>Replace a move:</Text>
+          <ScrollView style={styles.movesList}>
+            {pokemon.moves.map((move, index) => {
+              const details = MOVES[move.name.toLowerCase()];
+              const typeColor = TYPE_COLORS[move.type || "normal"] ?? "#888";
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => onSelect(index)}
+                  style={[styles.moveButton, { borderColor: typeColor }]}
+                >
+                  <View style={styles.moveHeader}>
+                    <Text style={styles.moveName}>
+                      {move.name.toUpperCase()}
+                    </Text>
+                    <View style={styles.moveClassContainer}>
+                      {renderMoveCategoryIcon(details?.damageClass)}
+                    </View>
+                  </View>
+                  <View style={styles.moveStatsRow}>
+                    <Text style={styles.moveStat}>
+                      PWR: {details?.power || "-"}
+                    </Text>
+                    <Text style={styles.moveStat}>
+                      ACC: {details?.accuracy ? `${details.accuracy}%` : "-"}
+                    </Text>
+                  </View>
+                  <Text style={styles.moveDesc}>
+                    {details?.description?.replace(
+                      /\$effect_chance/g,
+                      details.effectChance?.toString() || "",
+                    )}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
           <TouchableOpacity
             onPress={() => onSelect("skip")}
             style={styles.skipButton}
           >
             <Text style={styles.skipText}>
-              STOP LEARNING {newMove.name.toUpperCase()}
+              Don't learn {newMove.name.toUpperCase()}
             </Text>
           </TouchableOpacity>
         </View>
@@ -75,91 +159,105 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.8)",
-    padding: 20,
+    backgroundColor: colors.modalOverlay,
+    padding: 15,
   },
   container: {
-    backgroundColor: "#1F2937",
-    borderRadius: 15,
-    padding: 24,
-    width: "100%",
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: "#374151",
+    backgroundColor: colors.modalBackgroundPrimary,
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: colors.modalBorderSubtle,
+    maxHeight: "85%",
   },
   title: {
     color: "white",
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 5,
   },
   subtitle: {
-    color: "#9CA3AF",
+    color: "#fe6060",
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 15,
+    marginBottom: 10,
     textAlign: "center",
-    marginBottom: 20,
   },
   newMoveCard: {
-    backgroundColor: "#374151",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 24,
+    backgroundColor: colors.modalContent,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    marginBottom: 5,
   },
-  newMoveHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  newMoveName: {
-    color: "#818cf8",
-    fontWeight: "bold",
-  },
-  newMoveType: {
-    color: "#9CA3AF",
-  },
-  newMoveStats: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 4,
-  },
-  statText: {
-    color: "white",
-    fontSize: 12,
-  },
-  description: {
-    color: "#D1D5DB",
-    fontSize: 12,
-    fontStyle: "italic",
-  },
-  movesGrid: {
-    gap: 10,
-  },
-  moveButton: {
-    backgroundColor: "#111827",
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#4B5563",
+  moveHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 6,
+  },
+  newMoveName: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  moveStatsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  moveStat: {
+    color: "#E2C96B",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  description: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
+  },
+  movesList: {
+    flexGrow: 0,
+  },
+  moveDesc: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  moveButton: {
+    backgroundColor: colors.modalContent,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 2,
   },
   moveName: {
     color: "white",
     fontWeight: "bold",
+    fontSize: 14,
   },
-  moveType: {
+  moveClassContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  moveAttackTypeText: {
     color: "#9CA3AF",
-    fontSize: 12,
+    fontSize: 10,
+    fontStyle: "italic",
   },
   skipButton: {
-    marginTop: 24,
+    marginTop: 15,
     padding: 12,
     alignItems: "center",
+    backgroundColor: "#7F1D1D",
+    borderRadius: 12,
   },
   skipText: {
-    color: "#EF4444",
+    color: "#FCA5A5",
     fontWeight: "bold",
   },
 });

@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 2,
   },
   moveHeader: {
     flexDirection: "row",
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   moveAttackTypeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 2,
   },
   moveAttackTypeText: {
     color: "#9CA3AF",
