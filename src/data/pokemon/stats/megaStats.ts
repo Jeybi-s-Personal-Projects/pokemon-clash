@@ -8,11 +8,12 @@ export type MegaStats = {
     speed: number;
   };
   types: string[];
-  spriteUrl: string; // The sprite for the Mega form
+  ability: string; // Signature Mega Ability
+  spriteUrl: string;
 };
 
 export const MEGA_STATS: Record<string, MegaStats> = {
-  // Example for Charizard X
+  // Mega Charizard X
   "charizardite-x": {
     baseStats: {
       hp: 78,
@@ -23,10 +24,12 @@ export const MEGA_STATS: Record<string, MegaStats> = {
       speed: 100,
     },
     types: ["fire", "dragon"],
+    ability: "tough-claws",
     spriteUrl:
       "https://play.pokemonshowdown.com/sprites/xyani-back/charizard-megax.gif",
   },
-  // Example for Charizard Y
+
+  // Mega Charizard Y
   "charizardite-y": {
     baseStats: {
       hp: 78,
@@ -37,8 +40,8 @@ export const MEGA_STATS: Record<string, MegaStats> = {
       speed: 100,
     },
     types: ["fire", "flying"],
+    ability: "drought",
     spriteUrl:
       "https://play.pokemonshowdown.com/sprites/xyani-back/charizard-megay.gif",
   },
-  // Add other Mega Stones as needed...
 };

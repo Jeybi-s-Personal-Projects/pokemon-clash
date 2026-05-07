@@ -29,6 +29,7 @@ export async function applyMegaEvolution(pokemon: Pokemon): Promise<Pokemon> {
     ...pokemon,
     name: `Mega ${pokemon.name}`,
     type: megaData.types,
+    ability: megaData.ability,
     frontImage: megaData.spriteUrl,
     backImage: megaData.spriteUrl, // Simplified: using same sprite for back
     hp: Math.floor(newMaxHp * hpPercent),
