@@ -263,6 +263,11 @@ export default function CatchingScreen({
             setIsSuccess(true);
             setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
 
+            // Revert Mega if active
+            if (route.params.isMega && route.params.revertMegaInTeam) {
+              route.params.revertMegaInTeam();
+            }
+
             // 🌟 Trigger star burst
             setShowStars(true);
             await delay(800);
