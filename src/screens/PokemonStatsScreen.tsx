@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
     padding: 20,
-    marginBottom: 40,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },
