@@ -1,3 +1,5 @@
+import { colors } from "@/src/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
@@ -13,7 +15,17 @@ import {
 import StatusModal from "../components/statusModal";
 import { supabase } from "../lib/supabase";
 
+import { ItemEquipModal } from "@/src/components/ItemEquipModal";
+import { getItem } from "@/src/data/items/items";
+import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
+import { gen1Pokemon } from "../data/gen1Pokemon";
+import { gen2Pokemon } from "../data/gen2Pokemon";
+import { MOVES } from "../data/pokemon/moves/moves";
+import { SPECIES } from "../data/pokemon/species/species";
 import { PokemonStatsScreenProps } from "../types/navigation";
+import { calculateHp, calculateStat } from "../utils/statCalculator";
+
+const ALL_LOCAL = [...gen1Pokemon, ...gen2Pokemon];
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -42,12 +54,13 @@ export default function PokemonStatsScreen({
   route,
   navigation,
 }: PokemonStatsScreenProps) {
-  const { pokemon, onRelease } = route.params;
-  const primaryType = pokemon.type[0];
+  const { pokemon, onRelease } = route.params as any;
+  const [pokemonState, setPokemon] = useState(pokemon);
+  const primaryType = pokemonState.type[0];
   const accentColor = TYPE_COLORS[primaryType] ?? "#888";
 
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const [isReleasing, setIsReleasing] = useState(false);
+  const [itemModalVisible, setItemModalVisible] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -60,22 +73,46 @@ export default function PokemonStatsScreen({
     player.play();
   };
 
-  const handleRelease = async () => {
+  const handleEquipItem = async (itemId: string | null) => {
     playClick();
-    setConfirmVisible(false);
-    setIsReleasing(true);
+    setItemModalVisible(false);
 
     try {
-      // Supabase CASCADE delete should handle moves if set up,
-      // but we'll just delete the pokemon.
       const { error } = await supabase
         .from("pokemon")
-        .delete()
-        .eq("id", pokemon.id);
+        .update({ pk_held_item: itemId })
+        .eq("id", pokemonState.id);
 
       if (error) throw error;
 
-      setStatusMessage(`${pokemon.name} was released into the wild.`);
+      // Updating local state to reflect change
+      const updatedPokemon = { ...pokemonState, heldItem: itemId || undefined };
+      setPokemon(updatedPokemon);
+      navigation.setParams({ pokemon: updatedPokemon });
+
+      setStatusMessage(itemId ? "Item equipped!" : "Item unequipped!");
+      setStatusType("success");
+      setStatusVisible(true);
+    } catch (error: any) {
+      setStatusMessage(error.message);
+      setStatusType("error");
+      setStatusVisible(true);
+    }
+  };
+
+  const handleRelease = async () => {
+    playClick();
+    setConfirmVisible(false);
+
+    try {
+      const { error } = await supabase
+        .from("pokemon")
+        .delete()
+        .eq("id", pokemonState.id);
+
+      if (error) throw error;
+
+      setStatusMessage(`${pokemonState.name} was released into the wild.`);
       setStatusType("success");
       setStatusVisible(true);
     } catch (error: any) {
@@ -83,8 +120,95 @@ export default function PokemonStatsScreen({
       setStatusType("error");
       setStatusVisible(true);
     } finally {
-      setIsReleasing(false);
     }
+  };
+
+  const handleFactoryReset = async () => {
+    playClick();
+    const speciesData = SPECIES[pokemonState.speciesId];
+    const localData = ALL_LOCAL.find((p) => p.id === pokemonState.speciesId);
+
+    if (!speciesData || !localData) {
+      setStatusMessage("Could not find species data.");
+      setStatusType("error");
+      setStatusVisible(true);
+      return;
+    }
+
+    const baseUrl =
+      "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown";
+    const speciesId = pokemonState.speciesId;
+    const isShiny = pokemonState.isShiny;
+
+    const frontImage = isShiny
+      ? `${baseUrl}/shiny/${speciesId}.gif`
+      : `${baseUrl}/${speciesId}.gif`;
+    const backImage = isShiny
+      ? `${baseUrl}/back/shiny/${speciesId}.gif`
+      : `${baseUrl}/back/${speciesId}.gif`;
+
+    const resetPokemon = {
+      ...pokemonState,
+      name: localData.name.charAt(0).toUpperCase() + localData.name.slice(1),
+      type: localData.types,
+      hp: calculateHp(speciesData.baseStats.hp, pokemonState.level),
+      maxHp: calculateHp(speciesData.baseStats.hp, pokemonState.level),
+      attack: calculateStat(speciesData.baseStats.attack, pokemonState.level),
+      defense: calculateStat(speciesData.baseStats.defense, pokemonState.level),
+      specialAttack: calculateStat(
+        speciesData.baseStats.spAttack,
+        pokemonState.level,
+      ),
+      specialDefense: calculateStat(
+        speciesData.baseStats.spDefense,
+        pokemonState.level,
+      ),
+      speed: calculateStat(speciesData.baseStats.speed, pokemonState.level),
+      frontImage,
+      backImage,
+    };
+
+    try {
+      const { error } = await supabase
+        .from("pokemon")
+        .update({
+          pk_name: resetPokemon.name,
+          pk_hp: resetPokemon.hp,
+          pk_max_hp: resetPokemon.maxHp,
+          pk_attack: resetPokemon.attack,
+          pk_defense: resetPokemon.defense,
+          pk_special_attack: resetPokemon.specialAttack,
+          pk_special_defense: resetPokemon.specialDefense,
+          pk_speed: resetPokemon.speed,
+          pk_types: resetPokemon.type,
+          pk_front_image: resetPokemon.frontImage,
+          pk_back_image: resetPokemon.backImage,
+        })
+        .eq("id", pokemonState.id);
+
+      if (error) throw error;
+
+      setPokemon(resetPokemon);
+      navigation.setParams({ pokemon: resetPokemon });
+      setStatusMessage(`${resetPokemon.name} has been reset to base form.`);
+      setStatusType("success");
+      setStatusVisible(true);
+    } catch (e: any) {
+      setStatusMessage("Failed to reset Pokémon: " + e.message);
+      setStatusType("error");
+      setStatusVisible(true);
+    }
+  };
+
+  const getItemDescription = (itemId: string) => {
+    const item = getItem(itemId);
+    if (!item) return "";
+    return (
+      item.description ||
+      (item.category as any).effect ||
+      (item.category as any).description ||
+      ""
+    );
   };
 
   const StatRow = ({
@@ -116,80 +240,273 @@ export default function PokemonStatsScreen({
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header / Image Section */}
         <View
-          style={[styles.imageContainer, { borderColor: accentColor + "44" }]}
+          style={[
+            styles.imageContainer,
+            { borderColor: colors.modalBorderSubtle },
+          ]}
         >
-          <View
-            style={[styles.glow, { backgroundColor: accentColor + "22" }]}
-          />
+          <View style={[styles.glow, { backgroundColor: accentColor + "50" }]}>
+            <MaterialCommunityIcons
+              name="pokeball"
+              size={280}
+              color="white"
+              style={{ opacity: 0.05 }}
+            />
+          </View>
           <Image
-            source={{ uri: pokemon.frontImage }}
+            source={{ uri: pokemonState.frontImage }}
             style={styles.sprite}
             resizeMode="contain"
           />
-          <Text style={styles.name}>{pokemon.name}</Text>
-          <View style={styles.typeBadges}>
-            {pokemon.type.map((t: string) => (
-              <View
-                key={t}
-                style={[
-                  styles.badge,
-                  { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    { color: TYPE_COLORS[t] ?? "#888" },
-                  ]}
-                >
-                  {t}
-                </Text>
+          <View style={styles.nameContainer}>
+            <Text style={styles.name}>{pokemonState.name}</Text>
+            <View style={styles.badgeContainer}>
+              <View style={styles.typeBadges}>
+                {pokemonState.type.map((t: string) => (
+                  <View
+                    key={t}
+                    style={[
+                      styles.badge,
+                      { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        { color: TYPE_COLORS[t] ?? "#888" },
+                      ]}
+                    >
+                      {t}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
+            <Text style={styles.level}>Level {pokemonState.level}</Text>
           </View>
-          <Text style={styles.level}>Level {pokemon.level}</Text>
+
+          {SPECIES[pokemonState.speciesId]?.flavor_text && (
+            <View style={styles.flavorTextContainer}>
+              <Text style={styles.pokedexTitle}>Pokedex Entry:</Text>
+              <Text style={styles.flavorText}>
+                {SPECIES[pokemonState.speciesId].flavor_text}
+              </Text>
+            </View>
+          )}
+          <View style={styles.abilityRow}>
+            {pokemonState.ability ? (
+              <View style={styles.abilityContainer}>
+                <Text style={styles.abilityTitle}>Ability</Text>
+                <Text style={styles.abilityName}>{pokemonState.ability}</Text>
+                <Text style={styles.abilityDescription}>
+                  {ABILITIES[pokemonState.ability?.toLowerCase()]?.flavorText ||
+                    "No description available."}
+                </Text>
+                {SPECIES[pokemonState.speciesId]?.abilities &&
+                  pokemonState.ability ===
+                    SPECIES[pokemonState.speciesId].abilities[
+                      SPECIES[pokemonState.speciesId].abilities.length - 1
+                    ] &&
+                  SPECIES[pokemonState.speciesId].abilities.length > 1 && (
+                    <Text style={styles.hiddenAbilityTag}>(Hidden)</Text>
+                  )}
+              </View>
+            ) : (
+              <View style={styles.abilityContainer}>
+                <Text style={styles.abilityTitle}>Ability</Text>
+                <Text style={styles.abilityName}>None</Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Stats Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stats</Text>
-          <StatRow label="HP" value={pokemon.maxHp} color="#FF5959" />
-          <StatRow label="Attack" value={pokemon.attack || 0} color="#F08030" />
+          <StatRow label="HP" value={pokemonState.maxHp} color="#FF5959" />
+          <StatRow
+            label="Attack"
+            value={pokemonState.attack || 0}
+            color="#F08030"
+          />
           <StatRow
             label="Defense"
-            value={pokemon.defense || 0}
+            value={pokemonState.defense || 0}
             color="#F8D030"
           />
           <StatRow
             label="Sp. Atk"
-            value={pokemon.specialAttack || 0}
+            value={pokemonState.specialAttack || 0}
             color="#6890F0"
           />
           <StatRow
             label="Sp. Def"
-            value={pokemon.specialDefense || 0}
+            value={pokemonState.specialDefense || 0}
             color="#78C850"
           />
-          <StatRow label="Speed" value={pokemon.speed || 0} color="#F85888" />
+          <StatRow
+            label="Speed"
+            value={pokemonState.speed || 0}
+            color="#F85888"
+          />
         </View>
 
-        {/* Moves Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Moves</Text>
-          <View style={styles.movesGrid}>
-            {pokemon.moves.map((move: any, index: number) => (
-              <View key={index} style={styles.moveCard}>
-                <Text style={styles.moveName}>{move.name}</Text>
-                <Text style={styles.movePower}>PWR: {move.power}</Text>
-              </View>
-            ))}
+          <View style={styles.movesList}>
+            {pokemonState.moves.map((move: any, index: number) => {
+              const details = MOVES[move.name.toLowerCase()];
+              const moveType = details?.type || move.type || "normal";
+              const typeColor = TYPE_COLORS[moveType] ?? "#888";
+
+              return (
+                <View key={index} style={styles.moveDetailCard}>
+                  <View style={styles.moveHeader}>
+                    <View
+                      style={[
+                        styles.moveTypeBadge,
+                        { backgroundColor: typeColor },
+                      ]}
+                    >
+                      <Text style={styles.moveTypeBadgeText}>{moveType}</Text>
+                    </View>
+                    <Text style={styles.moveNameDetail}>{move.name}</Text>
+                    <Text style={styles.moveClassText}>
+                      {details?.damageClass === "physical" ? (
+                        <View style={styles.moveAttackTypeContainer}>
+                          <MaterialCommunityIcons
+                            name="brightness-5"
+                            size={16}
+                            color="orange"
+                          />
+                          <Text style={styles.moveAttackTypeText}>
+                            Physical
+                          </Text>
+                        </View>
+                      ) : details?.damageClass === "special" ? (
+                        <View style={styles.moveAttackTypeContainer}>
+                          <MaterialCommunityIcons
+                            name="radar"
+                            size={16}
+                            color="#d8a6f9"
+                          />
+                          <Text style={styles.moveAttackTypeText}>Special</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.moveAttackTypeContainer}>
+                          <MaterialCommunityIcons
+                            name="auto-mode"
+                            size={16}
+                            color="yellow"
+                          />
+                          <Text style={styles.moveAttackTypeText}>Status</Text>
+                        </View>
+                      )}
+                    </Text>
+                  </View>
+                  <View style={styles.moveStatsRow}>
+                    <Text style={styles.moveStatItem}>
+                      Power:{" "}
+                      <Text style={styles.whiteText}>
+                        {details?.power || "-"}
+                      </Text>
+                    </Text>
+                    <Text style={styles.moveStatItem}>
+                      Accuracy:{" "}
+                      <Text style={styles.whiteText}>
+                        {details?.accuracy ? `${details.accuracy}%` : "-"}
+                      </Text>
+                    </Text>
+                    <Text style={styles.moveStatItem}>
+                      PP:{" "}
+                      <Text style={styles.whiteText}>
+                        {move.pp}/{move.maxPp}
+                      </Text>
+                    </Text>
+                  </View>
+                  {details?.description && (
+                    <Text style={styles.moveDescription}>
+                      {details.description.replace(
+                        /\$effect_chance/g,
+                        details.effectChance?.toString() || "",
+                      )}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.itemContainer}>
+            <Text style={styles.abilityTitle}>Item Held</Text>
+            <View style={styles.itemBox}>
+              <View style={styles.itemMainRow}>
+                <View style={styles.itemActionColumn}>
+                  {pokemonState.heldItem ? (
+                    <Image
+                      source={{
+                        uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${pokemonState.heldItem}.png`,
+                      }}
+                      style={styles.itemImageLarge}
+                    />
+                  ) : (
+                    <MaterialCommunityIcons
+                      name="bag-personal-outline"
+                      size={40}
+                      color="#4B5563"
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={styles.equipButtonSmall}
+                    onPress={() => setItemModalVisible(true)}
+                  >
+                    <MaterialCommunityIcons
+                      name="swap-horizontal"
+                      size={14}
+                      color="white"
+                    />
+                    <Text style={styles.equipButtonTextSmall}>
+                      {pokemonState.heldItem ? "CHANGE" : "CHOOSE"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.itemInfoColumn}>
+                  <Text style={styles.itemHeldName}>
+                    {pokemonState.heldItem
+                      ? getItem(pokemonState.heldItem)?.name || "Unknown Item"
+                      : "No Item Held"}
+                  </Text>
+                  <Text style={styles.itemHeldDescription}>
+                    {pokemonState.heldItem
+                      ? getItemDescription(pokemonState.heldItem)
+                      : "Equip an item to boost your Pokémon's performance in battle."}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Debug</Text>
+          <Text style={styles.abilityDescription}>
+            Resets the pokemon to its base form including original stats. Use
+            cases include: mega evolved pokemon, gigantamax form and dynamax
+            form. This does not reset the level nor the experience of your
+            pokemon. This offers a safe way to restore your corrupted pokemon.
+          </Text>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleFactoryReset}
+          >
+            <Text style={styles.resetButtonText}>Factory Reset Pokémon</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Footer Actions */}
       <View style={styles.footer}>
         <View style={styles.footerButtons}>
           <TouchableOpacity
@@ -201,7 +518,6 @@ export default function PokemonStatsScreen({
           >
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.releaseButton}
             onPress={() => {
@@ -214,14 +530,20 @@ export default function PokemonStatsScreen({
         </View>
       </View>
 
-      {/* Confirmation Modal */}
+      <ItemEquipModal
+        visible={itemModalVisible}
+        speciesId={pokemonState.speciesId}
+        onSelect={handleEquipItem}
+        onClose={() => setItemModalVisible(false)}
+      />
+
       <Modal transparent visible={confirmVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Release Pokemon?</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to release your {pokemon.name.toUpperCase()}
-              ? This action cannot be undone.
+              Are you sure you want to release your{" "}
+              {pokemonState.name.toUpperCase()}? This action cannot be undone.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -261,19 +583,13 @@ export default function PokemonStatsScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#030712",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 120,
-  },
+  container: { flex: 1, backgroundColor: "black" },
+  scrollContent: { padding: 20, paddingBottom: 120 },
   imageContainer: {
     alignItems: "center",
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
-    padding: 30,
+    padding: 20,
     borderWidth: 1,
     position: "relative",
     overflow: "hidden",
@@ -281,51 +597,193 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    top: -20,
+    width: 280,
+    height: 180,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    top: 10,
     alignSelf: "center",
   },
-  sprite: {
-    width: 150,
-    height: 150,
+  sprite: { width: 150, height: 150 },
+  nameContainer: {
+    marginTop: 30,
+    height: 60,
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    borderBottomColor: colors.borderSubtle,
   },
   name: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: "bold",
     color: "white",
     textTransform: "capitalize",
+  },
+  badgeContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 60,
+  },
+  typeBadges: { flexDirection: "column", gap: 4 },
+  badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 8, fontWeight: "bold", textTransform: "uppercase" },
+  level: { color: "#9CA3AF", fontSize: 12, fontWeight: "600" },
+  flavorTextContainer: {
     marginTop: 10,
+    backgroundColor: colors.modalContent,
+    padding: 20,
+    borderTopStartRadius: 20,
+    borderBottomEndRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+    textAlign: "center",
   },
-  typeBadges: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
-  level: {
-    color: "#9CA3AF",
+  abilityRow: { width: "100%", flexDirection: "row", gap: "5%" },
+  abilityTitle: {
+    textAlign: "left",
+    color: colors.accent,
     fontSize: 16,
-    marginTop: 8,
+    fontWeight: "bold",
+    borderBottomWidth: 1,
+    paddingBottom: 5,
+    borderColor: colors.modalBorderSubtle,
+    marginBottom: 5,
+  },
+  abilityName: {
+    color: "#ffffff",
+    fontSize: 18,
     fontWeight: "600",
+    textTransform: "capitalize",
+    textAlign: "center",
+  },
+  abilityDescription: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 6,
+    fontStyle: "italic",
+    paddingHorizontal: 5,
+  },
+  hiddenAbilityTag: {
+    color: "#facc15",
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 2,
+    fontStyle: "italic",
+  },
+  abilityContainer: {
+    marginTop: 10,
+    width: "100%",
+    backgroundColor: colors.modalContent,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+  },
+  itemContainer: { marginTop: 20, width: "100%" },
+  itemBox: {
+    marginTop: 10,
+    backgroundColor: colors.modalContent,
+    padding: 15,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+  },
+
+  itemMainRow: {
+    flexDirection: "row",
+    gap: 15,
+    alignItems: "center",
+  },
+  itemActionColumn: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
+  },
+  itemInfoColumn: {
+    borderLeftWidth: 1,
+    paddingLeft: 12,
+    borderColor: colors.modalBorderSubtle,
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  itemImageLarge: {
+    width: 56,
+    height: 56,
+  },
+  itemHeldName: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+    textTransform: "capitalize",
+    marginBottom: 4,
+  },
+  itemHeldDescription: {
+    width: 150,
+    color: "#9CA3AF",
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
+  equipButtonSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  equipButtonTextSmall: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 10,
+  },
+  resetButton: {
+    marginTop: 20,
+    backgroundColor: colors.danger,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  resetButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+
+  pokedexTitle: {
+    textAlign: "left",
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "bold",
+    borderBottomWidth: 1,
+    paddingBottom: 10,
+    borderColor: colors.modalBorderSubtle,
+    marginBottom: 10,
+  },
+  flavorText: {
+    color: "#D1D5DB",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    fontStyle: "italic",
   },
   section: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#1F2937",
+    borderColor: colors.modalBorderSubtle,
   },
   sectionTitle: {
     fontSize: 20,
@@ -336,17 +794,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#374151",
     paddingBottom: 8,
   },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  statLabel: {
-    color: "#9CA3AF",
-    width: 80,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  statRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  statLabel: { color: "#9CA3AF", width: 80, fontSize: 14, fontWeight: "600" },
   statBarBg: {
     flex: 1,
     height: 8,
@@ -355,10 +804,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     overflow: "hidden",
   },
-  statBarFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
+  statBarFill: { height: "100%", borderRadius: 4 },
   statValue: {
     color: "white",
     width: 35,
@@ -366,31 +812,54 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "right",
   },
-  movesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  moveCard: {
-    width: "48%",
-    backgroundColor: "#1F2937",
-    padding: 12,
-    borderRadius: 12,
+  movesList: { gap: 12 },
+  moveDetailCard: {
+    backgroundColor: colors.modalContent,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorder,
   },
-  moveName: {
+  moveHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  moveTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  moveTypeBadgeText: {
+    fontSize: 10,
+    fontWeight: "bold",
     color: "white",
-    fontSize: 14,
+    textTransform: "uppercase",
+  },
+  moveNameDetail: {
+    color: "white",
+    fontSize: 16,
     fontWeight: "bold",
     textTransform: "capitalize",
+    flex: 1,
   },
-  movePower: {
-    color: "#818CF8",
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "600",
+  moveClassText: { fontSize: 16 },
+  moveStatsRow: {
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.modalBorderSubtle,
+    flexDirection: "row",
+    gap: 15,
+    marginBottom: 8,
   },
+  moveStatItem: { color: "#9CA3AF", fontSize: 12 },
+  whiteText: { color: "white", fontWeight: "bold" },
+  moveDescription: { color: "#9CA3AF", fontSize: 12, lineHeight: 18 },
+  moveAttackTypeContainer: {
+    width: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 4,
+  },
+  moveAttackTypeText: { color: "white", fontSize: 8, fontStyle: "italic" },
   footer: {
     position: "absolute",
     bottom: 0,
@@ -402,10 +871,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#1F2937",
     paddingBottom: 70,
   },
-  footerButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
+  footerButtons: { flexDirection: "row", gap: 12 },
   backButton: {
     flex: 1,
     backgroundColor: "#1F2937",
@@ -415,11 +881,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#374151",
   },
-  backButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  backButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
   releaseButton: {
     flex: 1,
     backgroundColor: "#7F1D1D",
@@ -429,25 +891,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#991B1B",
   },
-  releaseButtonText: {
-    color: "#FCA5A5",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  releaseButtonText: { color: "#FCA5A5", fontWeight: "bold", fontSize: 16 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: colors.modalOverlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackgroundPrimary,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorder,
     alignItems: "center",
   },
   modalTitle: {
@@ -463,11 +921,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
   },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
+  modalButtons: { flexDirection: "row", gap: 12, width: "100%" },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
@@ -475,19 +929,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#1F2937",
     alignItems: "center",
   },
-  cancelButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  cancelButtonText: { color: "white", fontWeight: "bold" },
   confirmButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: "#EF4444",
+    alignContent: "center",
     alignItems: "center",
   },
-  confirmButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  confirmButtonText: { color: "white", fontWeight: "bold" },
 });

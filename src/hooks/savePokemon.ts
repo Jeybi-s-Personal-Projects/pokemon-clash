@@ -45,6 +45,7 @@ export async function savePokemon(
       pk_special_defense: pokemon.specialDefense,
       pk_speed: pokemon.speed,
       pk_types: pokemon.type,
+      pk_ability: pokemon.ability,
       pk_front_image: pokemon.frontImage,
       pk_back_image: pokemon.backImage,
       pk_cry: pokemon.cry,

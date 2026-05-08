@@ -14,7 +14,8 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { colors } from "../theme/color";
-import { Pokemon } from "../types/pokemon";
+import { SelectFromPCScreenProps } from "../types/navigation";
+import { getPokemonIcon } from "../utils/pokemonImageUtils";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -39,8 +40,11 @@ const TYPE_COLORS: Record<string, string> = {
   steel: "#78909C",
 };
 
-export default function SelectFromPCScreen({ route, navigation }: any) {
-  const { teamLength } = route.params;
+export default function SelectFromPCScreen({
+  route,
+  navigation,
+}: SelectFromPCScreenProps) {
+  const { teamLength, replacedId, replacedOrder } = route.params;
   const { user } = useAuth();
   const [pcPokemon, setPcPokemon] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +68,7 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
     try {
       const { data, error } = await supabase
         .from("pokemon")
-        .select("id, pk_name, pk_level, pk_front_image, pk_types")
+        .select("id, pk_name, pk_level, pk_front_image, pk_types, pk_species_id")
         .eq("user_id", user.id)
         .is("pk_order", null)
         .order("created_at", { ascending: false });
@@ -84,19 +88,36 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
     setIsProcessing(true);
 
     try {
-      const nextOrder = (teamLength || 0) + 1;
+      if (replacedId && replacedOrder) {
+        // SWAP LOGIC: Use individual updates to avoid NOT NULL constraints
+        const { error: error1 } = await supabase
+          .from("pokemon")
+          .update({ pk_order: null })
+          .eq("id", replacedId);
 
-      const { error } = await supabase
-        .from("pokemon")
-        .update({ pk_order: nextOrder })
-        .eq("id", p.id);
+        if (error1) throw error1;
 
-      if (error) throw error;
+        const { error: error2 } = await supabase
+          .from("pokemon")
+          .update({ pk_order: replacedOrder })
+          .eq("id", p.id);
 
-      // Successfully added to team
+        if (error2) throw error2;
+      } else {
+        // ADD LOGIC
+        const nextOrder = (teamLength || 0) + 1;
+        const { error } = await supabase
+          .from("pokemon")
+          .update({ pk_order: nextOrder })
+          .eq("id", p.id);
+
+        if (error) throw error;
+      }
+
+      // Successfully finished
       navigation.goBack();
     } catch (e) {
-      console.error("Error adding to team:", e);
+      console.error("Error updating team:", e);
       setIsProcessing(false);
     }
   };
@@ -112,7 +133,7 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
         disabled={isProcessing}
       >
         <Image
-          source={{ uri: item.pk_front_image }}
+          source={{ uri: getPokemonIcon(item.pk_species_id) }}
           style={styles.sprite}
           resizeMode="contain"
         />
@@ -128,7 +149,9 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
                 { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
               ]}
             >
-              <Text style={[styles.typeText, { color: TYPE_COLORS[t] ?? "#888" }]}>
+              <Text
+                style={[styles.typeText, { color: TYPE_COLORS[t] ?? "#888" }]}
+              >
                 {t}
               </Text>
             </View>
@@ -149,9 +172,13 @@ export default function SelectFromPCScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Select from PC</Text>
+        <Text style={styles.title}>
+          {replacedId ? "Select Replacement" : "Select from PC"}
+        </Text>
         <Text style={styles.subtitle}>
-          Choose a Pokémon to add to your team.
+          {replacedId
+            ? "Choose a Pokémon to take this spot in your team."
+            : "Choose a Pokémon to add to your team."}
         </Text>
       </View>
 

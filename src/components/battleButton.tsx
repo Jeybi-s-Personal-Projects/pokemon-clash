@@ -1,3 +1,4 @@
+import { colors } from "@/src/theme/color";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -52,7 +53,7 @@ export default function BattleButton({
     ? (TYPE_COLORS[moveType.toLowerCase()] ?? "#9E9E9E")
     : null;
 
-  const accentColor = typeColor ?? (variant === "back" ? "#546E7A" : "#4299b7");
+  const accentColor = typeColor ?? (variant === "back" ? "#ffffff" : "#4299b7");
 
   const getEffectivenessLabel = () => {
     if (effectiveness === 0) return { text: "NO EFFECT", color: "#9E9E9E" };
@@ -139,7 +140,7 @@ export default function BattleButton({
             { backgroundColor: accentColor + "33", borderColor: accentColor },
           ]}
         >
-          <Text style={[styles.typeText, { color: accentColor }]}>
+          <Text style={[styles.typeText, { color: "white" }]}>
             {moveType.toUpperCase()}
           </Text>
         </View>
@@ -178,7 +179,7 @@ export default function BattleButton({
         <Text
           style={[
             styles.subLabel,
-            { color: accentColor, fontSize: isExpanded ? 9 : 10 },
+            { color: "white", fontSize: isExpanded ? 9 : 10 },
           ]}
         >
           {subLabel}
@@ -190,9 +191,10 @@ export default function BattleButton({
 
 const styles = StyleSheet.create({
   button: {
+    backgroundColor: colors.modalBackgroundPrimary,
     margin: "1%",
     borderWidth: 1.5,
-    borderRadius: 20,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 0 },

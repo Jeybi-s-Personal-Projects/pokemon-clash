@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,6 +25,8 @@ type Props = {
   currentLog?: string | null;
   isAutoBattle?: boolean;
   onToggleAutoBattle?: (value: boolean) => void;
+  onMegaEvolve?: () => void;
+  canMegaEvolve?: boolean;
 };
 
 const ACTION_CONFIG = [
@@ -63,6 +66,8 @@ export default function BattleActions({
   currentLog,
   isAutoBattle = false,
   onToggleAutoBattle,
+  onMegaEvolve,
+  canMegaEvolve,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -164,6 +169,31 @@ export default function BattleActions({
             </Text>
           </TouchableOpacity>
         )}
+        {canMegaEvolve && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onMegaEvolve}
+            style={[
+              styles.toggleButton,
+              {
+                borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+              },
+            ]}
+          >
+            <Image
+              source={require("@/assets/icons/mega-evolution-icon.png")}
+              style={{ width: 14, height: 14 }}
+            />
+            <Text
+              style={[
+                styles.toggleText,
+                { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+              ]}
+            >
+              MEGA
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
@@ -174,7 +204,7 @@ export default function BattleActions({
         >
           <MaterialCommunityIcons
             name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
-            size={16}
+            size={12}
             color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
           />
           <Text
@@ -190,6 +220,9 @@ export default function BattleActions({
 
       {currentLog ? (
         <View style={[styles.logBox]}>
+          <View style={styles.logDesign}>
+            <MaterialCommunityIcons name="pokeball" size={160} color="white" />
+          </View>
           <Text style={styles.logText}>{currentLog}</Text>
           <Animated.View
             style={[styles.cursorArrow, { opacity: cursorOpacity }]}
@@ -273,7 +306,8 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
     height: 280,
-    backgroundColor: "#080B14",
+    backgroundColor: colors.modalContent,
+
     borderTopWidth: 1,
   },
   containerText: {
@@ -294,7 +328,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontFamily: "monospace",
     fontSize: 9,
-    color: "#555",
+    color: "white",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -324,6 +358,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
     gap: 10,
+  },
+  logDesign: {
+    position: "absolute",
+    opacity: 0.15,
+    top: 0,
   },
   logText: {
     fontFamily: "monospace",

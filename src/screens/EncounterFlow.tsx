@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { SPECIES } from "../data/pokemon/species/species";
 import { fetchMoveBatch } from "../encounter/fetchWithCache";
 import { EncounterPokemon, MoveDetail } from "../encounter/types";
 import { useEncounterQueue } from "../hooks/useEncounterQueue";
@@ -14,6 +15,35 @@ import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
 type Screen = "transition" | "battle";
 
 /**
+ * Picks a random ability for the species.
+ * If 1 ability: returns that one.
+ * If > 1: 10% chance for the hidden one (last in array), 90% for a regular one.
+ */
+function getRandomAbility(speciesId: number): string {
+  const speciesData = SPECIES[speciesId];
+  if (
+    !speciesData ||
+    !speciesData.abilities ||
+    speciesData.abilities.length === 0
+  ) {
+    return "none";
+  }
+
+  const abilities = speciesData.abilities;
+  if (abilities.length === 1) return abilities[0];
+  // 10% chance for hidden ability (usually the last one in the list)
+  const isHidden = Math.random() < 0.1;
+  if (isHidden) {
+    return abilities[abilities.length - 1];
+  } else {
+    // Pick one of the regular abilities (all but the last one)
+    const regularAbilities = abilities.slice(0, -1);
+    const randomIndex = Math.floor(Math.random() * regularAbilities.length);
+    return regularAbilities[randomIndex];
+  }
+}
+
+/**
  * Maps EncounterPokemon (from the queue) and fetched move details to the full Pokemon type.
  */
 function mapEncounterToPokemon(
@@ -24,6 +54,7 @@ function mapEncounterToPokemon(
   const speciesId = encounter.id;
   const growthRate = getGrowthRate(speciesId);
   const experience = getExpForLevel(encounter.level, growthRate);
+  const ability = getRandomAbility(speciesId);
 
   return {
     speciesId,
@@ -45,6 +76,7 @@ function mapEncounterToPokemon(
     frontImage: encounter.image,
     backImage: encounter.backImage,
     isShiny: encounter.isShiny,
+    ability,
     moves: moveDetails.map((detail) => ({
       name: detail.name,
       power: detail.power ?? 0,
@@ -69,6 +101,11 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const [localTeam, setLocalTeam] = useState<Pokemon[]>(initialTeam);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
+  const [screen, setScreen] = useState<Screen>("transition");
+  const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
+    null,
+  );
+  const [isLoadingMoves, setIsLoadingMoves] = useState(false);
 
   // Clear catchPending after it's been "consumed" by the state
   useEffect(() => {
@@ -80,12 +117,6 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       return () => clearTimeout(timer);
     }
   }, [route.params.catchPending, navigation]);
-
-  const [screen, setScreen] = useState<Screen>("transition");
-  const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
-    null,
-  );
-  const [isLoadingMoves, setIsLoadingMoves] = useState(false);
 
   const { currentEncounter, isReady, isInitialLoading, advance, reset } =
     useEncounterQueue(region, area);
@@ -132,6 +163,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
           pk_species_id: p.speciesId,
           pk_name: p.name,
           pk_types: p.type,
+          pk_ability: p.ability,
           pk_front_image: p.frontImage,
           pk_back_image: p.backImage,
           pk_cry: p.cry,
@@ -156,6 +188,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
     }
   };
 
+  const checkpointProgress = async (finalTeam: Pokemon[]) => {
+    await syncAllProgress(finalTeam);
+  };
+
   const handleTransitionReady = useCallback(() => {
     setScreen("battle");
   }, []);
@@ -171,16 +207,14 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       setActiveIndex(newIndex);
 
       if (winner === "enemy") {
+        // Session ended by defeat
         await syncAllProgress(updatedTeam);
         reset();
         navigation.navigate("Dashboard" as any);
         return;
       }
 
-      if (didEvolve) {
-        await syncAllProgress(updatedTeam);
-      }
-
+      // Session continues - No automatic sync here
       setTimeout(() => {
         advance();
         setScreen("transition");
@@ -191,6 +225,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const handleExit = useCallback(
     async (finalTeam: Pokemon[]) => {
+      // Session ended by choice
       await syncAllProgress(finalTeam);
       reset();
       navigation.navigate("Dashboard" as any);
@@ -220,6 +255,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         team={localTeam}
         enemy={fullyLoadedEnemy}
         onBattleEnd={handleBattleEnd}
+        onCheckpoint={checkpointProgress}
         onRun={handleExit}
         onBagPress={(p, t, e) =>
           navigation.navigate("InventoryBag", {

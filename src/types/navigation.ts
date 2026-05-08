@@ -44,12 +44,18 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon; onRelease?: () => void };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
-  SelectFromPC: { currentTeamIds: (string | number)[]; teamLength: number };
+  SelectFromPC: {
+    currentTeamIds: (string | number)[];
+    teamLength: number;
+    replacedId?: string | number;
+    replacedOrder?: number;
+  };
   InventoryBag: {
     player: Pokemon;
     team?: Pokemon[];
     pokemon: Pokemon;
     fromScreen: "Battle" | "EncounterFlow";
+    onCatchFailed?: () => void;
   };
   CatchingScreen: {
     player: Pokemon;
@@ -57,6 +63,7 @@ export type RootStackParamList = {
     enemy: Pokemon;
     item: { id: string; name: string; catchRate: number };
     fromScreen: "Battle" | "EncounterFlow";
+    onCatchFailed?: () => void;
   };
 };
 

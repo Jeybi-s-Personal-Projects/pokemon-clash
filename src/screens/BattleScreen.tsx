@@ -1,18 +1,21 @@
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { setAudioModeAsync } from "expo-audio";
 
+import { OpponentInfoModal } from "@/src/components/battle/OpponentInfoModal";
+import { PokemonStatsModal } from "@/src/components/PokemonStatsModal";
+import { MegaEvolutionOverlay } from "@/src/components/battle/MegaEvolutionOverlay";
+import { BattleField } from "../components/battle/BattleField";
+import { MoveLearningModal } from "../components/battle/MoveLearningModal";
+import { SwitchModal } from "../components/battle/SwitchModal";
+import { WeatherIndicator } from "../components/battle/WeatherIndicator";
 import BattleActions from "../components/battleActions";
 import EvolutionModal from "../components/evolutionModal";
 import StatusModal from "../components/statusModal";
-import { BattleField } from "../components/battle/BattleField";
-import { SwitchModal } from "../components/battle/SwitchModal";
-import { MoveLearningModal } from "../components/battle/MoveLearningModal";
-import { WeatherIndicator } from "../components/battle/WeatherIndicator";
-
 import { useBattle } from "../hooks/useBattle";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
+
+import { setAudioModeAsync } from "expo-audio";
 
 // ─── Inner Battle component ──────────────────────────────────────────────────
 
@@ -26,10 +29,21 @@ interface BattleProps {
     didEvolve: boolean,
     activeIndex: number,
   ) => void;
+  onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onRun?: (finalTeam: Pokemon[]) => void;
-  onBagPress?: (player: Pokemon, team: Pokemon[], currentEnemy: Pokemon) => void;
+  // In Battle component, change onBagPress prop type:
+  onBagPress?: (
+    player: Pokemon,
+    team: Pokemon[],
+    currentEnemy: Pokemon,
+    onCatchFailed: () => void,
+  ) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
+  isAutoBattle?: boolean;
+  onToggleAutoBattle?: (v: boolean) => void;
+  catchFailed?: boolean;
+  onClearCatchFailed?: () => void;
 }
 
 export function Battle({
@@ -37,34 +51,52 @@ export function Battle({
   team,
   enemy,
   onBattleEnd,
+  onCheckpoint,
   onRun,
   onBagPress,
   catchPending,
   onSave,
   isAutoBattle = false,
   onToggleAutoBattle,
-}: BattleProps & {
-  isAutoBattle?: boolean;
-  onToggleAutoBattle?: (v: boolean) => void;
-}) {
+  catchFailed,
+  onClearCatchFailed,
+}: BattleProps) {
   const battle = useBattle({
     player,
     team,
     enemy,
     onBattleEnd,
+    onCheckpoint,
     onSave,
     catchPending,
     onToggleAutoBattle,
   });
 
   const { state, currentMessage } = battle;
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [statsModalVisible, setStatsModalVisible] = useState(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
+  // Handle Turn Penalty from CatchingScreen
+  useEffect(() => {
+    if (catchFailed) {
+      const timer = setTimeout(() => {
+        battle.processTurnPenalty();
+        onClearCatchFailed?.();
+      }, 500); // 500ms delay to allow component state to settle
+      return () => clearTimeout(timer);
+    }
+  }, [catchFailed]);
+
   return (
     <View style={styles.container}>
+      <MegaEvolutionOverlay 
+        visible={battle.isMegaEvolving} 
+        pokemon={state.player}
+      />
       {/* 0. Weather Indicator */}
       <WeatherIndicator weather={state.weather} turns={state.weatherTurns} />
 
@@ -78,6 +110,21 @@ export function Battle({
         dancingSide={state.dancingSide}
         hitSide={state.hitSide}
         isPlayerEntering={battle.isPlayerEntering}
+        onEnemyPress={() => setInfoModalVisible(true)}
+        onPlayerPress={() => setStatsModalVisible(true)}
+      />
+
+      <OpponentInfoModal
+        visible={infoModalVisible}
+        pokemon={state.enemy}
+        onClose={() => setInfoModalVisible(false)}
+      />
+
+      <PokemonStatsModal
+        visible={statsModalVisible}
+        pokemon={state.player}
+        stages={state.playerStages}
+        onClose={() => setStatsModalVisible(false)}
       />
 
       {/* 2. Action Menu / Log */}
@@ -87,8 +134,17 @@ export function Battle({
         enemyTypes={state.enemy.type}
         onMovePress={battle.attack}
         onPokemonPress={() => battle.setSwitchModalVisible(true)}
-        onBagPress={() => onBagPress?.(state.player, state.team, state.enemy)}
-        onRun={() => onRun?.(state.team)}
+        onBagPress={() =>
+          onBagPress?.(
+            state.player,
+            state.team,
+            state.enemy,
+            () => battle.processTurnPenalty(), // pass penalty as callback
+          )
+        }
+        onRun={() => onRun?.(battle.revertMegaInTeam(state.team))}
+        onMegaEvolve={battle.handleMegaEvolution}
+        canMegaEvolve={battle.canMegaEvolve}
         disabled={
           !!state.attackingSide ||
           !!state.dancingSide ||
@@ -128,7 +184,7 @@ export function Battle({
 
       <MoveLearningModal
         visible={battle.moveModalVisible}
-        pokemon={state.player}
+        pokemon={battle.learningPokemon || state.player}
         newMove={battle.pendingMove}
         onSelect={battle.handleMoveSelection}
       />
@@ -139,15 +195,18 @@ export function Battle({
 // ─── BattleScreen Wrapper ──────────────────────────────────────────────────
 
 export default function BattleScreen({ route, navigation }: BattleScreenProps) {
-  const { 
-    player, 
-    team, 
-    enemy, 
-    onRun, 
-    onBattleEnd: onBattleEndProp, 
-    isAutoBattle, 
-    onToggleAutoBattle 
+  const {
+    player,
+    team,
+    enemy,
+    onRun,
+    onBattleEnd: onBattleEndProp,
+    onCheckpoint,
+    isAutoBattle,
+    onToggleAutoBattle,
+    catchFailed,
   } = route.params as any;
+
   const catchPending = route.params.catchPending;
   const onSave = (route.params as any).onSave;
 
@@ -168,23 +227,30 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
       catchPending={catchPending}
       onSave={onSave}
       onBattleEnd={(winner, finalTeam, didEvolve, activeIndex) => {
-        if (onBattleEndProp) onBattleEndProp(winner, finalTeam, didEvolve, activeIndex);
+        if (onBattleEndProp)
+          onBattleEndProp(winner, finalTeam, didEvolve, activeIndex);
         else setTimeout(() => navigation.goBack(), 2000);
       }}
+      onCheckpoint={onCheckpoint}
       onRun={(finalTeam) => {
         if (onRun) onRun(finalTeam);
         else navigation.goBack();
       }}
-      onBagPress={(p, t, e) =>
+      onBagPress={(p, t, e, onCatchFailed) =>
         navigation.navigate("InventoryBag", {
           player: p,
           team: t,
           pokemon: e,
           fromScreen: "Battle",
+          onCatchFailed,
         } as any)
       }
       isAutoBattle={isAutoBattle}
       onToggleAutoBattle={onToggleAutoBattle}
+      catchFailed={catchFailed}
+      onClearCatchFailed={() =>
+        navigation.setParams({ catchFailed: undefined } as any)
+      }
     />
   );
 }

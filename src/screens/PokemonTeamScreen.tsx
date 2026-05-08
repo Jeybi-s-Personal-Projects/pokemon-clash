@@ -64,6 +64,7 @@ export default function PokemonTeamScreen({
   const { team: dbTeam, refetch, loading: isLoadingTeam } = useTeam(user?.id ?? "");
   const [team, setTeam] = useState<Pokemon[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSwapMode, setIsSwapMode] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -72,6 +73,8 @@ export default function PokemonTeamScreen({
   React.useEffect(() => {
     if (dbTeam.length > 0) {
       setTeam(dbTeam);
+    } else {
+      setTeam([]);
     }
   }, [dbTeam]);
 
@@ -79,6 +82,7 @@ export default function PokemonTeamScreen({
   useFocusEffect(
     useCallback(() => {
       refetch();
+      setIsSwapMode(false);
     }, [])
   );
 
@@ -112,12 +116,18 @@ export default function PokemonTeamScreen({
     setIsSaving(true);
 
     try {
+      // Use individual updates instead of upsert to avoid NOT NULL constraint violations
+      // for columns like pk_name which are not included in the sync data.
       const updatePromises = team.map((p, index) =>
-        supabase.from("pokemon").update({ pk_order: index + 1 }).eq("id", p.id),
+        supabase
+          .from("pokemon")
+          .update({ pk_order: index + 1 })
+          .eq("id", p.id)
       );
 
       const results = await Promise.all(updatePromises);
       const firstError = results.find((r) => r.error)?.error;
+      
       if (firstError) throw firstError;
 
       playClick("medium");
@@ -139,7 +149,11 @@ export default function PokemonTeamScreen({
     const accentColor = TYPE_COLORS[primaryType] ?? "#888";
 
     return (
-      <View style={[styles.card, { borderColor: accentColor + "44" }]}>
+      <View style={[
+        styles.card, 
+        { borderColor: accentColor + "44" },
+        isSwapMode && { borderColor: "#FBBF24", borderWidth: 2 }
+      ]}>
         {/* Glow effect based on type */}
         <View
           style={[
@@ -152,7 +166,15 @@ export default function PokemonTeamScreen({
           style={styles.cardClickArea}
           onPress={() => {
             playClick("light");
-            navigation.navigate("PokemonStats", { pokemon: item });
+            if (isSwapMode) {
+                navigation.navigate("SelectFromPC", {
+                  teamLength: team.length,
+                  replacedId: item.id,
+                  replacedOrder: index + 1
+                } as any);
+            } else {
+                navigation.navigate("PokemonStats", { pokemon: item });
+            }
           }}
           activeOpacity={0.7}
         >
@@ -224,30 +246,37 @@ export default function PokemonTeamScreen({
           </View>
 
           <Text style={styles.level}>Lv. {item.level}</Text>
+          
+          {isSwapMode && (
+            <View style={styles.swapOverlay}>
+              <MaterialCommunityIcons name="swap-horizontal" size={24} color="#FBBF24" />
+              <Text style={styles.swapText}>REPLACE</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         <View style={styles.controls}>
           <TouchableOpacity
-            disabled={index === 0}
+            disabled={index === 0 || isSwapMode}
             onPress={() => swap(index, index - 1)}
-            style={[styles.arrowButton, index === 0 && styles.disabledArrow]}
+            style={[styles.arrowButton, (index === 0 || isSwapMode) && styles.disabledArrow]}
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            disabled={index === team.length - 1}
+            disabled={index === team.length - 1 || isSwapMode}
             onPress={() => swap(index, index + 1)}
             style={[
               styles.arrowButton,
-              index === team.length - 1 && styles.disabledArrow,
+              (index === team.length - 1 || isSwapMode) && styles.disabledArrow,
             ]}
           >
             <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
-        {index === 0 && (
+        {index === 0 && !isSwapMode && (
           <View style={[styles.battleTag, { borderColor: accentColor + "88" }]}>
             <Text style={[styles.battleTagText, { color: accentColor }]}>
               STARTER
@@ -270,8 +299,10 @@ export default function PokemonTeamScreen({
     <View style={styles.container}>
       <View style={styles.headerInfo}>
         <Text style={styles.infoText}>
-          The #1 Pokémon will be your first in battle. Tap a card to see stats
-          or use arrows to reorder.
+          {isSwapMode 
+            ? "Tap a Pokémon in your team to replace it with one from your PC."
+            : "The #1 Pokémon will be your first in battle. Tap a card to see stats or use arrows to reorder."
+          }
         </Text>
       </View>
 
@@ -286,7 +317,7 @@ export default function PokemonTeamScreen({
 
       <View style={styles.footer}>
         <View style={styles.footerButtons}>
-          {team.length < 6 && (
+          {team.length < 6 && !isSwapMode && (
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => {
@@ -308,12 +339,32 @@ export default function PokemonTeamScreen({
 
           <TouchableOpacity
             style={[
+              styles.swapBtn,
+              isSwapMode && { backgroundColor: "#ef4444" },
+              team.length === 0 && styles.disabledButton,
+            ]}
+            onPress={() => {
+              playClick();
+              setIsSwapMode(!isSwapMode);
+            }}
+            disabled={team.length === 0}
+          >
+            <MaterialCommunityIcons 
+              name={isSwapMode ? "close-circle-outline" : "swap-horizontal"} 
+              size={24} 
+              color="white" 
+            />
+            <Text style={styles.addButtonText}>{isSwapMode ? "Cancel" : "Swap"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
               styles.saveButton,
-              isSaving && styles.disabledButton,
-              team.length === 6 && { flex: 1 },
+              (isSaving || isSwapMode) && styles.disabledButton,
+              (team.length === 6 || isSwapMode) && { flex: 1 },
             ]}
             onPress={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isSwapMode}
           >
             {isSaving ? (
               <ActivityIndicator color="white" />
@@ -472,6 +523,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 8,
   },
+  swapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+    borderRadius: 20,
+  },
+  swapText: {
+    color: "#FBBF24",
+    fontWeight: "900",
+    fontSize: 12,
+    marginTop: 4,
+  },
   controls: {
     flexDirection: "row",
     gap: 12,
@@ -531,6 +596,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  swapBtn: {
+    backgroundColor: "#F59E0B",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#F59E0B",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

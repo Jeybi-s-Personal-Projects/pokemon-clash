@@ -1,10 +1,126 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
-import PokemonCard from "../components/pokemonCard";
+import { Animated, Image, StyleSheet, Text, View } from "react-native";
+import { BattleField } from "../components/battle/BattleField";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
+import { SPECIES } from "../data/pokemon/species/species";
 import { savePokemon } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
+
+const initialStages = {
+  attack: 0,
+  defense: 0,
+  specialAttack: 0,
+  specialDefense: 0,
+  speed: 0,
+};
+
+const BALL_IMAGES: Record<string, any> = {
+  "poke-ball": require("../../assets/items/pokeball.png"),
+  "great-ball": require("../../assets/items/greatball.png"),
+  "ultra-ball": require("../../assets/items/ultraball.png"),
+  "master-ball": require("../../assets/items/masterball.png"),
+};
+
+// Star config: angle (degrees from center) and slight offset
+const STARS = [
+  { angle: -60, delay: 0 },
+  { angle: -90, delay: 80 },
+  { angle: -120, delay: 160 },
+];
+
+function StarBurst({
+  visible,
+  ballPosition,
+}: {
+  visible: boolean;
+  ballPosition: { x: number; y: number };
+}) {
+  const anims = useRef(
+    STARS.map(() => ({
+      opacity: new Animated.Value(0),
+      translateY: new Animated.Value(0),
+      translateX: new Animated.Value(0),
+      scale: new Animated.Value(0.3),
+    })),
+  ).current;
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const animations = STARS.map((star, i) => {
+      const radians = (star.angle * Math.PI) / 180;
+      const distance = 55;
+      const targetX = Math.cos(radians) * distance;
+      const targetY = Math.sin(radians) * distance;
+
+      return Animated.sequence([
+        Animated.delay(star.delay),
+        Animated.parallel([
+          Animated.timing(anims[i].opacity, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i].scale, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i].translateX, {
+            toValue: targetX,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i].translateY, {
+            toValue: targetY,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(anims[i].opacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]);
+    });
+
+    Animated.stagger(60, animations).start();
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <>
+      {STARS.map((_, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.star,
+            {
+              left: ballPosition.x,
+              top: ballPosition.y,
+              opacity: anims[i].opacity,
+              transform: [
+                { translateX: anims[i].translateX },
+                { translateY: anims[i].translateY },
+                { scale: anims[i].scale },
+              ],
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="star-four-points"
+            size={18}
+            color="#FFD700"
+          />
+        </Animated.View>
+      ))}
+    </>
+  );
+}
 
 export default function CatchingScreen({
   route,
@@ -19,11 +135,27 @@ export default function CatchingScreen({
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isEnemyCaught, setIsEnemyCaught] = useState(false);
+  const [showStars, setShowStars] = useState(false);
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-
+  // Animations
+  const ballAnim = useRef(new Animated.ValueXY({ x: -100, y: 300 })).current;
+  const ballOpacity = useRef(new Animated.Value(0)).current;
+  const ballRotation = useRef(new Animated.Value(0)).current;
+  const ballScale = useRef(new Animated.Value(1)).current;
   const cursorOpacity = useRef(new Animated.Value(1)).current;
+  const isMounted = useRef(true);
+
+  // Ball screen position for star origin
+  // These match the ballContainer style: centered in the arena
+  const BALL_SCREEN_X = -9; // adjust if needed
+  const BALL_SCREEN_Y = -9;
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   Animated.loop(
     Animated.sequence([
@@ -41,43 +173,138 @@ export default function CatchingScreen({
     { resetBeforeIteration: true },
   ).start();
 
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
   useEffect(() => {
     async function runSequence() {
-      // 1. Initial Shake delay
-      await delay(1000);
+      const baseCatchRate = SPECIES[enemy.speciesId]?.capture_rate || 50;
+      const ballModifier = item.catchRate || 1;
 
-      // 2. Logic (Simulate or actual)
+      let statusBonus = 1;
+      if (enemy.status === "sleep" || enemy.status === "freeze")
+        statusBonus = 2.0;
+      else if (enemy.status) statusBonus = 1.5;
 
-      const chance = item.id === "master-ball" ? 1.0 : 0.7;
-      const success = Math.random() < chance;
+      const a =
+        (((3 * enemy.maxHp - 2 * enemy.hp) * baseCatchRate * ballModifier) /
+          (3 * enemy.maxHp)) *
+        statusBonus;
 
-      if (success && user) {
-        try {
-          const { teamFull } = await savePokemon(enemy, user.id);
-          setIsSuccess(true);
-          setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
-          await delay(1500);
+      const success =
+        item.id === "master-ball" ? true : Math.random() * 255 < a;
 
-          setStatusMessage(
-            `Success! ${enemy.name.toUpperCase()} was added to your collection.${
-              teamFull
-                ? "\n\nYour team was full, so it was sent to the PC."
-                : ""
-            }`,
-          );
-          setStatusVisible(true);
-        } catch (error) {
-          console.error("Save failed", error);
-          setMessage("Something went wrong...");
-          await delay(1500);
-          navigation.goBack();
+      await delay(500);
+      if (!isMounted.current) return;
+
+      ballOpacity.setValue(1);
+      Animated.parallel([
+        Animated.timing(ballAnim, {
+          toValue: { x: 60, y: -60 },
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ballRotation, {
+          toValue: 2,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(ballScale, {
+            toValue: 1.5,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballScale, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+
+      await delay(800);
+      if (!isMounted.current) return;
+
+      ballRotation.setValue(0);
+      setIsEnemyCaught(true);
+      await delay(500);
+      if (!isMounted.current) return;
+
+      const wobble = () =>
+        Animated.sequence([
+          Animated.timing(ballRotation, {
+            toValue: 0.1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballRotation, {
+            toValue: -0.1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballRotation, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]);
+
+      for (let i = 0; i < 3; i++) {
+        await new Promise((resolve) => wobble().start(resolve));
+        await delay(200);
+        if (!isMounted.current) return;
+      }
+
+      if (success) {
+        if (user) {
+          try {
+            const { teamFull } = await savePokemon(enemy, user.id);
+            setIsSuccess(true);
+            setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
+
+            // Revert Mega if active
+            if (route.params.isMega && route.params.revertMegaInTeam) {
+              route.params.revertMegaInTeam();
+            }
+
+            // 🌟 Trigger star burst
+            setShowStars(true);
+            await delay(800);
+            if (!isMounted.current) return;
+            setShowStars(false);
+
+            await delay(700);
+            if (!isMounted.current) return;
+
+            setStatusMessage(
+              `Success! ${enemy.name.toUpperCase()} was added to your collection.${
+                teamFull
+                  ? "\n\nYour team was full, so it was sent to the PC."
+                  : ""
+              }`,
+            );
+            setStatusVisible(true);
+          } catch (error) {
+            console.error("Save failed", error);
+            setMessage("Something went wrong...");
+            await delay(1500);
+            if (!isMounted.current) return;
+            route.params.onCatchFailed?.();
+            navigation.goBack();
+          }
         }
       } else {
         setIsSuccess(false);
+        setIsEnemyCaught(false);
+        ballOpacity.setValue(0);
         setMessage(`OH NO! The ${enemy.name.toUpperCase()} broke free!`);
+
         await delay(1500);
-        setStatusMessage(`The Pokémon broke free! Returning to battle...`);
-        setStatusVisible(true);
+        if (!isMounted.current) return;
+
+        route.params.onCatchFailed?.();
+        navigation.goBack();
       }
     }
 
@@ -87,28 +314,60 @@ export default function CatchingScreen({
   const handleCloseModal = () => {
     setStatusVisible(false);
     if (isSuccess) {
-      // Clear the entire battle stack and return to Dashboard
       navigation.popToTop();
     } else {
-      // Go back to the battle screen directly (skipping the Bag)
       navigation.pop(1);
     }
   };
 
+  const spin = ballRotation.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-360deg", "360deg"],
+  });
+
   return (
     <View style={styles.container}>
       <View style={styles.battleArena}>
-        <PokemonCard pokemon={enemy} isHit={false} isAttacking={false} />
-        <View style={{ height: 100 }} />
-        <PokemonCard
-          pokemon={player}
-          isBack={true}
-          isHit={false}
-          isAttacking={false}
+        <BattleField
+          player={player}
+          enemy={enemy}
+          playerStages={initialStages}
+          enemyStages={initialStages}
+          attackingSide={null}
+          dancingSide={null}
+          hitSide={null}
+          isEnemyCaught={isEnemyCaught}
+        />
+
+        {/* The Animated Pokéball */}
+        <Animated.View
+          style={[
+            styles.ballContainer,
+            {
+              opacity: ballOpacity,
+              transform: [
+                { translateX: ballAnim.x },
+                { translateY: ballAnim.y },
+                { rotate: spin },
+                { scale: ballScale },
+              ],
+            },
+          ]}
+        >
+          <Image
+            source={BALL_IMAGES[item.id] || BALL_IMAGES["poke-ball"]}
+            style={styles.ballImage}
+            resizeMode="contain"
+          />
+        </Animated.View>
+
+        {/* ⭐ Star burst overlay — positioned at ball's resting spot */}
+        <StarBurst
+          visible={showStars}
+          ballPosition={{ x: "65%" as any, y: "40%" as any }}
         />
       </View>
 
-      {/* Message Box (Mimic BattleActions style) */}
       <View style={styles.logBox}>
         <View style={styles.messageBox}>
           <Text style={styles.messageText}>
@@ -140,9 +399,30 @@ const styles = StyleSheet.create({
   },
   battleArena: {
     flex: 1,
+    position: "relative",
+  },
+  ballContainer: {
+    position: "absolute",
+    zIndex: 20,
+    top: "50%",
+    left: "50%",
+    width: 60,
+    height: 60,
+    marginLeft: -30,
+    marginTop: -30,
     justifyContent: "center",
-    paddingHorizontal: 20,
-    backgroundColor: "#1F2937",
+    alignItems: "center",
+  },
+  ballImage: {
+    width: 50,
+    height: 50,
+  },
+  // Star sits at the same anchor as the ball
+  star: {
+    position: "absolute",
+    zIndex: 30,
+    marginLeft: -9, // half of icon size 18
+    marginTop: -9,
   },
   logBox: {
     borderTopWidth: 2,
@@ -150,6 +430,7 @@ const styles = StyleSheet.create({
     padding: 24,
     height: 280,
     width: "100%",
+    backgroundColor: "#080B14",
   },
   messageBox: {
     borderWidth: 2,

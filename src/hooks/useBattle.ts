@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { fetchPokemon } from "../api/pokeApi";
 import { getRandomMove } from "../battle/ai";
@@ -7,21 +7,21 @@ import {
   determineTurnOrder,
   isGameOver,
 } from "../battle/battleEngine";
-import { BattleState, StatStages, WeatherCondition } from "../battle/battleTypes";
+import { BattleState, StatStages } from "../battle/battleTypes";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon, swapIntoTeam } from "../hooks/savePokemon";
 import { supabase } from "../lib/supabase";
 import { Move, Pokemon } from "../types/pokemon";
-import { checkEvolution } from "../utils/evolutionChecker";
-import {
-  calculateExpGain,
-  checkLevelUp,
-  getExpForLevel,
-} from "../utils/experienceCalculator";
-import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { applyStatChanges, delay } from "../utils/battleUtils";
+import { checkEvolution } from "../utils/evolutionChecker";
+import { calculateExpGain, checkLevelUp } from "../utils/experienceCalculator";
+import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { MOVE_STATUS_MAP, getStatusDuration } from "../utils/statusUtils";
-import { MOVE_WEATHER_MAP, getWeatherStartMessage, getWeatherContinueMessage } from "../utils/weatherUtils";
+import {
+  MOVE_WEATHER_MAP,
+  getWeatherContinueMessage,
+  getWeatherStartMessage,
+} from "../utils/weatherUtils";
 
 const initialStages: StatStages = {
   attack: 0,
@@ -41,16 +41,22 @@ interface UseBattleOptions {
     didEvolve: boolean,
     activeIndex: number,
   ) => void;
+  onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onSave?: () => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onToggleAutoBattle?: (v: boolean) => void;
 }
+
+import { MEGA_STATS } from "../data/pokemon/stats/megaStats";
+import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
+// ... (imports)
 
 export function useBattle({
   player,
   team,
   enemy,
   onBattleEnd,
+  onCheckpoint,
   onSave,
   catchPending,
   onToggleAutoBattle,
@@ -73,6 +79,73 @@ export function useBattle({
     weatherTurns: 0,
   });
 
+  const [canMegaEvolve, setCanMegaEvolve] = useState(false);
+  const [isMega, setIsMega] = useState(false);
+  const [isMegaEvolving, setIsMegaEvolving] = useState(false);
+  const [basePlayer, setBasePlayer] = useState<Pokemon | null>(null);
+
+  // Check for mega evolution on switch or initialization
+  useEffect(() => {
+    if (!isMega && state.player.heldItem && MEGA_STATS[state.player.heldItem]) {
+      setCanMegaEvolve(true);
+    } else {
+      setCanMegaEvolve(false);
+    }
+  }, [state.player.id, state.player.heldItem, isMega]);
+
+  const handleMegaEvolution = async () => {
+    if (!canMegaEvolve) return;
+
+    setIsMegaEvolving(true);
+
+    // Store base version before evolving
+    setBasePlayer(state.player);
+
+    const evolvedPokemon = await applyMegaEvolution(state.player);
+
+    // Update player and team in state
+    const nextTeam = [...state.team];
+    nextTeam[state.activePlayerIndex] = evolvedPokemon;
+
+    setState((prev) => ({
+      ...prev,
+      player: evolvedPokemon,
+      team: nextTeam,
+    }));
+
+    setIsMega(true);
+    setCanMegaEvolve(false);
+    setCurrentMessage(`${evolvedPokemon.name.toUpperCase()} has Mega Evolved!`);
+
+    // Delay 5 seconds for glow/sound animation
+    await delay(5000);
+
+    setCurrentMessage(null);
+    setIsMegaEvolving(false);
+  };
+
+  /**
+   * Reverts any Mega-Evolved Pokémon in the team back to its base form.
+   * Finds the Pokémon that is currently in Mega form based on the basePlayer state.
+   */
+  const revertMegaInTeam = (teamToRevert: Pokemon[]): Pokemon[] => {
+    if (!isMega || !basePlayer) return teamToRevert;
+
+    return teamToRevert.map((p) => {
+      // Check if this Pokémon is the one that Mega Evolved (match by ID and state)
+      if (p.id === basePlayer.id && p.name.includes("Mega ")) {
+        return { ...basePlayer, hp: p.hp, maxHp: basePlayer.maxHp };
+      }
+      return p;
+    });
+  };
+
+  const resetMegaState = () => {
+    setIsMega(false);
+    setBasePlayer(null);
+  };
+  // ...
+
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
   const [isPlayerEntering, setIsPlayerEntering] = useState(false);
 
@@ -90,6 +163,7 @@ export function useBattle({
   // Move Learning State
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [pendingMove, setPendingMove] = useState<Move | null>(null);
+  const [learningPokemon, setLearningPokemon] = useState<Pokemon | null>(null);
   const [resolveMoveLearning, setResolveMoveLearning] = useState<{
     resolve: (updatedMoves: Move[]) => void;
   } | null>(null);
@@ -106,8 +180,12 @@ export function useBattle({
     resolve: () => void;
   } | null>(null);
 
-  const promptMoveReplacement = (newMove: Move): Promise<Move[]> => {
+  const promptMoveReplacement = (
+    newMove: Move,
+    pokemon: Pokemon,
+  ): Promise<Move[]> => {
     return new Promise((resolve) => {
+      setLearningPokemon(pokemon);
       setPendingMove(newMove);
       setMoveModalVisible(true);
       setResolveMoveLearning({ resolve });
@@ -115,23 +193,24 @@ export function useBattle({
   };
 
   const handleMoveSelection = async (index: number | "skip") => {
-    if (!resolveMoveLearning || !pendingMove) return;
+    if (!resolveMoveLearning || !pendingMove || !learningPokemon) return;
 
-    let updatedMoves = [...state.player.moves];
+    let updatedMoves = [...learningPokemon.moves];
 
     if (index !== "skip") {
       const oldMove = updatedMoves[index];
-      updatedMoves[index] = pendingMove;
+      updatedMoves[index] = { ...pendingMove };
 
-      if (user && state.player.id) {
+      if (user && learningPokemon.id) {
+        // Delete old move and insert new one
         await supabase
           .from("pokemon_moves")
           .delete()
-          .eq("pokemon_id", state.player.id)
+          .eq("pokemon_id", learningPokemon.id)
           .eq("move_name", oldMove.name);
 
         await supabase.from("pokemon_moves").insert({
-          pokemon_id: state.player.id,
+          pokemon_id: learningPokemon.id,
           move_name: pendingMove.name,
           move_power: pendingMove.power,
           move_pp: pendingMove.pp,
@@ -145,11 +224,11 @@ export function useBattle({
       }
 
       setCurrentMessage(
-        `${state.player.name} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`,
+        `${learningPokemon.name.toUpperCase()} forgot ${oldMove.name.toUpperCase()} and learned ${pendingMove.name.toUpperCase()}!`,
       );
     } else {
       setCurrentMessage(
-        `${state.player.name} did not learn ${pendingMove.name.toUpperCase()}.`,
+        `${learningPokemon.name.toUpperCase()} did not learn ${pendingMove.name.toUpperCase()}.`,
       );
     }
 
@@ -157,6 +236,7 @@ export function useBattle({
     await delay(1500);
     resolveMoveLearning.resolve(updatedMoves);
     setPendingMove(null);
+    setLearningPokemon(null);
     setResolveMoveLearning(null);
 
     if (onToggleAutoBattle) onToggleAutoBattle(false);
@@ -182,7 +262,9 @@ export function useBattle({
         setFinalCatchResult(result);
         setPendingCaughtId(data.id);
 
-        setCurrentMessage(`GOTCHA! ${state.enemy.name.toUpperCase()} was caught!`);
+        setCurrentMessage(
+          `GOTCHA! ${state.enemy.name.toUpperCase()} was caught!`,
+        );
         await delay(1500);
 
         if (teamFull) {
@@ -190,7 +272,9 @@ export function useBattle({
             `Gotcha! ${state.enemy.name.toUpperCase()} was caught!\n\nYour team is full, so it was sent to the PC.`,
           );
         } else {
-          setStatusMessage(`Gotcha! ${state.enemy.name.toUpperCase()} was caught!`);
+          setStatusMessage(
+            `Gotcha! ${state.enemy.name.toUpperCase()} was caught!`,
+          );
         }
         setStatusVisible(true);
       } catch (e) {
@@ -237,7 +321,8 @@ export function useBattle({
       loadTeamForSwap(pendingCaughtId!);
     } else {
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player", state.team, false, state.activePlayerIndex);
+      if (onBattleEnd)
+        onBattleEnd("player", state.team, false, state.activePlayerIndex);
     }
   };
 
@@ -246,7 +331,8 @@ export function useBattle({
       await swapIntoTeam(pendingCaughtId!, replacedId);
       setSwapModalVisible(false);
       if (onSave) onSave();
-      if (onBattleEnd) onBattleEnd("player", state.team, false, state.activePlayerIndex);
+      if (onBattleEnd)
+        onBattleEnd("player", state.team, false, state.activePlayerIndex);
     } catch (e) {
       Alert.alert("Error", "Swap failed.");
     }
@@ -255,7 +341,8 @@ export function useBattle({
   const handleDismissSwap = () => {
     setSwapModalVisible(false);
     if (onSave) onSave();
-    if (onBattleEnd) onBattleEnd("player", state.team, false, state.activePlayerIndex);
+    if (onBattleEnd)
+      onBattleEnd("player", state.team, false, state.activePlayerIndex);
   };
 
   const handleSwitch = async (index: number) => {
@@ -270,9 +357,21 @@ export function useBattle({
 
     setSwitchModalVisible(false);
     const isForced = state.player.hp <= 0;
-    
+
+    // If the fainted Pokémon was Mega Evolved, revert it in the team before switching
+    if (isForced && isMega && basePlayer) {
+      const revertedTeam = state.team.map((p, i) =>
+        i === state.activePlayerIndex
+          ? { ...basePlayer, hp: 0, maxHp: basePlayer.maxHp }
+          : p,
+      );
+      setState((s) => ({ ...s, team: revertedTeam }));
+      setIsMega(false);
+      setBasePlayer(null);
+    }
+
     setCurrentMessage(`Go! ${state.team[index].name.toUpperCase()}!`);
-    
+
     // Slow delay before the sprite appears
     await delay(1200);
 
@@ -282,10 +381,10 @@ export function useBattle({
       activePlayerIndex: index,
       playerStages: { ...initialStages },
     };
-    
+
     setState(newState);
     setIsPlayerEntering(true);
-    
+
     // Quick delay for fade-in animation
     await delay(600);
     setIsPlayerEntering(false);
@@ -312,6 +411,28 @@ export function useBattle({
     }
   };
 
+  const processTurnPenalty = async () => {
+    if (state.winner || currentMessage) return;
+    setCurrentMessage(null); // clear any stale message first
+    await delay(300);
+    const enemyMove = getRandomMove(state.enemy);
+    const afterEnemyState = await executeMove(enemyMove, "enemy", state);
+    setState(afterEnemyState);
+
+    const winner = isGameOver(afterEnemyState);
+    if (winner) {
+      handleWinner(winner, afterEnemyState);
+    } else if (afterEnemyState.player.hp <= 0) {
+      setCurrentMessage(
+        `${afterEnemyState.player.name.toUpperCase()} fainted!`,
+      );
+      await delay(1200);
+      setSwitchModalVisible(true);
+    } else {
+      setCurrentMessage(null);
+    }
+  };
+
   const handleWinner = async (
     winner: "player" | "enemy",
     currentState: BattleState,
@@ -324,162 +445,234 @@ export function useBattle({
         `The wild ${currentState.enemy.name.toUpperCase()} fainted!`,
       );
 
-      const expGain = calculateExpGain(
+      const baseExpGain = calculateExpGain(
         currentState.enemy.level,
         currentState.enemy.speciesId,
         true,
       );
-      await delay(1200);
-      setCurrentMessage(
-        `${currentState.player.name.toUpperCase()} gained ${expGain} EXP!`,
-      );
 
-      const levelUp = checkLevelUp(currentState.player, expGain);
-      let updatedPlayer = { ...currentState.player };
+      const finalTeam = [...currentState.team];
+      let hasMilestone = false;
+      const newMovesToSave: any[] = [];
 
-      if (levelUp) {
-        await delay(1200);
-        setCurrentMessage(
-          `${currentState.player.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
-        );
+      // 1. Process EXP for all team members
+      for (let i = 0; i < finalTeam.length; i++) {
+        const p = finalTeam[i];
+        if (p.hp <= 0) continue; // Fainted Pokemon don't get EXP
 
-        updatedPlayer = {
-          ...currentState.player,
-          level: levelUp.newLevel,
-          experience: levelUp.totalExp,
-          ...levelUp.stats,
-        };
+        const isActive = i === currentState.activePlayerIndex;
+        const sharedExp = isActive
+          ? baseExpGain
+          : Math.floor(baseExpGain * 0.5);
 
-        if (levelUp.newMoves.length > 0) {
-          for (const move of levelUp.newMoves) {
+        if (sharedExp <= 0) continue;
+
+        const levelUp = checkLevelUp(p, sharedExp);
+        let updatedPokemon = { ...p };
+
+        if (levelUp) {
+          hasMilestone = true; // Level up is a milestone
+          updatedPokemon = {
+            ...p,
+            level: levelUp.newLevel,
+            experience: levelUp.totalExp,
+            ...levelUp.stats,
+          };
+
+          await delay(1200);
+          setCurrentMessage(`${p.name.toUpperCase()} gained ${sharedExp} EXP!`);
+          await delay(1200);
+          setCurrentMessage(
+            `${p.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
+          );
+
+          // Handle new moves
+          if (levelUp.newMoves.length > 0) {
+            for (const move of levelUp.newMoves) {
+              if (updatedPokemon.moves.length < 4) {
+                // Auto-learn if slots available
+                updatedPokemon.moves = [...updatedPokemon.moves, move];
+                await delay(1200);
+                setCurrentMessage(
+                  `${updatedPokemon.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+                );
+
+                // Add to batch save list
+                newMovesToSave.push({
+                  pokemon_id: updatedPokemon.id,
+                  move_name: move.name,
+                  move_power: move.power,
+                  move_pp: move.pp,
+                  move_type: move.type ?? "normal",
+                  move_damageClass: move.damageClass,
+                  move_accuracy: move.accuracy,
+                  move_statChanges: JSON.stringify(move.statChanges),
+                  move_description: move.description,
+                  move_priority: move.priority,
+                });
+              } else {
+                // Prompt replacement
+                await delay(1200);
+                setCurrentMessage(
+                  `${updatedPokemon.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
+                );
+                await delay(1500);
+                setCurrentMessage(`But it already knows 4 moves!`);
+                await delay(1500);
+
+                const newMoveset = await promptMoveReplacement(
+                  move,
+                  updatedPokemon,
+                );
+                updatedPokemon.moves = newMoveset;
+                // Note: manual replacement handles its own DB update inside handleMoveSelection
+              }
+            }
+          }
+
+          // Check for Evolution
+          const evolutionTargetId = checkEvolution(
+            updatedPokemon,
+            updatedPokemon.level,
+          );
+          if (evolutionTargetId) {
+            setCurrentMessage(
+              `What? ${updatedPokemon.name.toUpperCase()} is evolving!`,
+            );
+            await delay(2000);
+
+            const newSpeciesData = await fetchPokemon(
+              evolutionTargetId.toString(),
+            );
+
+            const evolve = new Promise<void>((resolve) => {
+              setEvolvingPokemon({
+                oldName: updatedPokemon.name,
+                newSpeciesId: evolutionTargetId,
+                newName: newSpeciesData.name,
+                spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
+              });
+              setEvolutionVisible(true);
+              setResolveEvolution({ resolve });
+            });
+
+            await evolve;
+
+            updatedPokemon = {
+              ...updatedPokemon,
+              speciesId: evolutionTargetId,
+              name: newSpeciesData.name,
+              type: newSpeciesData.types.map((t: any) => t.type.name),
+              frontImage: newSpeciesData.sprites.other.showdown.front_default,
+              backImage: newSpeciesData.sprites.other.showdown.back_default,
+              hp: calculateHp(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              maxHp: calculateHp(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              attack: calculateStat(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "attack")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              defense: calculateStat(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "defense")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+              specialAttack: calculateStat(
+                newSpeciesData.stats.find(
+                  (s: any) => s.stat.name === "special-attack",
+                ).base_stat,
+                updatedPokemon.level,
+              ),
+              specialDefense: calculateStat(
+                newSpeciesData.stats.find(
+                  (s: any) => s.stat.name === "special-defense",
+                ).base_stat,
+                updatedPokemon.level,
+              ),
+              speed: calculateStat(
+                newSpeciesData.stats.find((s: any) => s.stat.name === "speed")
+                  .base_stat,
+                updatedPokemon.level,
+              ),
+            };
+
+            setCurrentMessage(
+              `${updatedPokemon.name.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
+            );
+            await delay(2000);
+            if (onToggleAutoBattle) onToggleAutoBattle(false);
+          }
+        } else {
+          updatedPokemon.experience += sharedExp;
+          if (isActive) {
             await delay(1200);
             setCurrentMessage(
-              `${currentState.player.name.toUpperCase()} learned ${move.name.toUpperCase()}!`,
+              `${p.name.toUpperCase()} gained ${sharedExp} EXP!`,
             );
-            if (updatedPlayer.moves.length < 4) {
-              updatedPlayer.moves = [...updatedPlayer.moves, move];
-              await supabase.from("pokemon_moves").insert({
-                pokemon_id: updatedPlayer.id,
-                move_name: move.name,
-                move_power: move.power,
-                move_pp: move.pp,
-                move_type: move.type ?? "normal",
-                move_damageClass: move.damageClass,
-                move_accuracy: move.accuracy,
-                move_statChanges: JSON.stringify(move.statChanges),
-                move_description: move.description,
-                move_priority: move.priority,
-              });
-            } else {
-              setCurrentMessage(
-                `${currentState.player.name.toUpperCase()} wants to learn ${move.name.toUpperCase()}...`,
-              );
-              await delay(1500);
-              setCurrentMessage(
-                `But ${currentState.player.name.toUpperCase()} already knows 4 moves!`,
-              );
-              await delay(1500);
-
-              const newMoveset = await promptMoveReplacement(move);
-              updatedPlayer.moves = newMoveset;
-            }
           }
         }
 
-        const evolutionTargetId = checkEvolution(
-          updatedPlayer,
-          updatedPlayer.level,
-        );
-        if (evolutionTargetId) {
-          setCurrentMessage(
-            `What? ${updatedPlayer.name.toUpperCase()} is evolving!`,
-          );
-          await delay(2000);
+        finalTeam[i] = updatedPokemon;
 
-          const newSpeciesData = await fetchPokemon(
-            evolutionTargetId.toString(),
-          );
-
-          const evolve = new Promise<void>((resolve) => {
-            setEvolvingPokemon({
-              oldName: updatedPlayer.name,
-              newSpeciesId: evolutionTargetId,
-              newName: newSpeciesData.name,
-              spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
-            });
-            setEvolutionVisible(true);
-            setResolveEvolution({ resolve });
-          });
-
-          await evolve;
-
-          updatedPlayer = {
-            ...updatedPlayer,
-            speciesId: evolutionTargetId,
-            name: newSpeciesData.name,
-            type: newSpeciesData.types.map((t: any) => t.type.name),
-            frontImage: newSpeciesData.sprites.other.showdown.front_default,
-            backImage: newSpeciesData.sprites.other.showdown.back_default,
-            hp: calculateHp(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            maxHp: calculateHp(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            attack: calculateStat(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "attack")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            defense: calculateStat(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "defense")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-            specialAttack: calculateStat(
-              newSpeciesData.stats.find(
-                (s: any) => s.stat.name === "special-attack",
-              ).base_stat,
-              updatedPlayer.level,
-            ),
-            specialDefense: calculateStat(
-              newSpeciesData.stats.find(
-                (s: any) => s.stat.name === "special-defense",
-              ).base_stat,
-              updatedPlayer.level,
-            ),
-            speed: calculateStat(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "speed")
-                .base_stat,
-              updatedPlayer.level,
-            ),
-          };
-
-          setCurrentMessage(
-            `${evolvingPokemon?.oldName.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
-          );
-          await delay(2000);
-          if (onToggleAutoBattle) onToggleAutoBattle(false);
-        }
-      } else {
-        updatedPlayer.experience += expGain;
+        // Update state progressively so UI reflects levels immediately
+        setState((s) => ({
+          ...s,
+          player: i === s.activePlayerIndex ? updatedPokemon : s.player,
+          team: finalTeam,
+        }));
       }
 
-      const finalTeam = [...currentState.team];
-      finalTeam[currentState.activePlayerIndex] = updatedPlayer;
+      // 2. Batch Save Milestones
+      if (newMovesToSave.length > 0) {
+        // De-duplicate: Ensure only unique (pokemon_id, move_name) pairs exist
+        const uniqueMoves = Array.from(
+          new Map(
+            newMovesToSave.map((m) => [`${m.pokemon_id}-${m.move_name}`, m])
+          ).values()
+        );
+        const { error } = await supabase
+          .from("pokemon_moves")
+          .insert(uniqueMoves);
+        if (error) console.error("Error batch saving moves:", error);
+      }
 
-      setState((s) => ({ ...s, player: updatedPlayer, team: finalTeam }));
+      if (hasMilestone && onCheckpoint) {
+        await onCheckpoint(finalTeam);
+      }
+
       await delay(1500);
-      if (onBattleEnd) onBattleEnd("player", finalTeam, false, currentState.activePlayerIndex);
+
+      // Revert Mega Evolution before ending the battle
+      const teamForEnd = revertMegaInTeam(finalTeam);
+      resetMegaState();
+
+      if (onBattleEnd)
+        onBattleEnd(
+          "player",
+          teamForEnd,
+          hasMilestone,
+          currentState.activePlayerIndex,
+        );
     } else {
+      // Enemy won
       setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
       setState((s) => ({ ...s, hitSide: "player" }));
       await delay(2000);
-      if (onBattleEnd) onBattleEnd("enemy", currentState.team, false, currentState.activePlayerIndex);
+
+      // Revert Mega Evolution before ending the battle
+      const teamForEnd = revertMegaInTeam(currentState.team);
+      resetMegaState();
+
+      if (onBattleEnd)
+        onBattleEnd("enemy", teamForEnd, false, currentState.activePlayerIndex);
     }
   };
 
@@ -556,22 +749,34 @@ export function useBattle({
           if (!nextDefenderConfusionTurns) {
             nextDefenderConfusionTurns = getStatusDuration("confusion");
             setCurrentMessage(null);
-            setCurrentMessage(`${defender.name.toUpperCase()} became confused!`);
+            setCurrentMessage(
+              `${defender.name.toUpperCase()} became confused!`,
+            );
             await delay(1200);
           }
         } else if (!nextDefenderStatus) {
           nextDefenderStatus = statusEffect.status;
           nextDefenderStatusTurns = getStatusDuration(statusEffect.status);
-          
+
           let statusMsg = "";
           switch (nextDefenderStatus) {
-            case "poison": statusMsg = `${defender.name.toUpperCase()} was poisoned!`; break;
-            case "burn": statusMsg = `${defender.name.toUpperCase()} was burned!`; break;
-            case "paralysis": statusMsg = `${defender.name.toUpperCase()} is paralyzed! It may be unable to move!`; break;
-            case "sleep": statusMsg = `${defender.name.toUpperCase()} fell asleep!`; break;
-            case "freeze": statusMsg = `${defender.name.toUpperCase()} was frozen solid!`; break;
+            case "poison":
+              statusMsg = `${defender.name.toUpperCase()} was poisoned!`;
+              break;
+            case "burn":
+              statusMsg = `${defender.name.toUpperCase()} was burned!`;
+              break;
+            case "paralysis":
+              statusMsg = `${defender.name.toUpperCase()} is paralyzed! It may be unable to move!`;
+              break;
+            case "sleep":
+              statusMsg = `${defender.name.toUpperCase()} fell asleep!`;
+              break;
+            case "freeze":
+              statusMsg = `${defender.name.toUpperCase()} was frozen solid!`;
+              break;
           }
-          
+
           setCurrentMessage(null);
           setCurrentMessage(statusMsg);
           await delay(1200);
@@ -621,16 +826,28 @@ export function useBattle({
     const nextPlayer = {
       ...currentState.player,
       hp: isPlayerAttacking ? currentState.player.hp : nextDefenderHp,
-      status: isPlayerAttacking ? currentState.player.status : nextDefenderStatus,
-      statusTurns: isPlayerAttacking ? currentState.player.statusTurns : nextDefenderStatusTurns,
-      confusionTurns: isPlayerAttacking ? currentState.player.confusionTurns : nextDefenderConfusionTurns,
+      status: isPlayerAttacking
+        ? currentState.player.status
+        : nextDefenderStatus,
+      statusTurns: isPlayerAttacking
+        ? currentState.player.statusTurns
+        : nextDefenderStatusTurns,
+      confusionTurns: isPlayerAttacking
+        ? currentState.player.confusionTurns
+        : nextDefenderConfusionTurns,
     };
     const nextEnemy = {
       ...currentState.enemy,
       hp: isPlayerAttacking ? nextDefenderHp : currentState.enemy.hp,
-      status: isPlayerAttacking ? nextDefenderStatus : currentState.enemy.status,
-      statusTurns: isPlayerAttacking ? nextDefenderStatusTurns : currentState.enemy.statusTurns,
-      confusionTurns: isPlayerAttacking ? nextDefenderConfusionTurns : currentState.enemy.confusionTurns,
+      status: isPlayerAttacking
+        ? nextDefenderStatus
+        : currentState.enemy.status,
+      statusTurns: isPlayerAttacking
+        ? nextDefenderStatusTurns
+        : currentState.enemy.statusTurns,
+      confusionTurns: isPlayerAttacking
+        ? nextDefenderConfusionTurns
+        : currentState.enemy.confusionTurns,
     };
 
     const nextTeam = [...currentState.team];
@@ -704,18 +921,24 @@ export function useBattle({
     for (const turn of turns) {
       if (currentState.player.hp <= 0 || currentState.enemy.hp <= 0) break;
 
-      const activeAttacker = turn.side === "player" ? currentState.player : currentState.enemy;
-      
+      const activeAttacker =
+        turn.side === "player" ? currentState.player : currentState.enemy;
+
       // 1. Status Checks (Can Move?)
       let skipTurn = false;
-      
+
       // Sleep check
       if (activeAttacker.status === "sleep") {
         if (activeAttacker.statusTurns && activeAttacker.statusTurns > 0) {
-          setCurrentMessage(`${activeAttacker.name.toUpperCase()} is fast asleep!`);
+          setCurrentMessage(
+            `${activeAttacker.name.toUpperCase()} is fast asleep!`,
+          );
           await delay(1200);
-          
-          const updatedAttacker = { ...activeAttacker, statusTurns: activeAttacker.statusTurns - 1 };
+
+          const updatedAttacker = {
+            ...activeAttacker,
+            statusTurns: activeAttacker.statusTurns - 1,
+          };
           if (turn.side === "player") {
             currentState = { ...currentState, player: updatedAttacker };
           } else {
@@ -725,7 +948,11 @@ export function useBattle({
         } else {
           setCurrentMessage(`${activeAttacker.name.toUpperCase()} woke up!`);
           await delay(1200);
-          const updatedAttacker = { ...activeAttacker, status: null, statusTurns: 0 };
+          const updatedAttacker = {
+            ...activeAttacker,
+            status: null,
+            statusTurns: 0,
+          };
           if (turn.side === "player") {
             currentState = { ...currentState, player: updatedAttacker };
           } else {
@@ -733,7 +960,7 @@ export function useBattle({
           }
         }
       }
-      
+
       // Freeze check
       if (!skipTurn && activeAttacker.status === "freeze") {
         if (Math.random() < 0.2) {
@@ -746,49 +973,80 @@ export function useBattle({
             currentState = { ...currentState, enemy: updatedAttacker };
           }
         } else {
-          setCurrentMessage(`${activeAttacker.name.toUpperCase()} is frozen solid!`);
+          setCurrentMessage(
+            `${activeAttacker.name.toUpperCase()} is frozen solid!`,
+          );
           await delay(1200);
           skipTurn = true;
         }
       }
-      
+
       // Paralysis check
       if (!skipTurn && activeAttacker.status === "paralysis") {
         if (Math.random() < 0.25) {
-          setCurrentMessage(`${activeAttacker.name.toUpperCase()} is paralyzed! It can't move!`);
+          setCurrentMessage(
+            `${activeAttacker.name.toUpperCase()} is paralyzed! It can't move!`,
+          );
           await delay(1200);
           skipTurn = true;
         }
       }
-      
+
       // Confusion check
-      if (!skipTurn && activeAttacker.confusionTurns && activeAttacker.confusionTurns > 0) {
+      if (
+        !skipTurn &&
+        activeAttacker.confusionTurns &&
+        activeAttacker.confusionTurns > 0
+      ) {
         setCurrentMessage(`${activeAttacker.name.toUpperCase()} is confused!`);
         await delay(1200);
-        
-        const updatedAttacker = { ...activeAttacker, confusionTurns: activeAttacker.confusionTurns - 1 };
-        if (turn.side === "player") currentState = { ...currentState, player: updatedAttacker };
+
+        const updatedAttacker = {
+          ...activeAttacker,
+          confusionTurns: activeAttacker.confusionTurns - 1,
+        };
+        if (turn.side === "player")
+          currentState = { ...currentState, player: updatedAttacker };
         else currentState = { ...currentState, enemy: updatedAttacker };
-        
+
         if (updatedAttacker.confusionTurns === 0) {
-           setCurrentMessage(`${activeAttacker.name.toUpperCase()} snapped out of its confusion!`);
-           await delay(1200);
+          setCurrentMessage(
+            `${activeAttacker.name.toUpperCase()} snapped out of its confusion!`,
+          );
+          await delay(1200);
         } else if (Math.random() < 0.5) {
           setCurrentMessage(`It hurt itself in its confusion!`);
           await delay(600);
-          
+
           // Confusion damage: Power 40 physical move
-          const confDamage = Math.floor(((((2 * activeAttacker.level) / 5 + 2) * 40 * (activeAttacker.attack / activeAttacker.defense)) / 50 + 2));
-          const damagedAttacker = { ...updatedAttacker, hp: Math.max(0, updatedAttacker.hp - confDamage) };
-          
+          const confDamage = Math.floor(
+            (((2 * activeAttacker.level) / 5 + 2) *
+              40 *
+              (activeAttacker.attack / activeAttacker.defense)) /
+              50 +
+              2,
+          );
+          const damagedAttacker = {
+            ...updatedAttacker,
+            hp: Math.max(0, updatedAttacker.hp - confDamage),
+          };
+
           if (turn.side === "player") {
-            currentState = { ...currentState, player: damagedAttacker, hitSide: "player" };
+            currentState = {
+              ...currentState,
+              player: damagedAttacker,
+              hitSide: "player",
+            };
           } else {
-            currentState = { ...currentState, enemy: damagedAttacker, hitSide: "enemy" };
+            currentState = {
+              ...currentState,
+              enemy: damagedAttacker,
+              hitSide: "enemy",
+            };
           }
           setState(currentState);
           await delay(600);
-          setState(s => ({ ...s, hitSide: null }));
+          setState((s) => ({ ...s, hitSide: null }));
           skipTurn = true;
         }
       }
@@ -796,7 +1054,10 @@ export function useBattle({
       if (skipTurn) {
         setState(currentState);
         const winner = isGameOver(currentState);
-        if (winner) { handleWinner(winner, currentState); return; }
+        if (winner) {
+          handleWinner(winner, currentState);
+          return;
+        }
         continue;
       }
 
@@ -830,7 +1091,7 @@ export function useBattle({
 
     // 3. End of Turn Damage (Poison / Burn / Weather)
     let finalState = { ...currentState };
-    
+
     // Weather effects
     if (finalState.weather) {
       setCurrentMessage(null);
@@ -856,7 +1117,9 @@ export function useBattle({
           // Immunities
           let isImmune = false;
           if (finalState.weather === "sandstorm") {
-            isImmune = p.type.some(t => ["rock", "ground", "steel"].includes(t));
+            isImmune = p.type.some((t) =>
+              ["rock", "ground", "steel"].includes(t),
+            );
           } else if (finalState.weather === "hail") {
             isImmune = p.type.includes("ice");
           }
@@ -865,18 +1128,33 @@ export function useBattle({
             const damage = Math.floor(p.maxHp / 16);
             const nextHp = Math.max(0, p.hp - damage);
             setCurrentMessage(null);
-            setCurrentMessage(`${p.name.toUpperCase()} was buffeted by the ${finalState.weather}!`);
+            setCurrentMessage(
+              `${p.name.toUpperCase()} was buffeted by the ${finalState.weather}!`,
+            );
             await delay(1200);
-            
-            if (side === "player") finalState = { ...finalState, player: { ...p, hp: nextHp }, hitSide: "player" };
-            else finalState = { ...finalState, enemy: { ...p, hp: nextHp }, hitSide: "enemy" };
-            
+
+            if (side === "player")
+              finalState = {
+                ...finalState,
+                player: { ...p, hp: nextHp },
+                hitSide: "player",
+              };
+            else
+              finalState = {
+                ...finalState,
+                enemy: { ...p, hp: nextHp },
+                hitSide: "enemy",
+              };
+
             setState(finalState);
             await delay(600);
-            setState(s => ({ ...s, hitSide: null }));
-            
+            setState((s) => ({ ...s, hitSide: null }));
+
             const winner = isGameOver(finalState);
-            if (winner) { handleWinner(winner, finalState); return; }
+            if (winner) {
+              handleWinner(winner, finalState);
+              return;
+            }
           }
         }
       }
@@ -889,20 +1167,35 @@ export function useBattle({
       if (p.hp > 0 && (p.status === "poison" || p.status === "burn")) {
         const damage = Math.floor(p.maxHp / 8);
         const nextHp = Math.max(0, p.hp - damage);
-        
+
         setCurrentMessage(null);
-        setCurrentMessage(`${p.name.toUpperCase()} was hurt by its ${p.status}!`);
+        setCurrentMessage(
+          `${p.name.toUpperCase()} was hurt by its ${p.status}!`,
+        );
         await delay(1200);
-        
-        if (side === "player") finalState = { ...finalState, player: { ...p, hp: nextHp }, hitSide: "player" };
-        else finalState = { ...finalState, enemy: { ...p, hp: nextHp }, hitSide: "enemy" };
-        
+
+        if (side === "player")
+          finalState = {
+            ...finalState,
+            player: { ...p, hp: nextHp },
+            hitSide: "player",
+          };
+        else
+          finalState = {
+            ...finalState,
+            enemy: { ...p, hp: nextHp },
+            hitSide: "enemy",
+          };
+
         setState(finalState);
         await delay(600);
-        setState(s => ({ ...s, hitSide: null }));
-        
+        setState((s) => ({ ...s, hitSide: null }));
+
         const winner = isGameOver(finalState);
-        if (winner) { handleWinner(winner, finalState); return; }
+        if (winner) {
+          handleWinner(winner, finalState);
+          return;
+        }
       }
     }
 
@@ -922,6 +1215,7 @@ export function useBattle({
     state,
     currentMessage,
     isPlayerEntering,
+    learningPokemon,
     attack,
     handleSwitch,
     // Status Modal
@@ -945,5 +1239,12 @@ export function useBattle({
     evolvingPokemon,
     setEvolutionVisible,
     resolveEvolution,
+    // Penalty
+    processTurnPenalty,
+    // Mega Evolution
+    canMegaEvolve,
+    handleMegaEvolution,
+    isMegaEvolving,
+    revertMegaInTeam,
   };
 }

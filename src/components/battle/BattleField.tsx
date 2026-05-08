@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { StatStages } from "../../battle/battleTypes";
 import { Pokemon } from "../../types/pokemon";
 import { getExpForLevel } from "../../utils/experienceCalculator";
@@ -13,6 +13,9 @@ interface BattleFieldProps {
   dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
   isPlayerEntering?: boolean;
+  isEnemyCaught?: boolean;
+  onEnemyPress?: () => void;
+  onPlayerPress?: () => void;
 }
 
 const bg = require("@/assets/backgrounds/background-grass.jpg");
@@ -26,35 +29,45 @@ export const BattleField = ({
   dancingSide,
   hitSide,
   isPlayerEntering,
+  isEnemyCaught,
+  onEnemyPress,
+  onPlayerPress,
 }: BattleFieldProps) => {
   return (
     <View style={styles.container}>
       <Image source={bg} style={styles.background} />
-      <PokemonCard
-        pokemon={enemy}
-        stages={enemyStages}
-        isAttacking={attackingSide === "enemy"}
-        isDancing={dancingSide === "enemy"}
-        isHit={hitSide === "enemy"}
-      />
+      <TouchableOpacity onPress={onEnemyPress} activeOpacity={0.9}>
+        <PokemonCard
+          pokemon={enemy}
+          stages={enemyStages}
+          isAttacking={attackingSide === "enemy"}
+          isDancing={dancingSide === "enemy"}
+          isHit={hitSide === "enemy"}
+          isCaught={isEnemyCaught}
+        />
+      </TouchableOpacity>
       <View style={styles.spacer} />
-      <PokemonCard
-        pokemon={player}
-        stages={playerStages}
-        isBack={true}
-        isAttacking={attackingSide === "player"}
-        isDancing={dancingSide === "player"}
-        isHit={hitSide === "player"}
-        isEntering={isPlayerEntering}
-        exp={
-          player.experience -
-          getExpForLevel(player.level, player.growthRate || "medium-fast")
-        }
-        maxExp={
-          getExpForLevel(player.level + 1, player.growthRate || "medium-fast") -
-          getExpForLevel(player.level, player.growthRate || "medium-fast")
-        }
-      />
+      <TouchableOpacity onPress={onPlayerPress} activeOpacity={0.9}>
+        <PokemonCard
+          pokemon={player}
+          stages={playerStages}
+          isBack={true}
+          isAttacking={attackingSide === "player"}
+          isDancing={dancingSide === "player"}
+          isHit={hitSide === "player"}
+          isEntering={isPlayerEntering}
+          exp={
+            player.experience -
+            getExpForLevel(player.level, player.growthRate || "medium-fast")
+          }
+          maxExp={
+            getExpForLevel(
+              player.level + 1,
+              player.growthRate || "medium-fast",
+            ) - getExpForLevel(player.level, player.growthRate || "medium-fast")
+          }
+        />
+      </TouchableOpacity>
     </View>
   );
 };
