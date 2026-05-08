@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import StatusModal from "../components/statusModal";
+import { TYPE_COLORS, TypeBadge } from "../components/TypeBadge";
 import { supabase } from "../lib/supabase";
 
 import { ItemEquipModal } from "@/src/components/ItemEquipModal";
@@ -28,27 +29,6 @@ import { calculateHp, calculateStat } from "../utils/statCalculator";
 const ALL_LOCAL = [...gen1Pokemon, ...gen2Pokemon];
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
-
-const TYPE_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  water: "#4FC3F7",
-  grass: "#66BB6A",
-  electric: "#FFD54F",
-  psychic: "#F48FB1",
-  ice: "#80DEEA",
-  dragon: "#7986CB",
-  dark: "#616161",
-  fairy: "#F06292",
-  normal: "#BDBDBD",
-  fighting: "#EF5350",
-  flying: "#90CAF9",
-  poison: "#AB47BC",
-  ground: "#D4A574",
-  rock: "#8D6E63",
-  bug: "#AED581",
-  ghost: "#7E57C2",
-  steel: "#78909C",
-};
 
 export default function PokemonStatsScreen({
   route,
@@ -264,28 +244,12 @@ export default function PokemonStatsScreen({
             <View style={styles.badgeContainer}>
               <View style={styles.typeBadges}>
                 {pokemonState.type.map((t: string) => (
-                  <View
-                    key={t}
-                    style={[
-                      styles.badge,
-                      { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.badgeText,
-                        { color: TYPE_COLORS[t] ?? "#888" },
-                      ]}
-                    >
-                      {t}
-                    </Text>
-                  </View>
+                  <TypeBadge key={t} type={t} />
                 ))}
               </View>
             </View>
             <Text style={styles.level}>Level {pokemonState.level}</Text>
           </View>
-
           {SPECIES[pokemonState.speciesId]?.flavor_text && (
             <View style={styles.flavorTextContainer}>
               <Text style={styles.pokedexTitle}>Pokedex Entry:</Text>
@@ -362,14 +326,7 @@ export default function PokemonStatsScreen({
               return (
                 <View key={index} style={styles.moveDetailCard}>
                   <View style={styles.moveHeader}>
-                    <View
-                      style={[
-                        styles.moveTypeBadge,
-                        { backgroundColor: typeColor },
-                      ]}
-                    >
-                      <Text style={styles.moveTypeBadgeText}>{moveType}</Text>
-                    </View>
+                    <TypeBadge type={moveType} />
                     <Text style={styles.moveNameDetail}>{move.name}</Text>
                     <Text style={styles.moveClassText}>
                       {details?.damageClass === "physical" ? (
@@ -819,24 +776,13 @@ const styles = StyleSheet.create({
     borderColor: colors.modalBorder,
   },
   moveHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  moveTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginRight: 10,
-  },
-  moveTypeBadgeText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "white",
-    textTransform: "uppercase",
-  },
   moveNameDetail: {
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
     textTransform: "capitalize",
     flex: 1,
+    marginLeft: 8,
   },
   moveClassText: { fontSize: 16 },
   moveStatsRow: {
