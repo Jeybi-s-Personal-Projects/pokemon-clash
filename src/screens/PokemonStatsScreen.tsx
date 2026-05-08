@@ -440,7 +440,7 @@ export default function PokemonStatsScreen({
 
         <View style={styles.section}>
           <View style={styles.itemContainer}>
-            <Text style={styles.abilityTitle}>Item Held</Text>
+            <Text style={styles.sectionTitle}>Item Held</Text>
             <View style={styles.itemBox}>
               <View style={styles.itemMainRow}>
                 <View style={styles.itemActionColumn}>
@@ -491,7 +491,7 @@ export default function PokemonStatsScreen({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Debug</Text>
+          <Text style={styles.sectionTitle}>Debugging</Text>
           <Text style={styles.abilityDescription}>
             Resets the pokemon to its base form including original stats. Use
             cases include: mega evolved pokemon, gigantamax form and dynamax
@@ -502,7 +502,7 @@ export default function PokemonStatsScreen({
             style={styles.resetButton}
             onPress={handleFactoryReset}
           >
-            <Text style={styles.resetButtonText}>Factory Reset Pokémon</Text>
+            <Text style={styles.resetButtonText}>Reset Pokémon</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -584,7 +584,7 @@ export default function PokemonStatsScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "black" },
-  scrollContent: { padding: 20, paddingBottom: 120 },
+  scrollContent: { padding: 20, paddingBottom: 160 },
   imageContainer: {
     alignItems: "center",
     backgroundColor: colors.modalBackgroundPrimary,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     borderBottomEndRadius: 20,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
-    textAlign: "center",
+    textAlign: "left",
   },
   abilityRow: { width: "100%", flexDirection: "row", gap: "5%" },
   abilityTitle: {
@@ -656,19 +656,19 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   abilityName: {
-    color: "#ffffff",
+    color: colors.danger,
     fontSize: 18,
     fontWeight: "600",
     textTransform: "capitalize",
-    textAlign: "center",
+    textAlign: "left",
+    fontStyle: "italic",
   },
   abilityDescription: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 6,
+    color: "#D1D5DB",
+    fontSize: 14,
+    textAlign: "left",
+    lineHeight: 20,
     fontStyle: "italic",
-    paddingHorizontal: 5,
   },
   hiddenAbilityTag: {
     color: "#facc15",
@@ -682,15 +682,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     width: "100%",
     backgroundColor: colors.modalContent,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    padding: 20,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },
-  itemContainer: { marginTop: 20, width: "100%" },
+  itemContainer: { width: "100%" },
   itemBox: {
-    marginTop: 10,
     backgroundColor: colors.modalContent,
     padding: 15,
     borderRadius: 16,
@@ -752,7 +750,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     backgroundColor: colors.danger,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: "center",
   },
   resetButtonText: {
@@ -762,18 +760,18 @@ const styles = StyleSheet.create({
 
   pokedexTitle: {
     textAlign: "left",
-    color: "#ffffff",
-    fontSize: 18,
+    color: colors.accent,
+    fontSize: 16,
     fontWeight: "bold",
     borderBottomWidth: 1,
-    paddingBottom: 10,
+    paddingBottom: 5,
     borderColor: colors.modalBorderSubtle,
-    marginBottom: 10,
+    marginBottom: 5,
   },
   flavorText: {
     color: "#D1D5DB",
     fontSize: 14,
-    textAlign: "center",
+    textAlign: "left",
     lineHeight: 20,
     fontStyle: "italic",
   },
@@ -876,7 +874,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#1F2937",
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 10,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#374151",
@@ -886,7 +884,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#7F1D1D",
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 10,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#991B1B",

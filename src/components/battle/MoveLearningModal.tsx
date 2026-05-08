@@ -1,4 +1,3 @@
-import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { colors } from "@/src/theme/color";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { MOVES } from "../../data/pokemon/moves/moves";
+import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { Move, Pokemon } from "../../types/pokemon";
 
 // Use same type color map
@@ -49,17 +49,37 @@ export const MoveLearningModal = ({
   onSelect,
 }: MoveLearningModalProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [confirmUniqueVisible, setConfirmUniqueVisible] = useState(false);
+  const [pendingMoveIndex, setPendingMoveIndex] = useState<
+    number | "skip" | null
+  >(null);
 
   // Reset lock whenever the modal becomes visible for a new move
   useEffect(() => {
     if (visible) {
       setIsProcessing(false);
+      setConfirmUniqueVisible(false);
+      setPendingMoveIndex(null);
     }
   }, [visible]);
 
   if (!newMove) return null;
 
   const handleSelect = (index: number | "skip") => {
+    const isUnique =
+      index !== "skip" &&
+      BATTLE_MOVES[pokemon.moves[index].name.toLowerCase()]?.category ===
+        "unique";
+
+    if (isUnique) {
+      setPendingMoveIndex(index);
+      setConfirmUniqueVisible(true);
+    } else {
+      executeSelection(index);
+    }
+  };
+
+  const executeSelection = (index: number | "skip") => {
     if (isProcessing) return;
     setIsProcessing(true);
     onSelect(index);
@@ -182,6 +202,46 @@ export const MoveLearningModal = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Confirmation Modal for Unique Moves */}
+      <Modal visible={confirmUniqueVisible} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.container}>
+            <Text style={styles.title}>WARNING</Text>
+            <Text style={styles.description}>
+              Are you sure you want to learn this move? This move does not have
+              usable logic in battle yet.
+            </Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.skipButton,
+                  { backgroundColor: "#EF4444", flex: 1, marginRight: 5 },
+                ]}
+                onPress={() => {
+                  setConfirmUniqueVisible(false);
+                  setPendingMoveIndex(null);
+                }}
+              >
+                <Text style={styles.skipText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.skipButton,
+                  { backgroundColor: "#10B981", flex: 1, marginLeft: 5 },
+                ]}
+                onPress={() => {
+                  setConfirmUniqueVisible(false);
+                  if (pendingMoveIndex !== null)
+                    executeSelection(pendingMoveIndex);
+                }}
+              >
+                <Text style={styles.skipText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -299,5 +359,9 @@ const styles = StyleSheet.create({
   skipText: {
     color: "white",
     fontWeight: "bold",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
 });
