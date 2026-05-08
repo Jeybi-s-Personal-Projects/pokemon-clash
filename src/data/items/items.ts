@@ -93,6 +93,7 @@ export type MegaStoneCategory = {
   megaOf: string;
   /** The Mega Evolution form unlocked (e.g. "mega-charizard-x"). */
   megaForm: string;
+  effect: string;
 };
 
 export type OtherCategory = {
@@ -1116,6 +1117,7 @@ export const ITEMS: Item[] = [
   // ══════════════════════════════════════════════════════════════════
 
   // ── Gen 1 Starters ────────────────────────────────────────────────
+  // ── Gen 1 Starters ────────────────────────────────────────────────
   {
     id: "venusaurite",
     name: "Venusaurite",
@@ -1124,6 +1126,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "venusaur",
       megaForm: "mega-venusaur",
+      effect: "Allows Mega Evolution of Venusaur.",
     },
   },
   {
@@ -1134,6 +1137,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "charizard",
       megaForm: "mega-charizard-x",
+      effect: "Allows Mega Evolution of Charizard into Mega Charizard X.",
     },
   },
   {
@@ -1144,6 +1148,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "charizard",
       megaForm: "mega-charizard-y",
+      effect: "Allows Mega Evolution of Charizard into Mega Charizard Y.",
     },
   },
   {
@@ -1154,6 +1159,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "blastoise",
       megaForm: "mega-blastoise",
+      effect: "Allows Mega Evolution of Blastoise.",
     },
   },
 
@@ -1166,6 +1172,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "beedrill",
       megaForm: "mega-beedrill",
+      effect: "Allows Mega Evolution of Beedrill.",
     },
   },
   {
@@ -1176,6 +1183,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "pidgeot",
       megaForm: "mega-pidgeot",
+      effect: "Allows Mega Evolution of Pidgeot.",
     },
   },
   {
@@ -1186,6 +1194,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "alakazam",
       megaForm: "mega-alakazam",
+      effect: "Allows Mega Evolution of Alakazam.",
     },
   },
   {
@@ -1196,6 +1205,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "slowbro",
       megaForm: "mega-slowbro",
+      effect: "Allows Mega Evolution of Slowbro.",
     },
   },
   {
@@ -1206,6 +1216,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "gengar",
       megaForm: "mega-gengar",
+      effect: "Allows Mega Evolution of Gengar.",
     },
   },
   {
@@ -1216,6 +1227,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "kangaskhan",
       megaForm: "mega-kangaskhan",
+      effect: "Allows Mega Evolution of Kangaskhan.",
     },
   },
   {
@@ -1226,6 +1238,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "pinsir",
       megaForm: "mega-pinsir",
+      effect: "Allows Mega Evolution of Pinsir.",
     },
   },
   {
@@ -1236,6 +1249,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "gyarados",
       megaForm: "mega-gyarados",
+      effect: "Allows Mega Evolution of Gyarados.",
     },
   },
   {
@@ -1246,6 +1260,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "aerodactyl",
       megaForm: "mega-aerodactyl",
+      effect: "Allows Mega Evolution of Aerodactyl.",
     },
   },
   {
@@ -1256,6 +1271,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "dragonite",
       megaForm: "mega-dragonite",
+      effect: "Allows Mega Evolution of Dragonite.",
     },
   },
   {
@@ -1266,6 +1282,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "skarmorite",
       megaForm: "mega-skarmorite",
+      effect: "Allows Mega Evolution of Skarmory.",
     },
   },
   {
@@ -1276,6 +1293,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "mewtwo",
       megaForm: "mega-mewtwo-x",
+      effect: "Allows Mega Evolution of Mewtwo into Mega Mewtwo X.",
     },
   },
   {
@@ -1286,6 +1304,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "mewtwo",
       megaForm: "mega-mewtwo-y",
+      effect: "Allows Mega Evolution of Mewtwo into Mega Mewtwo Y.",
     },
   },
 
@@ -1298,6 +1317,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "ampharos",
       megaForm: "mega-ampharos",
+      effect: "Allows Mega Evolution of Ampharos.",
     },
   },
   {
@@ -1308,6 +1328,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "steelix",
       megaForm: "mega-steelix",
+      effect: "Allows Mega Evolution of Steelix.",
     },
   },
   {
@@ -1318,6 +1339,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "scizor",
       megaForm: "mega-scizor",
+      effect: "Allows Mega Evolution of Scizor.",
     },
   },
   {
@@ -1328,6 +1350,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "heracross",
       megaForm: "mega-heracross",
+      effect: "Allows Mega Evolution of Heracross.",
     },
   },
   {
@@ -1338,6 +1361,7 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "houndoom",
       megaForm: "mega-houndoom",
+      effect: "Allows Mega Evolution of Houndoom.",
     },
   },
   {
@@ -1348,10 +1372,10 @@ export const ITEMS: Item[] = [
       category: "mega-stone",
       megaOf: "tyranitar",
       megaForm: "mega-tyranitar",
+      effect: "Allows Mega Evolution of Tyranitar.",
     },
   },
 ];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**

@@ -18,9 +18,14 @@ import { supabase } from "../lib/supabase";
 import { ItemEquipModal } from "@/src/components/ItemEquipModal";
 import { getItem } from "@/src/data/items/items";
 import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
+import { gen1Pokemon } from "../data/gen1Pokemon";
+import { gen2Pokemon } from "../data/gen2Pokemon";
 import { MOVES } from "../data/pokemon/moves/moves";
 import { SPECIES } from "../data/pokemon/species/species";
 import { PokemonStatsScreenProps } from "../types/navigation";
+import { calculateHp, calculateStat } from "../utils/statCalculator";
+
+const ALL_LOCAL = [...gen1Pokemon, ...gen2Pokemon];
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -56,7 +61,6 @@ export default function PokemonStatsScreen({
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [itemModalVisible, setItemModalVisible] = useState(false);
-  const [isReleasing, setIsReleasing] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -99,7 +103,6 @@ export default function PokemonStatsScreen({
   const handleRelease = async () => {
     playClick();
     setConfirmVisible(false);
-    setIsReleasing(true);
 
     try {
       const { error } = await supabase
@@ -117,7 +120,83 @@ export default function PokemonStatsScreen({
       setStatusType("error");
       setStatusVisible(true);
     } finally {
-      setIsReleasing(false);
+    }
+  };
+
+  const handleFactoryReset = async () => {
+    playClick();
+    const speciesData = SPECIES[pokemonState.speciesId];
+    const localData = ALL_LOCAL.find((p) => p.id === pokemonState.speciesId);
+
+    if (!speciesData || !localData) {
+      setStatusMessage("Could not find species data.");
+      setStatusType("error");
+      setStatusVisible(true);
+      return;
+    }
+
+    const baseUrl =
+      "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown";
+    const speciesId = pokemonState.speciesId;
+    const isShiny = pokemonState.isShiny;
+
+    const frontImage = isShiny
+      ? `${baseUrl}/shiny/${speciesId}.gif`
+      : `${baseUrl}/${speciesId}.gif`;
+    const backImage = isShiny
+      ? `${baseUrl}/back/shiny/${speciesId}.gif`
+      : `${baseUrl}/back/${speciesId}.gif`;
+
+    const resetPokemon = {
+      ...pokemonState,
+      name: localData.name.charAt(0).toUpperCase() + localData.name.slice(1),
+      type: localData.types,
+      hp: calculateHp(speciesData.baseStats.hp, pokemonState.level),
+      maxHp: calculateHp(speciesData.baseStats.hp, pokemonState.level),
+      attack: calculateStat(speciesData.baseStats.attack, pokemonState.level),
+      defense: calculateStat(speciesData.baseStats.defense, pokemonState.level),
+      specialAttack: calculateStat(
+        speciesData.baseStats.spAttack,
+        pokemonState.level,
+      ),
+      specialDefense: calculateStat(
+        speciesData.baseStats.spDefense,
+        pokemonState.level,
+      ),
+      speed: calculateStat(speciesData.baseStats.speed, pokemonState.level),
+      frontImage,
+      backImage,
+    };
+
+    try {
+      const { error } = await supabase
+        .from("pokemon")
+        .update({
+          pk_name: resetPokemon.name,
+          pk_hp: resetPokemon.hp,
+          pk_max_hp: resetPokemon.maxHp,
+          pk_attack: resetPokemon.attack,
+          pk_defense: resetPokemon.defense,
+          pk_special_attack: resetPokemon.specialAttack,
+          pk_special_defense: resetPokemon.specialDefense,
+          pk_speed: resetPokemon.speed,
+          pk_types: resetPokemon.type,
+          pk_front_image: resetPokemon.frontImage,
+          pk_back_image: resetPokemon.backImage,
+        })
+        .eq("id", pokemonState.id);
+
+      if (error) throw error;
+
+      setPokemon(resetPokemon);
+      navigation.setParams({ pokemon: resetPokemon });
+      setStatusMessage(`${resetPokemon.name} has been reset to base form.`);
+      setStatusType("success");
+      setStatusVisible(true);
+    } catch (e: any) {
+      setStatusMessage("Failed to reset Pokémon: " + e.message);
+      setStatusType("error");
+      setStatusVisible(true);
     }
   };
 
@@ -362,43 +441,69 @@ export default function PokemonStatsScreen({
         <View style={styles.section}>
           <View style={styles.itemContainer}>
             <Text style={styles.abilityTitle}>Item Held</Text>
-            {pokemonState.heldItem ? (
-              <View style={styles.itemBox}>
-                <View style={styles.itemRow}>
-                  <Image
-                    source={{
-                      uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${pokemonState.heldItem}.png`,
-                    }}
-                    style={styles.itemImage}
-                  />
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.abilityName}>
-                      {getItem(pokemonState.heldItem)?.name || "Unknown Item"}
+            <View style={styles.itemBox}>
+              <View style={styles.itemMainRow}>
+                <View style={styles.itemActionColumn}>
+                  {pokemonState.heldItem ? (
+                    <Image
+                      source={{
+                        uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${pokemonState.heldItem}.png`,
+                      }}
+                      style={styles.itemImageLarge}
+                    />
+                  ) : (
+                    <MaterialCommunityIcons
+                      name="bag-personal-outline"
+                      size={40}
+                      color="#4B5563"
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={styles.equipButtonSmall}
+                    onPress={() => setItemModalVisible(true)}
+                  >
+                    <MaterialCommunityIcons
+                      name="swap-horizontal"
+                      size={14}
+                      color="white"
+                    />
+                    <Text style={styles.equipButtonTextSmall}>
+                      {pokemonState.heldItem ? "CHANGE" : "CHOOSE"}
                     </Text>
-                    <Text style={styles.abilityDescription}>
-                      {getItemDescription(pokemonState.heldItem)}
-                    </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.equipButton}
-                  onPress={() => setItemModalVisible(true)}
-                >
-                  <Text style={styles.equipButtonText}>Change Item</Text>
-                </TouchableOpacity>
+
+                <View style={styles.itemInfoColumn}>
+                  <Text style={styles.itemHeldName}>
+                    {pokemonState.heldItem
+                      ? getItem(pokemonState.heldItem)?.name || "Unknown Item"
+                      : "No Item Held"}
+                  </Text>
+                  <Text style={styles.itemHeldDescription}>
+                    {pokemonState.heldItem
+                      ? getItemDescription(pokemonState.heldItem)
+                      : "Equip an item to boost your Pokémon's performance in battle."}
+                  </Text>
+                </View>
               </View>
-            ) : (
-              <View style={styles.itemBox}>
-                <Text style={styles.abilityName}>None</Text>
-                <TouchableOpacity
-                  style={styles.equipButton}
-                  onPress={() => setItemModalVisible(true)}
-                >
-                  <Text style={styles.equipButtonText}>Choose Item</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            </View>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Debug</Text>
+          <Text style={styles.abilityDescription}>
+            Resets the pokemon to its base form including original stats. Use
+            cases include: mega evolved pokemon, gigantamax form and dynamax
+            form. This does not reset the level nor the experience of your
+            pokemon. This offers a safe way to restore your corrupted pokemon.
+          </Text>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleFactoryReset}
+          >
+            <Text style={styles.resetButtonText}>Factory Reset Pokémon</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -542,7 +647,7 @@ const styles = StyleSheet.create({
   abilityRow: { width: "100%", flexDirection: "row", gap: "5%" },
   abilityTitle: {
     textAlign: "left",
-    color: "#fe6060",
+    color: colors.accent,
     fontSize: 16,
     fontWeight: "bold",
     borderBottomWidth: 1,
@@ -592,26 +697,69 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },
-  itemRow: {
+
+  itemMainRow: {
     flexDirection: "row",
+    gap: 15,
     alignItems: "center",
   },
-  itemImage: {
-    width: 40,
-    height: 40,
-    marginRight: 12,
+  itemActionColumn: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
   },
-  itemInfo: {
+  itemInfoColumn: {
+    borderLeftWidth: 1,
+    paddingLeft: 12,
+    borderColor: colors.modalBorderSubtle,
     flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
   },
-  equipButton: {
-    marginTop: 12,
+  itemImageLarge: {
+    width: 56,
+    height: 56,
+  },
+  itemHeldName: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+    textTransform: "capitalize",
+    marginBottom: 4,
+  },
+  itemHeldDescription: {
+    width: 150,
+    color: "#9CA3AF",
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
+  equipButtonSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: colors.accent,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
-  equipButtonText: { color: "white", fontWeight: "bold", fontSize: 12 },
+  equipButtonTextSmall: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 10,
+  },
+  resetButton: {
+    marginTop: 20,
+    backgroundColor: colors.danger,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  resetButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+
   pokedexTitle: {
     textAlign: "left",
     color: "#ffffff",
