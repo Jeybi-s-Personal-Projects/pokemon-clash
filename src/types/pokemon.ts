@@ -13,7 +13,13 @@ export type Move = {
   priority?: number | null;
 };
 
-export type StatusCondition = "poison" | "burn" | "paralysis" | "sleep" | "freeze" | null;
+export type StatusCondition =
+  | "poison"
+  | "burn"
+  | "paralysis"
+  | "sleep"
+  | "freeze"
+  | null;
 
 export type Pokemon = {
   id?: number | string;
@@ -41,4 +47,8 @@ export type Pokemon = {
   status?: StatusCondition;
   statusTurns?: number; // For sleep
   confusionTurns?: number; // Volatile status
+
+  // pokemon.ts — add to Pokemon type:
+  flinched?: boolean; // cleared each turn start
+  badPoisonTurns?: number; // escalating toxic counter
 };
