@@ -81,70 +81,43 @@ export default function BattleButton({
           </Text>
         </View>
       )}
+{/* Type badge */}
+{!isExpanded && moveType && (
+  <View style={styles.typeBadgeContainer}>
+    <TypeBadge
+      type={moveType}
+      size="small"
+      borderColor={colors.modalBorderSubtle}
+    />
+  </View>
+)}
 
-      {/* Pixel corner accents */}
-      <View
-        style={[
-          styles.corner,
-          styles.topLeft,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          styles.topRight,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          styles.bottomLeft,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          styles.bottomRight,
-          { backgroundColor: accentColor },
-        ]}
-      />
+{icon && (
+  <View
+    style={{
+      marginBottom: 4,
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    {icon}
+  </View>
+)}
+{!isExpanded && (
+  <Text
+    style={[
+      styles.label,
+      {
+        color: disabled ? "#555" : "white",
+        fontSize: isExpanded ? 14 : 16,
+        marginTop: moveType ? 12 : 0,
+      },
+    ]}
+  >
+    {label.toUpperCase()}
+  </Text>
+)}
 
-      {/* Type badge */}
-      {moveType && (
-        <View style={styles.typeBadgeContainer}>
-          <TypeBadge
-            type={moveType}
-            size="small"
-            borderColor={colors.modalBorderSubtle}
-          />
-        </View>
-      )}
-
-      {icon && (
-        <View
-          style={{
-            marginBottom: 4,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {icon}
-        </View>
-      )}
-      <Text
-        style={[
-          styles.label,
-          {
-            color: disabled ? "#555" : "white",
-            fontSize: isExpanded ? 14 : 16,
-          },
-        ]}
-      >
-        {label.toUpperCase()}
-      </Text>
       {isExpanded && description ? (
         <Text
           style={[styles.description, { color: "#9CA3AF" }]}
@@ -171,7 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modalBackgroundPrimary,
     margin: "1%",
     borderWidth: 1.5,
-    borderRadius: 18,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 0 },
@@ -215,16 +188,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.2,
   },
-  // Pixel corner accents
-  corner: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-  },
-  topLeft: { top: -1, left: -1 },
-  topRight: { top: -1, right: -1 },
-  bottomLeft: { bottom: -1, left: -1 },
-  bottomRight: { bottom: -1, right: -1 },
   description: {
     fontFamily: "monospace",
     fontSize: 7.5,
