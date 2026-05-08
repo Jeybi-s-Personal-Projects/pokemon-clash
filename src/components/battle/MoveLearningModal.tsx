@@ -1,3 +1,4 @@
+import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { colors } from "@/src/theme/color";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
@@ -127,17 +128,27 @@ export const MoveLearningModal = ({
             {pokemon.moves.map((move, index) => {
               const details = MOVES[move.name.toLowerCase()];
               const typeColor = TYPE_COLORS[move.type || "normal"] ?? "#888";
+              const moveBattleData = BATTLE_MOVES[move.name.toLowerCase()];
+              const isDisabled =
+                (move.pp ?? 0) <= 0 || moveBattleData?.category === "unique";
 
               return (
                 <TouchableOpacity
                   key={index}
                   onPress={() => handleSelect(index)}
-                  disabled={isProcessing}
-                  style={[styles.moveButton, { borderColor: typeColor }]}
+                  disabled={isProcessing || isDisabled}
+                  style={[
+                    styles.moveButton,
+                    {
+                      borderColor: typeColor,
+                      opacity: isDisabled ? 0.6 : 1,
+                    },
+                  ]}
                 >
                   <View style={styles.moveHeader}>
                     <Text style={styles.moveName}>
                       {move.name.toUpperCase()}
+                      {isDisabled && " (DISABLED)"}
                     </Text>
                     {renderMoveCategoryIcon(details?.damageClass)}
                   </View>

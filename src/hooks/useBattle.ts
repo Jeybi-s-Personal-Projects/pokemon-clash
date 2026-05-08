@@ -107,7 +107,8 @@ export function useBattle({
     enemyStages: { ...initialStages },
     weather: null,
     weatherTurns: 0,
-    // New fields for charge, trap, flinch, bad poison
+    // New fields for charge, trap, flinch, bad
+    chargingMove: null,
     playerCharge: undefined,
     enemyCharge: undefined,
     playerTrap: undefined,

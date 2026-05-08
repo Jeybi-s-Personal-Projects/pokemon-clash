@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { ABILITIES } from "../../data/pokemon/abilities/abilities";
 import { MOVES } from "../../data/pokemon/moves/moves";
+import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { Pokemon } from "../../types/pokemon";
 
 // Use same type color map as PokemonStatsScreen
@@ -70,14 +71,22 @@ export function OpponentInfoModal({
               const details = MOVES[move.name.toLowerCase()];
               const moveType = details?.type || move.type || "normal";
               const typeColor = TYPE_COLORS[moveType] ?? "#888";
+              const moveBattleData = BATTLE_MOVES[move.name.toLowerCase()];
+              const isDisabled =
+                (move.pp ?? 0) <= 0 || moveBattleData?.category === "unique";
 
               return (
                 <View
                   key={i}
-                  style={[styles.moveCard, { borderColor: typeColor }]}
+                  style={[
+                    styles.moveCard,
+                    { borderColor: typeColor, opacity: isDisabled ? 0.6 : 1 },
+                  ]}
                 >
                   <View style={styles.moveHeader}>
-                    <Text style={styles.moveName}>{move.name}</Text>
+                    <Text style={styles.moveName}>
+                      {move.name} {isDisabled && "(NO LOGIC YET)"}
+                    </Text>
                     <View style={styles.moveClassContainer}>
                       {details?.damageClass === "physical" ? (
                         <View style={styles.moveAttackTypeContainer}>

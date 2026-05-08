@@ -1,3 +1,4 @@
+import { BATTLE_MOVES } from "@/src/data/pokemon/moves/movesBattle";
 import { colors } from "@/src/theme/color";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
@@ -278,7 +279,11 @@ export default function BattleActions({
                   moveType={move.type}
                   effectiveness={effectiveness}
                   onPress={() => onMovePress(i)}
-                  disabled={disabled || (move.pp ?? 0) <= 0}
+                  disabled={
+                    disabled ||
+                    (move.pp ?? 0) <= 0 ||
+                    BATTLE_MOVES[move.name.toLowerCase()]?.category === "unique"
+                  }
                   variant="move"
                   height={"40%"}
                 />

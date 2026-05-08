@@ -43,6 +43,11 @@ export type BattleState = {
   // ── Weather ───────────────────────────────────────────
   weather: WeatherCondition;
   weatherTurns: number;
+  chargingMove: {
+    move: string;
+    target: string;
+    attacker: "player" | "enemy";
+  } | null;
 
   // ── Charge moves (Fly, Bounce, Dig, Solar Beam, etc.) ─
   playerCharge?: ChargeState;

@@ -6,10 +6,12 @@ import { Move, Pokemon } from "../types/pokemon";
  */
 export function getAIMove(attacker: Pokemon, defender: Pokemon): Move {
   const hpPercent = (attacker.hp / attacker.maxHp) * 100;
-  const movesWithData = attacker.moves.map((m) => ({
-    move: m,
-    data: BATTLE_MOVES[m.name.toLowerCase()],
-  }));
+  const movesWithData = attacker.moves
+    .filter((m) => BATTLE_MOVES[m.name.toLowerCase()]?.category !== "unique")
+    .map((m) => ({
+      move: m,
+      data: BATTLE_MOVES[m.name.toLowerCase()],
+    }));
 
   // 1. If HP is low, prioritize healing
   if (hpPercent < 40) {
@@ -34,17 +36,21 @@ export function getAIMove(attacker: Pokemon, defender: Pokemon): Move {
   }
 
   // 4. Default: Highest power move that has PP
-  const damagingMoves = attacker.moves
-    .filter((m) => m.pp > 0)
-    .sort((a, b) => (b.power || 0) - (a.power || 0));
+  const damagingMoves = movesWithData
+    .filter((m) => m.move.pp > 0)
+    .sort((a, b) => (b.data?.power || 0) - (a.data?.power || 0));
 
-  return damagingMoves[0] || attacker.moves[0];
+  return damagingMoves[0]?.move || movesWithData[0]?.move || attacker.moves[0];
 }
 
 /**
  * Simple random move selection (legacy/basic).
  */
 export function getRandomMove(pokemon: Pokemon) {
-  const index = Math.floor(Math.random() * pokemon.moves.length);
-  return pokemon.moves[index];
+  const availableMoves = pokemon.moves.filter(
+    (m) => BATTLE_MOVES[m.name.toLowerCase()]?.category !== "unique",
+  );
+  if (availableMoves.length === 0) return pokemon.moves[0];
+  const index = Math.floor(Math.random() * availableMoves.length);
+  return availableMoves[index];
 }
