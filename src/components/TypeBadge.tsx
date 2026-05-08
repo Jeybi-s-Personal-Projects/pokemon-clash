@@ -46,16 +46,26 @@ const TYPE_ICONS: Record<string, any> = {
 interface TypeBadgeProps {
   type: string;
   size?: 'small' | 'normal';
+  borderColor?: string;
 }
 
-export const TypeBadge: React.FC<TypeBadgeProps> = ({ type, size = 'normal' }) => {
+export const TypeBadge: React.FC<TypeBadgeProps> = ({ type, size = 'normal', borderColor }) => {
   const color = TYPE_COLORS[type.toLowerCase()] ?? "#888";
   const icon = TYPE_ICONS[type.toLowerCase()];
 
   const isSmall = size === 'small';
 
   return (
-    <View style={[styles.badge, { backgroundColor: color + "33", paddingHorizontal: isSmall ? 6 : 8, paddingVertical: isSmall ? 2 : 4 }]}>
+    <View style={[
+        styles.badge, 
+        { 
+          backgroundColor: color + "33", 
+          paddingHorizontal: isSmall ? 6 : 8, 
+          paddingVertical: isSmall ? 2 : 4,
+          borderWidth: borderColor ? 1 : 0,
+          borderColor: borderColor || 'transparent'
+        }
+    ]}>
       {icon && <Image source={icon} style={[styles.icon, { width: isSmall ? 10 : 12, height: isSmall ? 10 : 12 }]} />}
       <Text style={[styles.badgeText, { color, fontSize: isSmall ? 8 : 10 }]}>{type}</Text>
     </View>

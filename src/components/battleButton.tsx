@@ -2,29 +2,9 @@ import { colors } from "@/src/theme/color";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { TYPE_COLORS, TypeBadge } from "./TypeBadge";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
-
-const TYPE_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  water: "#4FC3F7",
-  grass: "#66BB6A",
-  electric: "#FFD600",
-  psychic: "#F06292",
-  ice: "#80DEEA",
-  dragon: "#7C4DFF",
-  dark: "#546E7A",
-  normal: "#9E9E9E",
-  fighting: "#EF5350",
-  poison: "#AB47BC",
-  ground: "#FFA726",
-  flying: "#80CBC4",
-  bug: "#8BC34A",
-  rock: "#A1887F",
-  ghost: "#5C6BC0",
-  steel: "#78909C",
-  fairy: "#F48FB1",
-};
 
 export default function BattleButton({
   label,
@@ -134,15 +114,12 @@ export default function BattleButton({
 
       {/* Type badge */}
       {moveType && (
-        <View
-          style={[
-            styles.typeBadge,
-            { backgroundColor: accentColor + "33", borderColor: accentColor },
-          ]}
-        >
-          <Text style={[styles.typeText, { color: "white" }]}>
-            {moveType.toUpperCase()}
-          </Text>
+        <View style={styles.typeBadgeContainer}>
+          <TypeBadge
+            type={moveType}
+            size="small"
+            borderColor={colors.modalBorderSubtle}
+          />
         </View>
       )}
 
@@ -218,20 +195,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     opacity: 0.9,
   },
-  typeBadge: {
+  typeBadgeContainer: {
     position: "absolute",
     top: 5,
     right: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    borderWidth: 1,
-  },
-  typeText: {
-    fontFamily: "monospace",
-    fontSize: 7,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
   },
   effBadge: {
     position: "absolute",
