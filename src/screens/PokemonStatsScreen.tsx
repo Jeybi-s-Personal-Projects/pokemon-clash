@@ -364,12 +364,22 @@ export default function PokemonStatsScreen({
             <Text style={styles.abilityTitle}>Item Held</Text>
             {pokemonState.heldItem ? (
               <View style={styles.itemBox}>
-                <Text style={styles.abilityName}>
-                  {getItem(pokemonState.heldItem)?.name || "Unknown Item"}
-                </Text>
-                <Text style={styles.abilityDescription}>
-                  {getItemDescription(pokemonState.heldItem)}
-                </Text>
+                <View style={styles.itemRow}>
+                  <Image
+                    source={{
+                      uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${pokemonState.heldItem}.png`,
+                    }}
+                    style={styles.itemImage}
+                  />
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.abilityName}>
+                      {getItem(pokemonState.heldItem)?.name || "Unknown Item"}
+                    </Text>
+                    <Text style={styles.abilityDescription}>
+                      {getItemDescription(pokemonState.heldItem)}
+                    </Text>
+                  </View>
+                </View>
                 <TouchableOpacity
                   style={styles.equipButton}
                   onPress={() => setItemModalVisible(true)}
@@ -581,7 +591,18 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
+  },
+  itemRow: {
+    flexDirection: "row",
     alignItems: "center",
+  },
+  itemImage: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
+  },
+  itemInfo: {
+    flex: 1,
   },
   equipButton: {
     marginTop: 12,

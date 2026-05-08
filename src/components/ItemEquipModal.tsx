@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from "react";
 import {
-  FlatList,
-  Modal,
+  FlatList, Image, Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { ITEMS } from "../data/items/items";
 import { colors } from "../theme/color";
@@ -108,8 +107,20 @@ export function ItemEquipModal({
                 style={styles.itemButton}
                 onPress={() => onSelect(item.id)}
               >
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDesc}>{getItemDescription(item)}</Text>
+                <View style={styles.itemRow}>
+                  <Image
+                    source={{
+                      uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${item.id}.png`,
+                    }}
+                    style={styles.itemImage}
+                  />
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemDesc}>
+                      {getItemDescription(item)}
+                    </Text>
+                  </View>
+                </View>
               </TouchableOpacity>
             )}
           />
@@ -195,6 +206,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  itemImage: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
+  },
+  itemInfo: {
+    flex: 1,
   },
   itemName: {
     color: "white",
