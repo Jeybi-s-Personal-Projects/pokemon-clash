@@ -65,6 +65,8 @@ export function useBattle({
     enemyTrap: undefined,
     playerFlinched: false,
     enemyFlinched: false,
+    playerProtected: false,
+    enemyProtected: false,
     playerBadPoison: false,
     enemyBadPoison: false,
   });
@@ -131,7 +133,13 @@ export function useBattle({
       { side: secondSide, move: secondSide === "player" ? playerMove : enemyMove },
     ];
 
-    let currentState = { ...state, playerFlinched: false, enemyFlinched: false };
+    let currentState = {
+      ...state,
+      playerFlinched: false,
+      enemyFlinched: false,
+      playerProtected: false,
+      enemyProtected: false,
+    };
 
     for (const turn of turns) {
       if (currentState.player.hp <= 0 || currentState.enemy.hp <= 0) break;
@@ -308,13 +316,21 @@ export function useBattle({
       if (winner) { winHandler(winner, finalState, getWinContext(finalState)); return; }
     }
 
-    finalState = { ...finalState, playerFlinched: false, enemyFlinched: false };
+    finalState = {
+      ...finalState,
+      playerFlinched: false,
+      enemyFlinched: false,
+      playerProtected: false,
+      enemyProtected: false,
+    };
     setState(finalState);
     if (finalState.player.hp <= 0) {
       setCurrentMessage(`${finalState.player.name.toUpperCase()} fainted!`);
       await delay(1200);
       teamMgmt.setSwitchModalVisible(true);
-    } else { setCurrentMessage(null); }
+    } else {
+      setCurrentMessage(null);
+    }
   };
 
   const processTurnPenalty = async () => {
@@ -322,15 +338,27 @@ export function useBattle({
     setCurrentMessage(null);
     await delay(300);
     const enemyMove = getAIMove(state.enemy, state.player);
-    const afterEnemyState = await executeMove(enemyMove, "enemy", state, execContext);
+    const afterEnemyState = await executeMove(
+      enemyMove,
+      "enemy",
+      {
+        ...state,
+        playerProtected: false,
+        enemyProtected: false,
+      },
+      execContext,
+    );
     setState(afterEnemyState);
     const winner = isGameOver(afterEnemyState);
-    if (winner) { winHandler(winner, afterEnemyState, getWinContext(afterEnemyState)); }
-    else if (afterEnemyState.player.hp <= 0) {
+    if (winner) {
+      winHandler(winner, afterEnemyState, getWinContext(afterEnemyState));
+    } else if (afterEnemyState.player.hp <= 0) {
       setCurrentMessage(`${afterEnemyState.player.name.toUpperCase()} fainted!`);
       await delay(1200);
       teamMgmt.setSwitchModalVisible(true);
-    } else { setCurrentMessage(null); }
+    } else {
+      setCurrentMessage(null);
+    }
   };
 
   return {

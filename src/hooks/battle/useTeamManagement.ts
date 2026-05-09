@@ -125,6 +125,8 @@ export function useTeamManagement(
       playerCharge: undefined,
       playerTrap: undefined,
       playerFlinched: false,
+      playerProtected: false,
+      enemyProtected: false,
       playerBadPoison: false,
     };
 

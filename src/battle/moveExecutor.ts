@@ -49,9 +49,52 @@ export const executeMove = async (
   const moveId = getMoveId(move);
   const enhancedMove = BATTLE_MOVES[moveId];
 
+  // ── 0. Determine Target ──────────────────────────────────
+  // Does this move target the opponent? (Important for Protect)
+  const isOffensive =
+    (move.power ?? 0) > 0 ||
+    enhancedMove?.effects.some((e) => e.target === "target" || e.target === "all-enemies") ||
+    enhancedMove?.category === "status" ||
+    (move.statChanges && move.statChanges.length > 0 && move.statChanges[0].change < 0);
+
+  // ── 0.5 Protection check ──────────────────────────────────
+  const defenderProtected = isPlayerAttacking
+    ? currentState.enemyProtected
+    : currentState.playerProtected;
+
+  // Protect blocks moves targeting the protected Pokémon
+  if (defenderProtected && isOffensive && enhancedMove?.category !== "protect") {
+    setCurrentMessage(`${defender.name.toUpperCase()} protected itself!`);
+    await delay(1500);
+    return currentState;
+  }
+
+  // ── 0.7 Handle Protect category ──────────────────────────
+  if (enhancedMove?.category === "protect") {
+    const nextState = {
+      ...currentState,
+      [isPlayerAttacking ? "playerProtected" : "enemyProtected"]: true,
+    };
+    setCurrentMessage(`${attacker.name.toUpperCase()} is protecting itself!`);
+    await delay(1000);
+    return nextState;
+  }
+
   // ── 1. Accuracy check ───────────────────────────────────
-  const moveAccuracy = enhancedMove?.accuracy ?? move.accuracy;
-  if (moveAccuracy != null) {
+  let moveAccuracy = enhancedMove?.accuracy ?? move.accuracy;
+  
+  // If accuracy is undefined, only weather and stat-changes are guaranteed hits.
+  // Others (like status moves) are treated as 100% accuracy but still subject to modifiers.
+  let isGuaranteed = false;
+  if (moveAccuracy == null) {
+    if (enhancedMove?.category === "weather" || enhancedMove?.category === "stat-change") {
+      isGuaranteed = true;
+    } else {
+      moveAccuracy = 100; // Treat as 100% if not a self-buff/weather
+    }
+  }
+
+  if (!isGuaranteed && moveAccuracy != null) {
     const accStage = attackerStages.accuracy;
     const evaStage = defenderStages.evasion;
 

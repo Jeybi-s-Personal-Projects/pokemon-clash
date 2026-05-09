@@ -15,6 +15,7 @@ export type MoveCategory =
   | "stat-change"
   | "weather"
   | "heal"
+  | "protect"
   | "field-effect"
   | "multi-hit"
   | "ohko"
@@ -54,7 +55,9 @@ export type MoveEffect = {
     | "hp-cost" // value = number (% of maxHp as cost)
     | "self-faint" // value = null
     | "multi-hit" // value = [min, max] or number (fixed hits)
-    | "unique"; // value = string (unique move id, handled separately)
+    | "unique" // value = string (unique move id, handled separately)
+    | "protect"; // value = stirng (unique move id, handled separately)
+
   target: MoveTarget;
   chance: number; // 0-100
   value: any;

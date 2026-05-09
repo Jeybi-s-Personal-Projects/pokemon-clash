@@ -62,6 +62,8 @@ export type BattleState = {
   // ── Volatile per-turn flags ───────────────────────────
   playerFlinched: boolean;
   enemyFlinched: boolean;
+  playerProtected: boolean;
+  enemyProtected: boolean;
 
   // ── Bad poison (Toxic) tracking ───────────────────────
   playerBadPoison: boolean;

@@ -4838,7 +4838,7 @@ export const BATTLE_MOVES: Record<string, BattleMove> = {
     maxPp: 10,
     damageClass: "status",
     priority: 0,
-    category: "unique",
+    category: "protect",
     effects: [],
     description:
       "For five turns, protects all Pokémon on the ground from major status ailments and confusion, and halves the power of incoming dragon moves.",
@@ -5645,9 +5645,9 @@ export const BATTLE_MOVES: Record<string, BattleMove> = {
     maxPp: 10,
     damageClass: "status",
     priority: 4,
-    category: "unique",
+    category: "protect",
     effects: [
-      { type: "unique", target: "field", chance: 100, value: "protect" },
+      { type: "protect", target: "field", chance: 100, value: "protect" },
     ],
     description: "Prevents any moves from hitting the user this turn.",
   },
@@ -6426,9 +6426,9 @@ export const BATTLE_MOVES: Record<string, BattleMove> = {
     maxPp: 25,
     damageClass: "status",
     priority: 0,
-    category: "unique",
+    category: "protect",
     effects: [
-      { type: "unique", target: "field", chance: 100, value: "safeguard" },
+      { type: "protect", target: "field", chance: 100, value: "safeguard" },
     ],
     description:
       "Protects the user’s field from major status ailments and confusion for five turns.",
@@ -7615,7 +7615,7 @@ export const BATTLE_MOVES: Record<string, BattleMove> = {
     maxPp: 10,
     damageClass: "status",
     priority: 0,
-    category: "stat-change",
+    category: "protect",
     effects: [{ type: "hp-cost", target: "user", chance: 100, value: 25 }],
     description:
       "Transfers 1/4 of the user’s max HP into a doll, protecting the user from further damage or status changes until it breaks.",
