@@ -1,3 +1,5 @@
+import StatusModal from "../components/statusModal";
+import { MovesetViewModal } from "../components/MovesetViewModal";
 import { colors } from "@/src/theme/color";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
@@ -12,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import StatusModal from "../components/statusModal";
+
 import { TYPE_COLORS, TypeBadge } from "../components/TypeBadge";
 import { supabase } from "../lib/supabase";
 
@@ -41,6 +43,7 @@ export default function PokemonStatsScreen({
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [itemModalVisible, setItemModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -65,7 +68,6 @@ export default function PokemonStatsScreen({
 
       if (error) throw error;
 
-      // Updating local state to reflect change
       const updatedPokemon = { ...pokemonState, heldItem: itemId || undefined };
       setPokemon(updatedPokemon);
       navigation.setParams({ pokemon: updatedPokemon });
@@ -99,7 +101,6 @@ export default function PokemonStatsScreen({
       setStatusMessage(error.message);
       setStatusType("error");
       setStatusVisible(true);
-    } finally {
     }
   };
 
@@ -316,19 +317,26 @@ export default function PokemonStatsScreen({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Moves</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Moves</Text>
+            <TouchableOpacity
+              style={styles.smallMovesetButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text style={styles.smallMovesetButtonText}>View All</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.movesList}>
             {pokemonState.moves.map((move: any, index: number) => {
               const details = MOVES[move.name.toLowerCase()];
               const moveType = details?.type || move.type || "normal";
-              const typeColor = TYPE_COLORS[moveType] ?? "#888";
 
               return (
                 <View key={index} style={styles.moveDetailCard}>
                   <View style={styles.moveHeader}>
                     <TypeBadge type={moveType} />
                     <Text style={styles.moveNameDetail}>{move.name}</Text>
-                    <Text style={styles.moveClassText}>
+                    <View style={styles.moveClassContainer}>
                       {details?.damageClass === "physical" ? (
                         <View style={styles.moveAttackTypeContainer}>
                           <MaterialCommunityIcons
@@ -359,7 +367,7 @@ export default function PokemonStatsScreen({
                           <Text style={styles.moveAttackTypeText}>Status</Text>
                         </View>
                       )}
-                    </Text>
+                    </View>
                   </View>
                   <View style={styles.moveStatsRow}>
                     <Text style={styles.moveStatItem}>
@@ -394,6 +402,13 @@ export default function PokemonStatsScreen({
             })}
           </View>
         </View>
+
+        <MovesetViewModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          speciesId={pokemonState.speciesId}
+          currentMoves={pokemonState.moves.map((m: any) => m.name)}
+        />
 
         <View style={styles.section}>
           <View style={styles.itemContainer}>
@@ -714,7 +729,6 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-
   pokedexTitle: {
     textAlign: "left",
     color: colors.accent,
@@ -740,11 +754,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "white",
-    marginBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#374151",
     paddingBottom: 8,
@@ -767,6 +786,19 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "right",
   },
+  smallMovesetButton: {
+    backgroundColor: colors.modalContent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  smallMovesetButtonText: {
+    color: colors.accent,
+    fontWeight: "bold",
+    fontSize: 12,
+  },
   movesList: { gap: 12 },
   moveDetailCard: {
     backgroundColor: colors.modalContent,
@@ -784,7 +816,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
   },
-  moveClassText: { fontSize: 16 },
+  moveClassContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   moveStatsRow: {
     paddingTop: 10,
     borderTopWidth: 1,
@@ -797,7 +832,7 @@ const styles = StyleSheet.create({
   whiteText: { color: "white", fontWeight: "bold" },
   moveDescription: { color: "#9CA3AF", fontSize: 12, lineHeight: 18 },
   moveAttackTypeContainer: {
-    width: 50,
+    width: 60,
     justifyContent: "center",
     alignItems: "center",
     flexDirection: "row-reverse",
