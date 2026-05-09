@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { MovesetViewModal } from "../components/MovesetViewModal";
+import { EvolutionGuideModal } from "../components/pokemonData/EvolutionGuideModal";
 import { MoveEditModal } from "../components/pokemonData/MoveEditModal";
 import StatusModal from "../components/statusModal";
 
@@ -46,6 +47,7 @@ export default function PokemonStatsScreen({
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [moveEditVisible, setMoveEditVisible] = useState(false);
+  const [evolutionVisible, setEvolutionVisible] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -352,6 +354,7 @@ export default function PokemonStatsScreen({
                   {ABILITIES[pokemonState.ability?.toLowerCase()]?.flavorText ||
                     "No description available."}
                 </Text>
+
                 {SPECIES[pokemonState.speciesId]?.abilities &&
                   pokemonState.ability ===
                     SPECIES[pokemonState.speciesId].abilities[
@@ -360,6 +363,19 @@ export default function PokemonStatsScreen({
                   SPECIES[pokemonState.speciesId].abilities.length > 1 && (
                     <Text style={styles.hiddenAbilityTag}>(Hidden)</Text>
                   )}
+                <TouchableOpacity
+                  style={styles.evolutionGuideButton}
+                  onPress={() => setEvolutionVisible(true)}
+                >
+                  <MaterialCommunityIcons
+                    name="book-open-variant"
+                    size={14}
+                    color="white"
+                  />
+                  <Text style={styles.evolutionGuideButtonText}>
+                    Evolution Guide
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.abilityContainer}>
@@ -507,6 +523,12 @@ export default function PokemonStatsScreen({
           onClose={() => setMoveEditVisible(false)}
           pokemon={pokemonState}
           onConfirm={handleMoveUpdate}
+        />
+
+        <EvolutionGuideModal
+          visible={evolutionVisible}
+          onClose={() => setEvolutionVisible(false)}
+          speciesId={pokemonState.speciesId}
         />
 
         <View style={styles.section}>
@@ -749,6 +771,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontStyle: "italic",
   },
+  evolutionGuideButton: {
+    marginTop: 15,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
+  evolutionGuideButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
   abilityContainer: {
     marginTop: 10,
     width: "100%",
@@ -886,15 +925,15 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   smallMovesetButton: {
-    backgroundColor: colors.modalContent,
+    backgroundColor: colors.accent,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
   smallMovesetButtonText: {
-    color: colors.accent,
+    color: "white",
     fontWeight: "bold",
     fontSize: 12,
   },
