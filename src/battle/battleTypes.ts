@@ -6,6 +6,8 @@ export type StatStages = {
   specialAttack: number;
   specialDefense: number;
   speed: number;
+  accuracy: number;
+  evasion: number;
 };
 
 export type WeatherCondition = "rain" | "sun" | "sandstorm" | "hail" | null;
@@ -58,10 +60,10 @@ export type BattleState = {
   enemyTrap?: TrapState;
 
   // ── Volatile per-turn flags ───────────────────────────
-  playerFlinched?: boolean;
-  enemyFlinched?: boolean;
+  playerFlinched: boolean;
+  enemyFlinched: boolean;
 
   // ── Bad poison (Toxic) tracking ───────────────────────
-  playerBadPoison?: boolean;
-  enemyBadPoison?: boolean;
+  playerBadPoison: boolean;
+  enemyBadPoison: boolean;
 };
