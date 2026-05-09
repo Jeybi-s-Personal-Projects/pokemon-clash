@@ -46,6 +46,7 @@ export function usePokemonList(userId: string) {
         backImage: p.pk_back_image,
         cry: p.pk_cry,
         moves: p.pokemon_moves.map((m: any) => ({
+          id: m.id,
           name: m.move_name,
           power: m.move_power,
           type: m.move_type,

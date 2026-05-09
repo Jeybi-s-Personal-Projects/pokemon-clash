@@ -1,5 +1,3 @@
-import StatusModal from "../components/statusModal";
-import { MovesetViewModal } from "../components/MovesetViewModal";
 import { colors } from "@/src/theme/color";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
@@ -14,6 +12,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MovesetViewModal } from "../components/MovesetViewModal";
+import { MoveEditModal } from "../components/pokemonData/MoveEditModal";
+import StatusModal from "../components/statusModal";
 
 import { TYPE_COLORS, TypeBadge } from "../components/TypeBadge";
 import { supabase } from "../lib/supabase";
@@ -44,6 +45,7 @@ export default function PokemonStatsScreen({
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [moveEditVisible, setMoveEditVisible] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -54,6 +56,88 @@ export default function PokemonStatsScreen({
   const playClick = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     player.play();
+  };
+
+  const handleMoveUpdate = async (newMoves: any[], replacedMoveId?: string) => {
+    playClick();
+    setMoveEditVisible(false);
+
+    try {
+      const updatedMove =
+        newMoves.find(
+          (m: any) => !pokemonState.moves.find((om: any) => om.id === m.id),
+        ) || newMoves.find((m: any) => !m.id);
+
+      if (!updatedMove) throw new Error("No new move detected.");
+
+      if (replacedMoveId) {
+        // Safe path: we have the row ID
+        const { error } = await supabase
+          .from("pokemon_moves")
+          .update({
+            move_name: updatedMove.name,
+            move_power: updatedMove.power,
+            move_pp: updatedMove.pp,
+            move_type: updatedMove.type ?? "normal",
+            move_damageClass: updatedMove.damageClass,
+            move_accuracy: updatedMove.accuracy,
+            move_statChanges: JSON.stringify(updatedMove.statChanges || []),
+            move_description: updatedMove.description,
+            move_priority: updatedMove.priority,
+          })
+          .eq("id", replacedMoveId);
+
+        if (error) throw error;
+      } else {
+        // Fallback path: delete by name and insert (matches useBattle logic)
+        // Find which move was replaced by comparing arrays
+        const moveIndex = newMoves.findIndex(
+          (m) => m.name === updatedMove.name,
+        );
+        const oldMove = pokemonState.moves[moveIndex];
+
+        await supabase
+          .from("pokemon_moves")
+          .delete()
+          .eq("pokemon_id", pokemonState.id)
+          .eq("move_name", oldMove.name);
+
+        await supabase.from("pokemon_moves").insert({
+          pokemon_id: pokemonState.id,
+          move_name: updatedMove.name,
+          move_power: updatedMove.power,
+          move_pp: updatedMove.pp,
+          move_type: updatedMove.type ?? "normal",
+          move_damageClass: updatedMove.damageClass,
+          move_accuracy: updatedMove.accuracy,
+          move_statChanges: JSON.stringify(updatedMove.statChanges || []),
+          move_description: updatedMove.description,
+          move_priority: updatedMove.priority,
+        });
+      }
+
+      // Update local state. To get the new ID for the inserted move (if fallback used),
+      // we'd need to fetch, but for now we'll just update the name/stats so the UI looks right.
+      const finalMoves = pokemonState.moves.map((m, i) => {
+        const isReplaced = replacedMoveId
+          ? m.id === replacedMoveId
+          : newMoves[i].name === updatedMove.name;
+        return isReplaced ? { ...updatedMove, id: replacedMoveId } : m;
+      });
+
+      const updatedPokemon = { ...pokemonState, moves: finalMoves };
+      setPokemon(updatedPokemon);
+      navigation.setParams({ pokemon: updatedPokemon });
+
+      setStatusMessage("Moveset updated successfully!");
+      setStatusType("success");
+      setStatusVisible(true);
+    } catch (error: any) {
+      console.error("Move update error:", error);
+      setStatusMessage(error.message);
+      setStatusType("error");
+      setStatusVisible(true);
+    }
   };
 
   const handleEquipItem = async (itemId: string | null) => {
@@ -319,12 +403,20 @@ export default function PokemonStatsScreen({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Moves</Text>
-            <TouchableOpacity
-              style={styles.smallMovesetButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.smallMovesetButtonText}>View All</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={styles.smallMovesetButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Text style={styles.smallMovesetButtonText}>View All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.smallMovesetButton}
+                onPress={() => setMoveEditVisible(true)}
+              >
+                <Text style={styles.smallMovesetButtonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.movesList}>
             {pokemonState.moves.map((move: any, index: number) => {
@@ -408,6 +500,13 @@ export default function PokemonStatsScreen({
           onClose={() => setModalVisible(false)}
           speciesId={pokemonState.speciesId}
           currentMoves={pokemonState.moves.map((m: any) => m.name)}
+        />
+
+        <MoveEditModal
+          visible={moveEditVisible}
+          onClose={() => setMoveEditVisible(false)}
+          pokemon={pokemonState}
+          onConfirm={handleMoveUpdate}
         />
 
         <View style={styles.section}>

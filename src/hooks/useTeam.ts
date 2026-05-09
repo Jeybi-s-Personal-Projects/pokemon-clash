@@ -60,6 +60,7 @@ export function useTeam(userId: string) {
         moves: p.pokemon_moves.map((m: any) => {
           const detail = MOVES[m.move_name] || {};
           return {
+            id: m.id,
             name: m.move_name,
             power: detail.power ?? 0,
             pp: m.move_pp ?? detail.pp ?? 0,

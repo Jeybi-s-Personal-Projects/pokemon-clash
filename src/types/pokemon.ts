@@ -1,6 +1,7 @@
 import { GrowthRate } from "../data/level/growthRates";
 
 export type Move = {
+  id?: string; // Database primary key
   name: string;
   power: number;
   pp: number;
