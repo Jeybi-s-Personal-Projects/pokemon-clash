@@ -1,6 +1,9 @@
 import { Pokemon } from "@/src/types/pokemon";
+import { useAudioPlayer } from "expo-audio";
 import React, { useEffect, useRef } from "react";
 import { Animated, ImageBackground, StyleSheet, View } from "react-native";
+
+const megaEvolveSound = require("@/assets/sounds/mega-evolve.mp3");
 
 interface Props {
   visible: boolean;
@@ -11,12 +14,15 @@ export const MegaEvolutionOverlay = ({ visible, pokemon }: Props) => {
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const flashOpacity = useRef(new Animated.Value(0)).current;
 
+  const player = useAudioPlayer(megaEvolveSound);
+
   useEffect(() => {
     if (visible && pokemon) {
+      player.play();
       // Visual Animations
       Animated.timing(contentOpacity, {
         toValue: 1,
-        duration: 5000,
+        duration: 4300,
         useNativeDriver: true,
       }).start();
 

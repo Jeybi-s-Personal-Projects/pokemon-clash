@@ -26,7 +26,7 @@ export function useMegaEvolution(
   }, [player.id, player.heldItem, isMega]);
 
   const handleMegaEvolution = async () => {
-    if (!canMegaEvolve) return;
+    if (!canMegaEvolve || isMegaEvolving) return;
 
     setIsMegaEvolving(true);
     setBasePlayer(player);

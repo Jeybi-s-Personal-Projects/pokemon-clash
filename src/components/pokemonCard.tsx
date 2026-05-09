@@ -120,6 +120,7 @@ export default function PokemonCard({
   maxExp,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
+  const isMega = pokemon.name.toLowerCase().includes("mega");
 
   // Animation values
   const moveAnim = useRef(new Animated.Value(0)).current;
@@ -259,7 +260,7 @@ export default function PokemonCard({
         style={{
           padding: 8,
           width: isBack ? "43%" : "50%",
-          zIndex: 1,
+          zIndex: 2,
           position: "absolute",
           top: isBack ? -20 : 0, // Adjusted top
           [isBack ? "right" : "left"]: 10,
@@ -278,8 +279,12 @@ export default function PokemonCard({
             alignItems: "center",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+            <Text 
+              style={{ fontWeight: "bold", fontSize: 14, color: "white", flex: 1 }}
+              adjustsFontSizeToFit
+              numberOfLines={1}
+            >
               {pokemon.name.toUpperCase()}
               {pokemon.isShiny && (
                 <Ionicons
@@ -396,17 +401,16 @@ export default function PokemonCard({
           transform: [{ translateY: moveAnim }, { translateX: shakeAnim }],
           position: "absolute",
           bottom: 0,
-          [isBack ? "left" : "right"]: isBack ? 0 : 40,
+          [isBack ? "left" : "right"]: isBack ? (isMega ? -20 : 0) : (isMega ? 20 : 40),
           opacity: opacityAnim,
+          zIndex: 0,
         }}
       >
         <Image
           source={{ uri: imageSource }}
           style={{
-            width: isBack ? 160 : 100,
-            marginRight: isBack ? 0 : 15,
-            marginLeft: isBack ? 15 : 0,
-            height: isBack ? 160 : 100,
+            width: isBack ? (isMega ? 220 : 160) : (isMega ? 140 : 100),
+            height: isBack ? (isMega ? 220 : 160) : (isMega ? 140 : 100),
             resizeMode: "contain",
           }}
         />

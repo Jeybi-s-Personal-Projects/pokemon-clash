@@ -174,21 +174,26 @@ export default function BattleActions({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onMegaEvolve}
+            disabled={disabled}
             style={[
               styles.toggleButton,
               {
                 borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                opacity: disabled ? 0.5 : 1,
               },
             ]}
           >
             <Image
               source={require("@/assets/icons/mega-evolution-icon.png")}
-              style={{ width: 14, height: 14 }}
+              style={{ width: 14, height: 14, opacity: disabled ? 0.5 : 1 }}
             />
             <Text
               style={[
                 styles.toggleText,
-                { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+                {
+                  color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                  opacity: disabled ? 0.5 : 1,
+                },
               ]}
             >
               MEGA
