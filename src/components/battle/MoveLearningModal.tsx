@@ -12,28 +12,7 @@ import {
 import { MOVES } from "../../data/pokemon/moves/moves";
 import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { Move, Pokemon } from "../../types/pokemon";
-
-// Use same type color map
-const TYPE_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  water: "#4FC3F7",
-  grass: "#66BB6A",
-  electric: "#FFD54F",
-  psychic: "#F48FB1",
-  ice: "#80DEEA",
-  dragon: "#7986CB",
-  dark: "#616161",
-  fairy: "#F06292",
-  normal: "#BDBDBD",
-  fighting: "#EF5350",
-  flying: "#90CAF9",
-  poison: "#AB47BC",
-  ground: "#D4A574",
-  rock: "#8D6E63",
-  bug: "#AED581",
-  ghost: "#7E57C2",
-  steel: "#78909C",
-};
+import { TYPE_COLORS, TypeBadge } from "../TypeBadge";
 
 interface MoveLearningModalProps {
   visible: boolean;
@@ -88,6 +67,7 @@ export const MoveLearningModal = ({
   const newMoveDetails = MOVES[newMove.name.toLowerCase()];
   const newMoveType = newMove.type || "normal";
   const newMoveColor = TYPE_COLORS[newMoveType] ?? "#888";
+  const isNewMoveUnique = BATTLE_MOVES[newMove.name.toLowerCase()]?.category === "unique";
 
   const renderMoveCategoryIcon = (damageClass: string | undefined) => {
     switch (damageClass) {
@@ -126,11 +106,17 @@ export const MoveLearningModal = ({
           <Text style={styles.pokemonName}>{pokemon.name.toUpperCase()}</Text>
           <Text style={styles.title}>NEW MOVE LEARNED</Text>
 
-          <View style={[styles.newMoveCard, { borderColor: newMoveColor }]}>
+          <View style={[styles.newMoveCard, { borderColor: newMoveColor, opacity: isNewMoveUnique ? 0.6 : 1 }]}>
             <View style={styles.moveHeader}>
-              <Text style={styles.newMoveName}>
-                {newMove.name.toUpperCase()}
-              </Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Text style={styles.newMoveName}>
+                  {newMove.name.toUpperCase()}
+                  {isNewMoveUnique && " (UNIQUE)"}
+                </Text>
+                <TypeBadge type={newMoveType} size="small" />
+              </View>
               {renderMoveCategoryIcon(newMoveDetails?.damageClass)}
             </View>
             <View style={styles.moveStatsRow}>
@@ -148,28 +134,38 @@ export const MoveLearningModal = ({
             {pokemon.moves.map((move, index) => {
               const details = MOVES[move.name.toLowerCase()];
               const typeColor = TYPE_COLORS[move.type || "normal"] ?? "#888";
-              const moveBattleData = BATTLE_MOVES[move.name.toLowerCase()];
-              const isDisabled =
-                (move.pp ?? 0) <= 0 || moveBattleData?.category === "unique";
+              const isUnique =
+                BATTLE_MOVES[move.name.toLowerCase()]?.category === "unique";
+              const isPpEmpty = (move.pp ?? 0) <= 0;
 
               return (
                 <TouchableOpacity
                   key={index}
                   onPress={() => handleSelect(index)}
-                  disabled={isProcessing || isDisabled}
+                  disabled={isProcessing || isPpEmpty}
                   style={[
                     styles.moveButton,
                     {
                       borderColor: typeColor,
-                      opacity: isDisabled ? 0.6 : 1,
+                      opacity: isPpEmpty || isUnique ? 0.6 : 1,
                     },
                   ]}
                 >
                   <View style={styles.moveHeader}>
-                    <Text style={styles.moveName}>
-                      {move.name.toUpperCase()}
-                      {isDisabled && " (DISABLED)"}
-                    </Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Text style={styles.moveName}>
+                        {move.name.toUpperCase()}
+                        {isPpEmpty && " (EMPTY)"}
+                        {isUnique && " (UNIQUE)"}
+                      </Text>
+                      <TypeBadge type={move.type || "normal"} size="small" />
+                    </View>
                     {renderMoveCategoryIcon(details?.damageClass)}
                   </View>
                   <View style={styles.moveStatsRow}>

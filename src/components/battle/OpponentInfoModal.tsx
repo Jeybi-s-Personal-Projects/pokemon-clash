@@ -13,28 +13,7 @@ import { ABILITIES } from "../../data/pokemon/abilities/abilities";
 import { MOVES } from "../../data/pokemon/moves/moves";
 import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { Pokemon } from "../../types/pokemon";
-
-// Use same type color map as PokemonStatsScreen
-const TYPE_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  water: "#4FC3F7",
-  grass: "#66BB6A",
-  electric: "#FFD54F",
-  psychic: "#F48FB1",
-  ice: "#80DEEA",
-  dragon: "#7986CB",
-  dark: "#616161",
-  fairy: "#F06292",
-  normal: "#BDBDBD",
-  fighting: "#EF5350",
-  flying: "#90CAF9",
-  poison: "#AB47BC",
-  ground: "#D4A574",
-  rock: "#8D6E63",
-  bug: "#AED581",
-  ghost: "#7E57C2",
-  steel: "#78909C",
-};
+import { TypeBadge, TYPE_COLORS } from "../TypeBadge";
 
 interface OpponentInfoModalProps {
   visible: boolean;
@@ -54,6 +33,11 @@ export function OpponentInfoModal({
       <View style={styles.overlay}>
         <View style={styles.content}>
           <Text style={styles.title}>{pokemon.name.toUpperCase()}</Text>
+          <View style={styles.typeContainer}>
+            {pokemon.type.map((t) => (
+              <TypeBadge key={t} type={t} size="small" />
+            ))}
+          </View>
 
           <Text style={styles.sectionTitle}>Ability</Text>
           <View style={styles.abilityBox}>
@@ -84,9 +68,12 @@ export function OpponentInfoModal({
                   ]}
                 >
                   <View style={styles.moveHeader}>
-                    <Text style={styles.moveName}>
-                      {move.name} {isDisabled && "(NO LOGIC YET)"}
-                    </Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                      <Text style={styles.moveName}>
+                        {move.name} {isDisabled && "(NO LOGIC YET)"}
+                      </Text>
+                      <TypeBadge type={moveType} size="small" />
+                    </View>
                     <View style={styles.moveClassContainer}>
                       {details?.damageClass === "physical" ? (
                         <View style={styles.moveAttackTypeContainer}>
@@ -175,6 +162,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 10,
     letterSpacing: 1,
+  },
+  typeContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 10,
   },
   sectionTitle: {
     color: colors.accent,

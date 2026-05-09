@@ -273,7 +273,7 @@ export default function BattleActions({
                 <BattleButton
                   key={i}
                   label={move.name}
-                  subLabel={`PWR ${effectivePower} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
+                  subLabel={`PWR ${move.power ?? 0} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
                   description={move.description}
                   isExpanded={isExpanded}
                   moveType={move.type}

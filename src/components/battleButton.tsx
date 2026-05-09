@@ -1,8 +1,10 @@
 import { colors } from "@/src/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { TYPE_COLORS, TypeBadge } from "./TypeBadge";
+import { TypeBadge, TYPE_COLORS } from "./TypeBadge";
+
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -36,14 +38,15 @@ export default function BattleButton({
   const accentColor = typeColor ?? (variant === "back" ? "#ffffff" : "#4299b7");
 
   const getEffectivenessLabel = () => {
-    if (effectiveness === 0) return { text: "NO EFFECT", color: "#9E9E9E" };
+    if (effectiveness === 0) return { text: "X", icon: "close", color: "#9E9E9E" };
     if (effectiveness === 0.25)
-      return { text: "NOT VERY EFFECTIVE", color: "#4469ef" };
+      return { text: "0.25X", icon: "chevron-double-down", color: "#4469ef" };
     if (effectiveness === 0.5)
-      return { text: "NOT EFFECTIVE", color: "#EF4444" };
-    if (effectiveness === 2) return { text: "EFFECTIVE", color: "#22C55E" };
+      return { text: "0.5X", icon: "chevron-down", color: "#EF4444" };
+    if (effectiveness === 2)
+      return { text: "2X", icon: "chevron-up", color: "#22C55E" };
     if (effectiveness === 4)
-      return { text: "SUPER EFFECTIVE", color: "#d5ef44" };
+      return { text: "4X", icon: "chevron-double-up", color: "#d5ef44" };
     return null;
   };
 
@@ -73,54 +76,58 @@ export default function BattleButton({
             {
               backgroundColor: effLabel.color + "44",
               borderColor: effLabel.color,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 2,
             },
           ]}
         >
-          <Text style={[styles.effText, { color: effLabel.color }]}>
+          <Text style={[styles.effText, { color: "white" }]}>
             {effLabel.text}
           </Text>
+          <MaterialCommunityIcons name={effLabel.icon as any} size={10} color="white" />
         </View>
       )}
-{/* Type badge */}
-{!isExpanded && moveType && (
-  <View style={styles.typeBadgeContainer}>
-    <TypeBadge
-      type={moveType}
-      size="small"
-      borderColor={colors.modalBorderSubtle}
-    />
-  </View>
-)}
+      {/* Type badge */}
+      {!isExpanded && moveType && (
+        <View style={styles.typeBadgeContainer}>
+          <TypeBadge
+            type={moveType}
+            size="small"
+            borderColor={colors.modalBorderSubtle}
+          />
+        </View>
+      )}
 
-{icon && (
-  <View
-    style={{
-      marginBottom: 4,
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    {icon}
-  </View>
-)}
-{!isExpanded && (
-  <Text
-    style={[
-      styles.label,
-      {
-        color: disabled ? "#555" : "white",
-        fontSize: isExpanded ? 14 : 16,
-        marginTop: moveType ? 12 : 0,
-      },
-    ]}
-  >
-    {label.toUpperCase()}
-  </Text>
-)}
+      {icon && (
+        <View
+          style={{
+            marginBottom: 4,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {icon}
+        </View>
+      )}
+      {!isExpanded && (
+        <Text
+          style={[
+            styles.label,
+            {
+              color: disabled ? "#555" : "white",
+              fontSize: isExpanded ? 14 : 16,
+              marginTop: moveType ? 12 : 0,
+            },
+          ]}
+        >
+          {label.toUpperCase()}
+        </Text>
+      )}
 
       {isExpanded && description ? (
         <Text
-          style={[styles.description, { color: "#9CA3AF" }]}
+          style={[styles.description, { color: "white" }]}
           numberOfLines={3}
         >
           {description}
