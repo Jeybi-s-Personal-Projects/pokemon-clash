@@ -100,6 +100,7 @@ export default function InventoryBagScreen({
       item: { id: item.id, name: item.name, catchRate: item.catchRate },
       fromScreen: fromScreen,
       onCatchFailed: route.params.onCatchFailed,
+      revertMegaInTeam: route.params.revertMegaInTeam,
     });
   };
 

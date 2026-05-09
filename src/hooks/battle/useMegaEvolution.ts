@@ -52,15 +52,20 @@ export function useMegaEvolution(
     setIsMegaEvolving(false);
   };
 
+  const revertPokemon = (p: Pokemon): Pokemon => {
+    if (basePlayer && p.id === basePlayer.id && p.name.includes("Mega ")) {
+      return { 
+        ...basePlayer, 
+        hp: Math.min(p.hp, basePlayer.maxHp), 
+        maxHp: basePlayer.maxHp 
+      };
+    }
+    return p;
+  };
+
   const revertMegaInTeam = (teamToRevert: Pokemon[]): Pokemon[] => {
     if (!isMega || !basePlayer) return teamToRevert;
-
-    return teamToRevert.map((p) => {
-      if (p.id === basePlayer.id && p.name.includes("Mega ")) {
-        return { ...basePlayer, hp: p.hp, maxHp: basePlayer.maxHp };
-      }
-      return p;
-    });
+    return teamToRevert.map(revertPokemon);
   };
 
   const resetMegaState = () => {

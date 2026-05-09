@@ -56,6 +56,8 @@ export type RootStackParamList = {
     pokemon: Pokemon;
     fromScreen: "Battle" | "EncounterFlow";
     onCatchFailed?: () => void;
+    revertMegaInTeam?: (team: Pokemon[]) => Pokemon[];
+    isMega?: boolean;
   };
   CatchingScreen: {
     player: Pokemon;
@@ -64,6 +66,8 @@ export type RootStackParamList = {
     item: { id: string; name: string; catchRate: number };
     fromScreen: "Battle" | "EncounterFlow";
     onCatchFailed?: () => void;
+    revertMegaInTeam?: (team: Pokemon[]) => Pokemon[];
+    isMega?: boolean;
   };
 };
 

@@ -144,3 +144,45 @@ export async function swapIntoTeam(
 
   if (benchedError) throw benchedError;
 }
+
+/**
+ * Syncs the entire team's progress to Supabase.
+ * Typically called at the end of a battle or when a session ends.
+ */
+export async function syncTeamProgress(finalTeam: Pokemon[]): Promise<void> {
+  try {
+    const syncData = finalTeam
+      .filter((p) => !!p.id)
+      .map((p) => ({
+        id: p.id,
+        pk_species_id: p.speciesId,
+        pk_name: p.name,
+        pk_types: p.type,
+        pk_ability: p.ability,
+        pk_front_image: p.frontImage,
+        pk_back_image: p.backImage,
+        pk_cry: p.cry,
+        pk_level: p.level,
+        pk_experience: p.experience,
+        pk_hp: p.hp, 
+        pk_max_hp: p.maxHp,
+        pk_attack: p.attack,
+        pk_defense: p.defense,
+        pk_special_attack: p.specialAttack,
+        pk_special_defense: p.specialDefense,
+        pk_speed: p.speed,
+      }));
+
+    if (syncData.length === 0) return;
+
+    const { error } = await supabase.from("pokemon").upsert(syncData);
+
+    if (error) {
+      console.error("Error syncing progress:", error);
+      throw error;
+    }
+  } catch (e) {
+    console.error("Failed to sync progress", e);
+    throw e;
+  }
+}

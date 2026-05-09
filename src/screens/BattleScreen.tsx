@@ -243,8 +243,11 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
           pokemon: e,
           fromScreen: "Battle",
           onCatchFailed,
+          revertMegaInTeam: battle.revertMegaInTeam,
+          isMega: battle.isMega,
         } as any)
       }
+
       isAutoBattle={isAutoBattle}
       onToggleAutoBattle={onToggleAutoBattle}
       catchFailed={catchFailed}
