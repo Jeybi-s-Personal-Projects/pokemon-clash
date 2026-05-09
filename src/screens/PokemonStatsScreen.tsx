@@ -94,7 +94,7 @@ export default function PokemonStatsScreen({
         // Fallback path: delete by name and insert (matches useBattle logic)
         // Find which move was replaced by comparing arrays
         const moveIndex = newMoves.findIndex(
-          (m) => m.name === updatedMove.name,
+          (m: any) => m.name === updatedMove.name,
         );
         const oldMove = pokemonState.moves[moveIndex];
 
@@ -120,7 +120,7 @@ export default function PokemonStatsScreen({
 
       // Update local state. To get the new ID for the inserted move (if fallback used),
       // we'd need to fetch, but for now we'll just update the name/stats so the UI looks right.
-      const finalMoves = pokemonState.moves.map((m, i) => {
+      const finalMoves = pokemonState.moves.map((m: any, i: number) => {
         const isReplaced = replacedMoveId
           ? m.id === replacedMoveId
           : newMoves[i].name === updatedMove.name;
