@@ -100,6 +100,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const { region, area, team: initialTeam } = route.params;
   const [localTeam, setLocalTeam] = useState<Pokemon[]>(initialTeam);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [defeatCount, setDefeatCount] = useState(0);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
   const [screen, setScreen] = useState<Screen>("transition");
   const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
@@ -206,6 +207,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       setLocalTeam(updatedTeam);
       setActiveIndex(newIndex);
 
+      if (winner === "player") {
+        setDefeatCount((prev) => prev + 1);
+      }
+
       if (winner === "enemy") {
         // Session ended by defeat
         await syncAllProgress(updatedTeam);
@@ -274,6 +279,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         catchPending={route.params.catchPending}
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={setIsAutoBattle}
+        defeatCount={defeatCount}
       />
     </View>
   );

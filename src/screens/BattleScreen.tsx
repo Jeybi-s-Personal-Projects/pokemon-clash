@@ -44,6 +44,7 @@ interface BattleProps {
   onToggleAutoBattle?: (v: boolean) => void;
   catchFailed?: boolean;
   onClearCatchFailed?: () => void;
+  defeatCount?: number;
 }
 
 export function Battle({
@@ -60,6 +61,7 @@ export function Battle({
   onToggleAutoBattle,
   catchFailed,
   onClearCatchFailed,
+  defeatCount = 0,
 }: BattleProps) {
   const battle = useBattle({
     player,
@@ -157,6 +159,7 @@ export function Battle({
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={onToggleAutoBattle}
         isEnemyShiny={state.enemy.isShiny}
+        defeatCount={defeatCount}
       />
 
       {/* 3. Utility Modals */}

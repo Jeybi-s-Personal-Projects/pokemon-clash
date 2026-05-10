@@ -29,6 +29,7 @@ type Props = {
   onMegaEvolve?: () => void;
   canMegaEvolve?: boolean;
   isEnemyShiny?: boolean;
+  defeatCount?: number;
 };
 
 const ACTION_CONFIG = [
@@ -71,6 +72,7 @@ export default function BattleActions({
   onMegaEvolve,
   canMegaEvolve,
   isEnemyShiny,
+  defeatCount,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -154,74 +156,103 @@ export default function BattleActions({
       ]}
     >
       <View style={styles.toggleRow}>
-        {menu === "fight" && !currentLog && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsExpanded(!isExpanded)}
-            style={styles.toggleButton}
+        <View
+          style={{
+            height: 24,
+            paddingHorizontal: 10,
+            backgroundColor: "#080B14",
+            borderWidth: 1,
+            borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+            borderTopLeftRadius: 10,
+            borderTopRightRadius: 10,
+            justifyContent: "center",
+          }}
+        >
+          <Text
+            style={{
+              color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+              fontFamily: "monospace",
+              fontSize: 8,
+              fontWeight: "bold",
+            }}
           >
-            <Ionicons
-              name={isExpanded ? "chevron-down" : "chevron-up"}
-              size={16}
-              color={colors.neonBlue}
-            />
-            <Text style={styles.toggleText}>
-              {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {canMegaEvolve && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={onMegaEvolve}
-            disabled={disabled}
-            style={[
-              styles.toggleButton,
-              {
-                borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
-                opacity: disabled ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Image
-              source={require("@/assets/icons/mega-evolution-icon.png")}
-              style={{ width: 14, height: 14, opacity: disabled ? 0.5 : 1 }}
-            />
-            <Text
+            DEFEATS: {defeatCount}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {menu === "fight" && !currentLog && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setIsExpanded(!isExpanded)}
+              style={styles.toggleButton}
+            >
+              <Ionicons
+                name={isExpanded ? "chevron-down" : "chevron-up"}
+                size={16}
+                color={colors.neonBlue}
+              />
+              <Text style={styles.toggleText}>
+                {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {canMegaEvolve && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onMegaEvolve}
+              disabled={disabled}
               style={[
-                styles.toggleText,
+                styles.toggleButton,
                 {
-                  color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                  borderColor: isAutoBattle
+                    ? colors.neonOrange
+                    : colors.neonBlue,
                   opacity: disabled ? 0.5 : 1,
                 },
               ]}
             >
-              MEGA
-            </Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
-          style={[
-            styles.toggleButton,
-            { borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
-            size={12}
-            color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
-          />
-          <Text
+              <Image
+                source={require("@/assets/icons/mega-evolution-icon.png")}
+                style={{ width: 14, height: 14, opacity: disabled ? 0.5 : 1 }}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  {
+                    color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                    opacity: disabled ? 0.5 : 1,
+                  },
+                ]}
+              >
+                MEGA
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
             style={[
-              styles.toggleText,
-              { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+              styles.toggleButton,
+              {
+                borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+              },
             ]}
           >
-            {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
-          </Text>
-        </TouchableOpacity>
+            <MaterialCommunityIcons
+              name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
+              size={12}
+              color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
+            />
+            <Text
+              style={[
+                styles.toggleText,
+                { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+              ]}
+            >
+              {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {currentLog ? (
@@ -402,10 +433,10 @@ const styles = StyleSheet.create({
     top: -24,
     left: 10,
     right: 10,
-    justifyContent: "flex-end",
-    gap: 8,
+    justifyContent: "space-between",
     zIndex: 10,
   },
+
   toggleButton: {
     height: 24,
     paddingHorizontal: 10,
