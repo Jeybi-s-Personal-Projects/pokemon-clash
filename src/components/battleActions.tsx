@@ -283,6 +283,7 @@ export default function BattleActions({
                   isExpanded={isExpanded}
                   moveType={move.type}
                   effectiveness={effectiveness}
+                  effects={move.effects}
                   onPress={() => onMovePress(i)}
                   disabled={
                     disabled ||

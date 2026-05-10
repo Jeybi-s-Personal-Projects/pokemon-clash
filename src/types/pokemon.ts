@@ -1,4 +1,5 @@
 import { GrowthRate } from "../data/level/growthRates";
+import { MoveEffect } from "./moveBattle";
 
 export type Move = {
   id?: string; // Database primary key
@@ -10,6 +11,7 @@ export type Move = {
   type?: string;
   accuracy?: number | null;
   statChanges?: { stat: string; change: number }[];
+  effects?: MoveEffect[];
   description?: string | null;
   priority?: number | null;
 };

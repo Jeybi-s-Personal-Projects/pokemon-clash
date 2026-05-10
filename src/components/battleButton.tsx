@@ -18,6 +18,7 @@ export default function BattleButton({
   icon,
   onPress,
   disabled,
+  effects,
   variant = "action",
   width = "48%",
   height = "46%",
@@ -51,6 +52,18 @@ export default function BattleButton({
   };
 
   const effLabel = getEffectivenessLabel();
+
+  const getProcessedDescription = () => {
+    if (!description) return "";
+    let processed = description;
+    if (processed.includes("$effect_chance%") && effects) {
+      const effect = effects.find((e: any) => e.chance !== undefined);
+      if (effect) {
+        processed = processed.replace("$effect_chance%", effect.chance.toString());
+      }
+    }
+    return processed;
+  };
 
   return (
     <TouchableOpacity
@@ -130,7 +143,7 @@ export default function BattleButton({
           style={[styles.description, { color: "white" }]}
           numberOfLines={3}
         >
-          {description}
+          {getProcessedDescription()}
         </Text>
       ) : subLabel ? (
         <Text
