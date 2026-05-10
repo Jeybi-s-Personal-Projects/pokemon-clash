@@ -156,6 +156,7 @@ export function Battle({
         currentLog={currentMessage}
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={onToggleAutoBattle}
+        isEnemyShiny={state.enemy.isShiny}
       />
 
       {/* 3. Utility Modals */}

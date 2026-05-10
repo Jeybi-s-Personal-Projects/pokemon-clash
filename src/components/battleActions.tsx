@@ -28,6 +28,7 @@ type Props = {
   onToggleAutoBattle?: (value: boolean) => void;
   onMegaEvolve?: () => void;
   canMegaEvolve?: boolean;
+  isEnemyShiny?: boolean;
 };
 
 const ACTION_CONFIG = [
@@ -69,6 +70,7 @@ export default function BattleActions({
   onToggleAutoBattle,
   onMegaEvolve,
   canMegaEvolve,
+  isEnemyShiny,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -109,6 +111,10 @@ export default function BattleActions({
 
   useEffect(() => {
     if (isAutoBattle && !disabled && !currentLog) {
+      if (isEnemyShiny) {
+        onToggleAutoBattle?.(false);
+        return;
+      }
       const bestIdx = findBestMoveIndex();
       if (bestIdx !== -1) {
         const timer = setTimeout(() => {
@@ -117,7 +123,7 @@ export default function BattleActions({
         return () => clearTimeout(timer);
       }
     }
-  }, [isAutoBattle, disabled, currentLog]);
+  }, [isAutoBattle, disabled, currentLog, isEnemyShiny]);
 
   useEffect(() => {
     if (currentLog) {
