@@ -343,6 +343,7 @@ export default function CatchingScreen({
           attackingSide={null}
           dancingSide={null}
           hitSide={null}
+          floatingDamage={null}
           isEnemyCaught={isEnemyCaught}
         />
 

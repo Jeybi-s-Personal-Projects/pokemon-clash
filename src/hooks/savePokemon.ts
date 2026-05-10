@@ -18,17 +18,13 @@ import { Pokemon } from "../types/pokemon";
 
 /**
  * Saves a caught Pokémon to Supabase.
- *
- * Returns:
- *   { data, teamFull: false } — Pokémon added to active roster
- *   { data, teamFull: true  } — Team was full, Pokémon saved to box.
- *                               Show the swap modal then call swapIntoTeam().
  */
 export async function savePokemon(
   pokemon: Pokemon,
   userId: string,
 ): Promise<{ data: any; teamFull: boolean }> {
   // ── Step 1: Insert into Supabase ──
+  // Note: We save caught pokemon with FULL HP.
   const { data, error } = await supabase
     .from("pokemon")
     .insert({
@@ -37,7 +33,7 @@ export async function savePokemon(
       pk_name: pokemon.name,
       pk_level: pokemon.level,
       pk_experience: pokemon.experience,
-      pk_hp: pokemon.hp,
+      pk_hp: pokemon.maxHp, // Fully heal caught pokemon
       pk_max_hp: pokemon.maxHp,
       pk_attack: pokemon.attack,
       pk_defense: pokemon.defense,
@@ -60,21 +56,25 @@ export async function savePokemon(
   const moves = pokemon.moves.map((move) => ({
     pokemon_id: data.id,
     move_name: move.name,
-    move_power: move.power,
-    move_pp: move.pp,
+    move_power: move.power ?? 0,
+    move_pp: move.pp ?? 0,
     move_type: move.type ?? "normal",
-    move_damageClass: move.damageClass,
-    move_accuracy: move.accuracy,
+    move_damageClass: move.damageClass ?? "status",
+    move_accuracy: move.accuracy ?? 100,
     move_statChanges: move.statChanges ? JSON.stringify(move.statChanges) : "[]",
-    move_description: move.description,
-    move_priority: move.priority,
+    move_description: move.description ?? "",
+    move_priority: move.priority ?? 0,
   }));
 
   const { error: movesError } = await supabase
     .from("pokemon_moves")
     .insert(moves);
 
-  if (movesError) throw movesError;
+  if (movesError) {
+    console.error("Error saving moves for caught pokemon:", movesError);
+    // We don't throw here to avoid failing the whole catch, 
+    // but the pokemon will have no moves in the DB.
+  }
 
   // ── Step 3: Check team size from Supabase ──
   const { count, error: countError } = await supabase
@@ -105,18 +105,12 @@ export async function savePokemon(
 // ─── Swap ─────────────────────────────────────────────────────────────────────
 
 /**
- * Swaps a boxed Pokémon into the team, benching the chosen team member.
- *
- * Call this after the player picks who to replace in the swap modal.
- *
- * @param newPokemonId    Supabase id of the newly caught Pokémon (currently in box)
- * @param replacedId      Supabase id of the team member being benched
+ * Swaps a boxed Pokémon into the team.
  */
 export async function swapIntoTeam(
   newPokemonId: string,
   replacedId: string,
 ): Promise<void> {
-  // 1. Get the order of the pokemon we are replacing to maintain team position
   const { data: benchedPk, error: fetchError } = await supabase
     .from("pokemon")
     .select("pk_order")
@@ -127,9 +121,6 @@ export async function swapIntoTeam(
 
   const targetOrder = benchedPk?.pk_order ?? 1;
 
-  // 2. Update Supabase: 
-  // - New pokemon takes the order of the benched one
-  // - Benched pokemon order becomes null
   const { error: newPkError } = await supabase
     .from("pokemon")
     .update({ pk_order: targetOrder })
@@ -145,11 +136,16 @@ export async function swapIntoTeam(
   if (benchedError) throw benchedError;
 }
 
+// ─── Sync ─────────────────────────────────────────────────────────────────────
+
 /**
- * Syncs the entire team's progress to Supabase.
- * Typically called at the end of a battle or when a session ends.
+ * Robustly syncs the entire team's progress to Supabase,
+ * including their current movesets.
  */
-export async function syncTeamProgress(finalTeam: Pokemon[]): Promise<void> {
+export async function syncAllProgress(
+  finalTeam: Pokemon[],
+  shouldHeal: boolean = false,
+): Promise<void> {
   try {
     const syncData = finalTeam
       .filter((p) => !!p.id)
@@ -164,7 +160,7 @@ export async function syncTeamProgress(finalTeam: Pokemon[]): Promise<void> {
         pk_cry: p.cry,
         pk_level: p.level,
         pk_experience: p.experience,
-        pk_hp: p.hp, 
+        pk_hp: shouldHeal ? p.maxHp : p.hp,
         pk_max_hp: p.maxHp,
         pk_attack: p.attack,
         pk_defense: p.defense,
@@ -175,14 +171,50 @@ export async function syncTeamProgress(finalTeam: Pokemon[]): Promise<void> {
 
     if (syncData.length === 0) return;
 
-    const { error } = await supabase.from("pokemon").upsert(syncData);
+    // 1. Upsert stats
+    const { error: pokemonError } = await supabase.from("pokemon").upsert(syncData);
+    if (pokemonError) throw pokemonError;
 
-    if (error) {
-      console.error("Error syncing progress:", error);
-      throw error;
+    // 2. Sync moves for each pokemon
+    // To ensure moves are always accurate, we delete and re-insert.
+    for (const p of finalTeam) {
+      if (!p.id) continue;
+
+      // Skip move sync if moves array is empty/invalid
+      if (!p.moves || p.moves.length === 0) continue;
+
+      // Delete existing moves
+      await supabase.from("pokemon_moves").delete().eq("pokemon_id", p.id);
+
+      // Insert current moves
+      const movesToInsert = p.moves.map((m) => ({
+        pokemon_id: p.id,
+        move_name: m.name,
+        move_power: m.power ?? 0,
+        move_pp: m.pp ?? 0,
+        move_type: m.type ?? "normal",
+        move_damageClass: m.damageClass ?? "status",
+        move_accuracy: m.accuracy ?? 100,
+        move_statChanges: m.statChanges ? JSON.stringify(m.statChanges) : "[]",
+        move_description: m.description ?? "",
+        move_priority: m.priority ?? 0,
+      }));
+
+      const { error: movesError } = await supabase
+        .from("pokemon_moves")
+        .insert(movesToInsert);
+      
+      if (movesError) console.error(`Error syncing moves for ${p.name}:`, movesError);
     }
   } catch (e) {
-    console.error("Failed to sync progress", e);
+    console.error("Failed to sync all progress", e);
     throw e;
   }
+}
+
+/**
+ * Legacy wrapper for backward compatibility.
+ */
+export async function syncTeamProgress(finalTeam: Pokemon[]): Promise<void> {
+  return syncAllProgress(finalTeam, false);
 }

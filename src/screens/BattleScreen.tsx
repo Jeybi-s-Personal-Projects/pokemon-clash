@@ -31,12 +31,12 @@ interface BattleProps {
   ) => void;
   onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onRun?: (finalTeam: Pokemon[]) => void;
-  // In Battle component, change onBagPress prop type:
   onBagPress?: (
     player: Pokemon,
     team: Pokemon[],
     currentEnemy: Pokemon,
     onCatchFailed: () => void,
+    revertMega?: (team: Pokemon[]) => Pokemon[],
   ) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
@@ -143,7 +143,8 @@ export function Battle({
             state.player,
             state.team,
             state.enemy,
-            () => battle.processTurnPenalty(), // pass penalty as callback
+            () => battle.processTurnPenalty(),
+            battle.revertMegaInTeam,
           )
         }
         onRun={() => onRun?.(battle.revertMegaInTeam(state.team))}
@@ -243,13 +244,14 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
         if (onRun) onRun(finalTeam);
         else navigation.goBack();
       }}
-      onBagPress={(p, t, e, onCatchFailed) =>
+      onBagPress={(p, t, e, onCatchFailed, revertMega) =>
         navigation.navigate("InventoryBag", {
           player: p,
           team: t,
           pokemon: e,
           fromScreen: "Battle",
           onCatchFailed,
+          revertMegaInTeam: revertMega,
         } as any)
       }
 

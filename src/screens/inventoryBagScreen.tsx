@@ -38,14 +38,14 @@ const POKEBALL_ITEMS: BagItem[] = [
     id: "great-ball",
     name: "Great Ball",
     description: "Better catch rate than Poké Ball",
-    catchRate: 1.5,
+    catchRate: 25,
     sprite: require("../../assets/items/greatball.png"),
   },
   {
     id: "ultra-ball",
     name: "Ultra Ball",
     description: "High performance ball",
-    catchRate: 2,
+    catchRate: 50,
     sprite: require("../../assets/items/ultraball.png"),
   },
   {
