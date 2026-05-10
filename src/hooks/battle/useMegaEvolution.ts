@@ -1,8 +1,9 @@
+import { processSwitchInAbilities } from "../../battle/abilityHandler";
+import { applyMegaEvolution } from "../../utils/megaEvolutionUtils";
+import { delay } from "../../utils/battleUtils";
 import { useState, useEffect } from "react";
 import { Pokemon } from "../../types/pokemon";
 import { MEGA_STATS } from "../../data/pokemon/stats/megaStats";
-import { applyMegaEvolution } from "../../utils/megaEvolutionUtils";
-import { delay } from "../../utils/battleUtils";
 
 export function useMegaEvolution(
   player: Pokemon,
@@ -36,6 +37,7 @@ export function useMegaEvolution(
     const nextTeam = [...team];
     nextTeam[activePlayerIndex] = evolvedPokemon;
 
+    // First update the state to reflect the evolution
     setState((prev: any) => ({
       ...prev,
       player: evolvedPokemon,
@@ -46,11 +48,32 @@ export function useMegaEvolution(
     setCanMegaEvolve(false);
     setCurrentMessage(`${evolvedPokemon.name.toUpperCase()} has Mega Evolved!`);
 
-    await delay(5000);
+    await delay(2000);
+
+    // Now process the new ability as a switch-in effect
+    // We need to fetch the *latest* state to ensure we're processing the updated player
+    let abilityMessages: string[] = [];
+    setState((prev: any) => {
+        processSwitchInAbilities("player", prev).then((result) => {
+            setState((p: any) => ({
+                ...p,
+                ...result.newState,
+            }));
+            abilityMessages = result.messages;
+        });
+        return prev;
+    });
+
+    await delay(1000);
+    for (const msg of abilityMessages) {
+        setCurrentMessage(msg);
+        await delay(2000);
+    }
 
     setCurrentMessage(null);
     setIsMegaEvolving(false);
   };
+// ... rest of the file
 
   const revertPokemon = (p: Pokemon): Pokemon => {
     if (basePlayer && p.id === basePlayer.id && p.name.includes("Mega ")) {
