@@ -72,6 +72,7 @@ export function Battle({
     onSave,
     catchPending,
     onToggleAutoBattle,
+    defeatCount,
   });
 
   const { state, currentMessage } = battle;

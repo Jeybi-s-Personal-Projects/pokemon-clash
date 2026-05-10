@@ -18,7 +18,13 @@ export type WinHandlerContext = {
   resetMegaState: () => void;
   onToggleAutoBattle?: (v: boolean) => void;
   onCheckpoint?: (team: Pokemon[]) => void;
-  onBattleEnd?: (winner: "player" | "enemy", team: Pokemon[], hasMilestone: boolean, activeIndex: number) => void;
+  onBattleEnd?: (
+    winner: "player" | "enemy",
+    team: Pokemon[],
+    hasMilestone: boolean,
+    activeIndex: number,
+  ) => void;
+  defeatCount?: number;
 };
 
 export const handleWinner = async (
@@ -38,6 +44,7 @@ export const handleWinner = async (
     onToggleAutoBattle,
     onCheckpoint,
     onBattleEnd,
+    defeatCount = 0,
   } = context;
 
   setState((s) => ({ ...currentState, winner }));
@@ -48,11 +55,26 @@ export const handleWinner = async (
       `The wild ${currentState.enemy.name.toUpperCase()} fainted!`,
     );
 
-    const baseExpGain = calculateExpGain(
+    // 1. Calculate base experience
+    let baseExpGain = calculateExpGain(
       currentState.enemy.level,
       currentState.enemy.speciesId,
       true,
     );
+
+    // 2. Add Milestone Bonus
+    const currentDefeat = defeatCount + 1;
+    if (currentDefeat % 10 === 0) {
+      const n = currentDefeat / 10;
+      const bonusXP = n * 1000;
+      baseExpGain += bonusXP;
+
+      await delay(1200);
+      setCurrentMessage("MILESTONE REACHED!");
+      await delay(1000);
+      setCurrentMessage(`BONUS ${bonusXP} XP GRANTED TO TEAM!`);
+      await delay(1200);
+    }
 
     const finalTeam = [...currentState.team];
     let hasMilestone = false;

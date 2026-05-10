@@ -34,6 +34,7 @@ interface UseBattleOptions {
   onSave?: () => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onToggleAutoBattle?: (v: boolean) => void;
+  defeatCount?: number;
 }
 
 export function useBattle({
@@ -45,6 +46,7 @@ export function useBattle({
   onSave,
   catchPending,
   onToggleAutoBattle,
+  defeatCount = 0,
 }: UseBattleOptions) {
   const { user } = useAuth();
   
@@ -120,6 +122,7 @@ export function useBattle({
     onToggleAutoBattle,
     onCheckpoint,
     onBattleEnd,
+    defeatCount,
   });
 
   const teamMgmt = useTeamManagement(
