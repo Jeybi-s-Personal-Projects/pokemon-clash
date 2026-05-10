@@ -118,7 +118,7 @@ export async function processSwitchInAbilities(
     case "drizzle":
       if (state.weather !== "rain") {
         state.weather = "rain";
-        state.weatherTurns = -1;
+        state.weatherTurns = 5; 
         messages.push(`${enteringName}'s Drizzle summoned rain!`);
       }
       break;
@@ -126,7 +126,7 @@ export async function processSwitchInAbilities(
     case "drought":
       if (state.weather !== "sun") {
         state.weather = "sun";
-        state.weatherTurns = -1;
+        state.weatherTurns = 5;
         messages.push(`${enteringName}'s Drought intensified the sun's rays!`);
       }
       break;
@@ -134,7 +134,7 @@ export async function processSwitchInAbilities(
     case "sand-stream":
       if (state.weather !== "sandstorm") {
         state.weather = "sandstorm";
-        state.weatherTurns = -1;
+        state.weatherTurns = 5;
         messages.push(`${enteringName}'s Sand Stream whipped up a sandstorm!`);
       }
       break;
@@ -142,10 +142,11 @@ export async function processSwitchInAbilities(
     case "snow-warning":
       if (state.weather !== "hail") {
         state.weather = "hail";
-        state.weatherTurns = -1;
+        state.weatherTurns = 5;
         messages.push(`${enteringName}'s Snow Warning whipped up a hailstorm!`);
       }
       break;
+
 
     case "trace":
       const targetAbility = opponentPokemon.ability;

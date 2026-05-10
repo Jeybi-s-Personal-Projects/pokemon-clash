@@ -419,7 +419,7 @@ export default function PokemonCard({
         style={{
           transform: [{ translateY: moveAnim }, { translateX: shakeAnim }],
           position: "absolute",
-          bottom: isBack ? 0 : -20,
+          bottom: isBack ? 0 : -10,
           [isBack ? "left" : "right"]: isBack
             ? isMega
               ? -20
