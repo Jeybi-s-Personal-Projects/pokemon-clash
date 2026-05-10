@@ -28,14 +28,14 @@ export const MoveEditModal: React.FC<Props> = ({ visible, onClose, pokemon, onCo
       const speciesData = SPECIES[pokemon.speciesId];
       if (!speciesData) return;
 
-      const normalize = (s: string) => s.toLowerCase().replace(/[\s-]/g, '');
+      const normalize = (s: string) => s.toLowerCase().replace(/[\s]/g, '-');
       const currentMoveNorm = pokemon.moves.map(m => normalize(m.name));
       
       const learnable = speciesData.rawMoves
         .filter(m => m.levelLearned <= pokemon.level)
         .filter(m => !currentMoveNorm.includes(normalize(m.name)))
         .map(m => {
-           const slug = m.name.toLowerCase();
+           const slug = normalize(m.name);
            const battleData = BATTLE_MOVES[slug];
            
            if (!battleData || battleData.category === 'unique') return null;
