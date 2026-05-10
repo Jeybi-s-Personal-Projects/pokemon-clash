@@ -1286,6 +1286,17 @@ export const ITEMS: Item[] = [
     },
   },
   {
+    id: "feraligatrite",
+    name: "Feraligatrite",
+    gen: 6,
+    category: {
+      category: "mega-stone",
+      megaOf: "feraligatrite",
+      megaForm: "mega-feraligatr",
+      effect: "Allows Mega Evolution of Feraligatrite.",
+    },
+  },
+  {
     id: "mewtwonite-x",
     name: "Mewtwonite X",
     gen: 6,
