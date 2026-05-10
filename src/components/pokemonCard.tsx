@@ -17,6 +17,7 @@ type Props = {
   stages?: StatStages;
   exp?: number;
   maxExp?: number;
+  floatingDamage?: number | null;
 };
 
 const getStatMultiplier = (stage: number) => {
@@ -118,6 +119,7 @@ export default function PokemonCard({
   stages,
   exp,
   maxExp,
+  floatingDamage,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
   const isMega = pokemon.name.toLowerCase().includes("mega");
@@ -125,6 +127,20 @@ export default function PokemonCard({
   // Animation values
   const moveAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (floatingDamage) {
+      floatAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -60,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [floatingDamage]);
 
   useEffect(() => {
     if (isAttacking) {
@@ -255,6 +271,32 @@ export default function PokemonCard({
         justifyContent: "center",
       }}
     >
+      {/* Floating Damage Text */}
+      {floatingDamage && (
+        <Animated.View
+          style={{
+            position: "absolute",
+            zIndex: 10,
+            top: 50,
+            [isBack ? "left" : "right"]: 50,
+            transform: [{ translateY: floatAnim }],
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "900",
+              color: "#EF4444",
+              textShadowColor: "black",
+              textShadowOffset: { width: 1, height: 1 },
+              textShadowRadius: 2,
+            }}
+          >
+            -{Math.round(floatingDamage)}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* Static Info Box */}
       <View
         style={{

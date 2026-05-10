@@ -260,6 +260,21 @@ export const executeMove = async (
         }
       }
 
+      // ── Floating Damage & Tracking ─────────────────────────
+      if (currentHitDamage > 0) {
+        setState((s) => ({
+          ...s,
+          totalDamage: {
+            ...s.totalDamage,
+            [isPlayerAttacking ? "enemy" : "player"]:
+              s.totalDamage[isPlayerAttacking ? "enemy" : "player"] + currentHitDamage,
+          },
+          floatingDamage: { amount: currentHitDamage, side: isPlayerAttacking ? "enemy" : "player" },
+        }));
+        await delay(600);
+        setState((s) => ({ ...s, floatingDamage: null }));
+      }
+
       if (hitCount > 1) {
         await delay(400);
       }

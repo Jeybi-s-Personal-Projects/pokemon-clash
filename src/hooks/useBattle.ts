@@ -58,6 +58,8 @@ export function useBattle({
     attackingSide: null,
     dancingSide: null,
     hitSide: null,
+    totalDamage: { player: 0, enemy: 0 },
+    floatingDamage: null,
     playerStages: { ...initialStages },
     enemyStages: { ...initialStages },
     weather: null,

@@ -38,6 +38,10 @@ export type BattleState = {
   dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
 
+  // ── Damage Tracking ───────────────────────────────────
+  totalDamage: { player: number; enemy: number };
+  floatingDamage: { amount: number; side: "player" | "enemy" } | null;
+
   // ── Stat stages ───────────────────────────────────────
   playerStages: StatStages;
   enemyStages: StatStages;

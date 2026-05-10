@@ -109,6 +109,7 @@ export function Battle({
         attackingSide={state.attackingSide}
         dancingSide={state.dancingSide}
         hitSide={state.hitSide}
+        floatingDamage={state.floatingDamage}
         isPlayerEntering={battle.isPlayerEntering}
         onEnemyPress={() => setInfoModalVisible(true)}
         onPlayerPress={() => setStatsModalVisible(true)}
