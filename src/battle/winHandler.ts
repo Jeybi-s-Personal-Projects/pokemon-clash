@@ -204,7 +204,6 @@ export const handleWinner = async (
             `${updatedPokemon.name.toUpperCase()} evolved into ${newSpeciesData.name.toUpperCase()}!`,
           );
           await delay(2000);
-          if (onToggleAutoBattle) onToggleAutoBattle(false);
         }
       } else {
         updatedPokemon.experience += sharedExp;

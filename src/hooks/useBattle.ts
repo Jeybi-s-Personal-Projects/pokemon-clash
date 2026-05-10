@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAIMove } from "../battle/ai";
 import { determineTurnOrder, isGameOver } from "../battle/battleEngine";
 import { BattleState, TrapState } from "../battle/battleTypes";
@@ -8,7 +8,7 @@ import { delay } from "../utils/battleUtils";
 import { getWeatherContinueMessage } from "../utils/weatherUtils";
 
 // Modularized components
-import { processSwitchInAbilities } from "../battle/abilityHandler";
+import { processEndTurnAbilities, processSwitchInAbilities } from "../battle/abilityHandler";
 import { initialStages } from "../battle/battleConstants";
 import { executeMove, ExecutionContext } from "../battle/moveExecutor";
 import {
@@ -47,6 +47,16 @@ export function useBattle({
   onToggleAutoBattle,
 }: UseBattleOptions) {
   const { user } = useAuth();
+  
+  // Mutex lock to prevent overlapping async actions
+  const isProcessing = useRef(false);
+  const [isBusy, setIsBusy] = useState(false);
+
+  const setProcessing = (val: boolean) => {
+    isProcessing.current = val;
+    setIsBusy(val);
+  };
+
   const [state, setState] = useState<BattleState>({
     player,
     team,
@@ -133,32 +143,45 @@ export function useBattle({
   // ── Initial Entry Abilities ──────────────────────────────────────────
   useEffect(() => {
     const triggerInitialAbilities = async () => {
+      if (isProcessing.current) return;
+      setProcessing(true);
+
       // Small delay to let the battle screen render
       await delay(1000);
 
       let currentState = { ...state };
-
-      // Process Enemy Switch-in first (standard order)
-      const enemyResult = await processSwitchInAbilities("enemy", currentState);
-      currentState = enemyResult.newState;
-      for (const msg of enemyResult.messages) {
-        setCurrentMessage(msg);
-        await delay(1200);
+      
+      // Check if game is already over (e.g. player entered with 0 HP)
+      const initialWinner = isGameOver(currentState);
+      if (initialWinner) {
+        winHandler(initialWinner, currentState, getWinContext(currentState));
+        setProcessing(false);
+        return;
       }
 
-      // Process Player Switch-in
-      const playerResult = await processSwitchInAbilities(
-        "player",
-        currentState,
-      );
-      currentState = playerResult.newState;
-      for (const msg of playerResult.messages) {
-        setCurrentMessage(msg);
-        await delay(1200);
+      // 1. Enemy Switch-in
+      const enemyResult = await processSwitchInAbilities("enemy", currentState);
+      if (enemyResult.messages.length > 0) {
+        for (const msg of enemyResult.messages) {
+          setCurrentMessage(msg);
+          await delay(1200);
+        }
+        currentState = { ...currentState, ...enemyResult.newState };
+      }
+
+      // 2. Player Switch-in
+      const playerResult = await processSwitchInAbilities("player", currentState);
+      if (playerResult.messages.length > 0) {
+        for (const msg of playerResult.messages) {
+          setCurrentMessage(msg);
+          await delay(1200);
+        }
+        currentState = { ...currentState, ...playerResult.newState };
       }
 
       setState(currentState);
       setCurrentMessage(null);
+      setProcessing(false);
     };
 
     triggerInitialAbilities();
@@ -167,6 +190,7 @@ export function useBattle({
   // ── attack — main turn logic ──────────────────────────────────────────
   const attack = async (playerMoveIndex: number) => {
     if (
+      isProcessing.current ||
       state.attackingSide ||
       state.dancingSide ||
       state.winner ||
@@ -174,11 +198,14 @@ export function useBattle({
     )
       return;
 
+    setProcessing(true);
+
     const playerMove = state.player.moves[playerMoveIndex];
     if (playerMove.pp <= 0) {
       setCurrentMessage("No PP left for this move!");
       await delay(1000);
       setCurrentMessage(null);
+      setProcessing(false);
       return;
     }
 
@@ -333,6 +360,7 @@ export function useBattle({
         const winner = isGameOver(currentState);
         if (winner) {
           winHandler(winner, currentState, getWinContext(currentState));
+          setProcessing(false);
           return;
         }
         continue;
@@ -362,6 +390,7 @@ export function useBattle({
       const winner = isGameOver(currentState);
       if (winner) {
         winHandler(winner, currentState, getWinContext(currentState));
+        setProcessing(false);
         return;
       }
       await delay(1000);
@@ -422,6 +451,7 @@ export function useBattle({
             const winner = isGameOver(finalState);
             if (winner) {
               winHandler(winner, finalState, getWinContext(finalState));
+              setProcessing(false);
               return;
             }
           }
@@ -469,7 +499,8 @@ export function useBattle({
       }
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, finalState, getWinContext(finalState));
+        winHandler(winner, currentState, getWinContext(currentState));
+        setProcessing(false);
         return;
       }
     }
@@ -516,7 +547,25 @@ export function useBattle({
       setState((s) => ({ ...s, hitSide: null }));
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, finalState, getWinContext(finalState));
+        winHandler(winner, currentState, getWinContext(currentState));
+        setProcessing(false);
+        return;
+      }
+    }
+
+    // 4. End Turn Abilities (Speed Boost, Shed Skin, etc.)
+    for (const side of ["player", "enemy"] as const) {
+      const abilityResult = await processEndTurnAbilities(side, finalState);
+      finalState = { ...finalState, ...abilityResult.newState };
+      for (const msg of abilityResult.messages) {
+        setCurrentMessage(msg);
+        await delay(1200);
+      }
+      setState(finalState);
+      const winner = isGameOver(finalState);
+      if (winner) {
+        winHandler(winner, currentState, getWinContext(currentState));
+        setProcessing(false);
         return;
       }
     }
@@ -536,10 +585,12 @@ export function useBattle({
     } else {
       setCurrentMessage(null);
     }
+    setProcessing(false);
   };
 
   const processTurnPenalty = async () => {
-    if (state.winner || currentMessage) return;
+    if (isProcessing.current || state.winner || currentMessage) return;
+    setProcessing(true);
     setCurrentMessage(null);
     await delay(300);
     const enemyMove = getAIMove(state.enemy, state.player);
@@ -566,11 +617,13 @@ export function useBattle({
     } else {
       setCurrentMessage(null);
     }
+    setProcessing(false);
   };
 
   return {
     state,
     currentMessage,
+    isBusy,
     isPlayerEntering,
     learningPokemon: learning.learningPokemon,
     attack,

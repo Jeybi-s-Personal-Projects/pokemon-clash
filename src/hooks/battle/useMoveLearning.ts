@@ -72,8 +72,6 @@ export function useMoveLearning(
     setPendingMove(null);
     setLearningPokemon(null);
     setResolveMoveLearning(null);
-
-    if (onToggleAutoBattle) onToggleAutoBattle(false);
   };
 
   return {

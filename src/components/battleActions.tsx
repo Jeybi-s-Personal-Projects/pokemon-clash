@@ -74,41 +74,35 @@ export default function BattleActions({
   const [isExpanded, setIsExpanded] = useState(false);
   const cursorOpacity = useRef(new Animated.Value(1)).current;
 
-  const findBestMoveIndex = () => {
+  const findBestMoveIndex = (): number => {
     let bestIndex = -1;
-    let maxEffectivePower = -1;
+    let maxScore = -1;
 
     moves.forEach((move, i) => {
+      // 1. Skip if no PP
       if ((move.pp ?? 0) <= 0) return;
 
+      let score = 0;
       const power = move.power ?? 0;
-      if (power === 0) return;
-
       const moveType = (move.type || "normal") as PokemonType;
-      const effectiveness = getTypeMultiplier(
-        moveType,
-        enemyTypes as PokemonType[],
-      );
 
-      // STAB: Same Type Attack Bonus (1.5x)
-      const stab = playerTypes.includes(moveType) ? 1.5 : 1;
-      const effectivePower = power * (effectiveness ?? 1) * stab;
+      // 2. Damage-based scoring
+      if (power > 0) {
+        const effectiveness =
+          getTypeMultiplier(moveType, enemyTypes as PokemonType[]) ?? 1;
+        const stab = playerTypes.includes(moveType) ? 1.5 : 1;
+        score = power * effectiveness * stab;
+      } else {
+        // 3. Status/Utility move scoring (fallback)
+        // Give base utility score to non-damage moves
+        score = 50;
+      }
 
-      if (effectivePower > maxEffectivePower) {
-        maxEffectivePower = effectivePower;
+      if (score > maxScore) {
+        maxScore = score;
         bestIndex = i;
       }
     });
-
-    if (bestIndex === -1) {
-      let maxPP = -1;
-      moves.forEach((move, i) => {
-        if ((move.pp ?? 0) > maxPP) {
-          maxPP = move.pp ?? 0;
-          bestIndex = i;
-        }
-      });
-    }
 
     return bestIndex;
   };
