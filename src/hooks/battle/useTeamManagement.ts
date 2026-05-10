@@ -8,6 +8,7 @@ import { initialStages } from "../../battle/battleConstants";
 import { getAIMove } from "../../battle/ai";
 import { delay } from "../../utils/battleUtils";
 import { isGameOver } from "../../battle/battleEngine";
+import { processSwitchInAbilities } from "../../battle/abilityHandler";
 
 export function useTeamManagement(
   userId: string | undefined,
@@ -114,10 +115,9 @@ export function useTeamManagement(
     }
 
     setCurrentMessage(`Go! ${state.team[index].name.toUpperCase()}!`);
-
     await delay(1200);
 
-    const newState: BattleState = {
+    let newState: BattleState = {
       ...state,
       player: state.team[index],
       activePlayerIndex: index,
@@ -130,8 +130,17 @@ export function useTeamManagement(
       playerBadPoison: false,
     };
 
+    // ── Process Switch-in Abilities ──
+    const abilityResult = await processSwitchInAbilities("player", newState);
+    newState = abilityResult.newState;
+    
     setState(newState);
     setIsPlayerEntering(true);
+
+    for (const msg of abilityResult.messages) {
+      setCurrentMessage(msg);
+      await delay(1200);
+    }
 
     await delay(600);
     setIsPlayerEntering(false);

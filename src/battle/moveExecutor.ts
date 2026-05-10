@@ -5,13 +5,14 @@ import {
   checkMovePrerequisites,
   delay,
   processMoveEffects,
+  applyStatChanges,
 } from "../utils/battleUtils";
 import { dealDamage } from "./battleEngine";
 import { getMoveId, CHARGE_MESSAGES } from "./battleConstants";
 import { MOVE_STATUS_MAP, getStatusDuration } from "../utils/statusUtils";
 import { MOVE_WEATHER_MAP, getWeatherStartMessage } from "../utils/weatherUtils";
-import { applyStatChanges } from "../utils/battleUtils";
 import { ChargeState } from "../types/moveBattle";
+import { getAbilityDisplayName, isImmuneToStatus, processContactAbility } from "./abilityHandler";
 
 export type ExecutionContext = {
   setCurrentMessage: (msg: string | null) => void;
@@ -239,6 +240,26 @@ export const executeMove = async (
         nextPlayerHp = Math.max(0, nextPlayerHp - damage);
       }
 
+      // ── Contact Ability Check ──
+      if (damage > 0 && move.damageClass === "physical") {
+        const contactResult = await processContactAbility(attackerSide, currentState);
+        if (contactResult.messages.length > 0) {
+          for (const msg of contactResult.messages) {
+            setCurrentMessage(msg);
+            await delay(1200);
+          }
+          if (isPlayerAttacking) {
+            nextPlayerHp = contactResult.newState.player.hp;
+            nextPlayerStatus = contactResult.newState.player.status;
+            nextPlayerStatusTurns = contactResult.newState.player.statusTurns;
+          } else {
+            nextEnemyHp = contactResult.newState.enemy.hp;
+            nextEnemyStatus = contactResult.newState.enemy.status;
+            nextEnemyStatusTurns = contactResult.newState.enemy.statusTurns;
+          }
+        }
+      }
+
       if (hitCount > 1) {
         await delay(400);
       }
@@ -333,7 +354,10 @@ export const executeMove = async (
           const roll = Math.random() * 100;
           if (roll < statusEffect.chance) {
             if (statusEffect.isVolatile) {
-              if (!fallbackDefenderConfusionTurns) {
+              if (isImmuneToStatus(defender, "confusion")) {
+                setCurrentMessage(`${defender.name.toUpperCase()}'s ${getAbilityDisplayName(defender.ability!)} prevents confusion!`);
+                await delay(1200);
+              } else if (!fallbackDefenderConfusionTurns) {
                 fallbackDefenderConfusionTurns =
                   getStatusDuration("confusion");
                 setCurrentMessage(
@@ -342,30 +366,35 @@ export const executeMove = async (
                 await delay(1200);
               }
             } else if (!fallbackDefenderStatus) {
-              fallbackDefenderStatus = statusEffect.status;
-              fallbackDefenderStatusTurns = getStatusDuration(
-                statusEffect.status,
-              );
-              let statusMsg = "";
-              switch (fallbackDefenderStatus) {
-                case "poison":
-                  statusMsg = `${defender.name.toUpperCase()} was poisoned!`;
-                  break;
-                case "burn":
-                  statusMsg = `${defender.name.toUpperCase()} was burned!`;
-                  break;
-                case "paralysis":
-                  statusMsg = `${defender.name.toUpperCase()} is paralyzed!`;
-                  break;
-                case "sleep":
-                  statusMsg = `${defender.name.toUpperCase()} fell asleep!`;
-                  break;
-                case "freeze":
-                  statusMsg = `${defender.name.toUpperCase()} was frozen solid!`;
-                  break;
+              if (isImmuneToStatus(defender, statusEffect.status)) {
+                setCurrentMessage(`${defender.name.toUpperCase()}'s ${getAbilityDisplayName(defender.ability!)} prevents ${statusEffect.status}!`);
+                await delay(1200);
+              } else {
+                fallbackDefenderStatus = statusEffect.status;
+                fallbackDefenderStatusTurns = getStatusDuration(
+                  statusEffect.status,
+                );
+                let statusMsg = "";
+                switch (fallbackDefenderStatus) {
+                  case "poison":
+                    statusMsg = `${defender.name.toUpperCase()} was poisoned!`;
+                    break;
+                  case "burn":
+                    statusMsg = `${defender.name.toUpperCase()} was burned!`;
+                    break;
+                  case "paralysis":
+                    statusMsg = `${defender.name.toUpperCase()} is paralyzed!`;
+                    break;
+                  case "sleep":
+                    statusMsg = `${defender.name.toUpperCase()} fell asleep!`;
+                    break;
+                  case "freeze":
+                    statusMsg = `${defender.name.toUpperCase()} was frozen solid!`;
+                    break;
+                }
+                setCurrentMessage(statusMsg);
+                await delay(1200);
               }
-              setCurrentMessage(statusMsg);
-              await delay(1200);
             }
           }
         }
@@ -385,16 +414,17 @@ export const executeMove = async (
               ? "enemy"
               : "player"
             : attackerSide;
-          const targetName =
+          const targetPokemon =
             targetSide === "player"
-              ? currentState.player.name
-              : currentState.enemy.name;
+              ? currentState.player
+              : currentState.enemy;
           const targetStages =
             targetSide === "player" ? nextPlayerStages : nextEnemyStages;
           const { newStages, logs } = applyStatChanges(
             targetStages,
             move.statChanges,
-            targetName,
+            targetPokemon,
+            isDebuff ? "opponent" : "self"
           );
           if (targetSide === "player") nextPlayerStages = newStages;
           else nextEnemyStages = newStages;

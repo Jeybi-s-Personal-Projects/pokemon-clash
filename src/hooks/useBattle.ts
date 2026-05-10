@@ -8,13 +8,17 @@ import { delay } from "../utils/battleUtils";
 import { getWeatherContinueMessage } from "../utils/weatherUtils";
 
 // Modularized components
+import { processSwitchInAbilities } from "../battle/abilityHandler";
 import { initialStages } from "../battle/battleConstants";
+import { executeMove, ExecutionContext } from "../battle/moveExecutor";
+import {
+  handleWinner as winHandler,
+  WinHandlerContext,
+} from "../battle/winHandler";
+import { useEvolution } from "./battle/useEvolution";
 import { useMegaEvolution } from "./battle/useMegaEvolution";
 import { useMoveLearning } from "./battle/useMoveLearning";
 import { useTeamManagement } from "./battle/useTeamManagement";
-import { useEvolution } from "./battle/useEvolution";
-import { executeMove, ExecutionContext } from "../battle/moveExecutor";
-import { handleWinner as winHandler, WinHandlerContext } from "../battle/winHandler";
 
 interface UseBattleOptions {
   player: Pokemon;
@@ -75,13 +79,23 @@ export function useBattle({
   const [isPlayerEntering, setIsPlayerEntering] = useState(false);
 
   // specialized hooks
-  const mega = useMegaEvolution(state.player, state.activePlayerIndex, state.team, setState, setCurrentMessage);
-  const learning = useMoveLearning(user?.id, setCurrentMessage, onToggleAutoBattle);
+  const mega = useMegaEvolution(
+    state.player,
+    state.activePlayerIndex,
+    state.team,
+    setState,
+    setCurrentMessage,
+  );
+  const learning = useMoveLearning(
+    user?.id,
+    setCurrentMessage,
+    onToggleAutoBattle,
+  );
   const evo = useEvolution();
 
   // Engine Contexts
   const execContext: ExecutionContext = { setCurrentMessage, setState };
-  
+
   const getWinContext = (currentState: BattleState): WinHandlerContext => ({
     setCurrentMessage,
     setState,
@@ -102,8 +116,10 @@ export function useBattle({
     setState,
     setCurrentMessage,
     setIsPlayerEntering,
-    (m: Move, s: "player" | "enemy", st: BattleState) => executeMove(m, s, st, execContext),
-    (w: "player" | "enemy", st: BattleState) => winHandler(w, st, getWinContext(st)),
+    (m: Move, s: "player" | "enemy", st: BattleState) =>
+      executeMove(m, s, st, execContext),
+    (w: "player" | "enemy", st: BattleState) =>
+      winHandler(w, st, getWinContext(st)),
     onSave,
     onBattleEnd,
     mega.isMega,
@@ -112,9 +128,49 @@ export function useBattle({
     (mega as any).setBasePlayer,
   );
 
+  // ── Initial Entry Abilities ──────────────────────────────────────────
+  useEffect(() => {
+    const triggerInitialAbilities = async () => {
+      // Small delay to let the battle screen render
+      await delay(1000);
+
+      let currentState = { ...state };
+
+      // Process Enemy Switch-in first (standard order)
+      const enemyResult = await processSwitchInAbilities("enemy", currentState);
+      currentState = enemyResult.newState;
+      for (const msg of enemyResult.messages) {
+        setCurrentMessage(msg);
+        await delay(1200);
+      }
+
+      // Process Player Switch-in
+      const playerResult = await processSwitchInAbilities(
+        "player",
+        currentState,
+      );
+      currentState = playerResult.newState;
+      for (const msg of playerResult.messages) {
+        setCurrentMessage(msg);
+        await delay(1200);
+      }
+
+      setState(currentState);
+      setCurrentMessage(null);
+    };
+
+    triggerInitialAbilities();
+  }, []);
+
   // ── attack — main turn logic ──────────────────────────────────────────
   const attack = async (playerMoveIndex: number) => {
-    if (state.attackingSide || state.dancingSide || state.winner || currentMessage) return;
+    if (
+      state.attackingSide ||
+      state.dancingSide ||
+      state.winner ||
+      currentMessage
+    )
+      return;
 
     const playerMove = state.player.moves[playerMoveIndex];
     if (playerMove.pp <= 0) {
@@ -125,12 +181,26 @@ export function useBattle({
     }
 
     const enemyMove = getAIMove(state.enemy, state.player);
-    const firstSide = determineTurnOrder(state.player, state.playerStages, playerMove, state.enemy, state.enemyStages, enemyMove);
+    const firstSide = determineTurnOrder(
+      state.player,
+      state.playerStages,
+      playerMove,
+      state.enemy,
+      state.enemyStages,
+      enemyMove,
+      state.weather,
+    );
     const secondSide = firstSide === "player" ? "enemy" : "player";
 
     const turns = [
-      { side: firstSide, move: firstSide === "player" ? playerMove : enemyMove },
-      { side: secondSide, move: secondSide === "player" ? playerMove : enemyMove },
+      {
+        side: firstSide,
+        move: firstSide === "player" ? playerMove : enemyMove,
+      },
+      {
+        side: secondSide,
+        move: secondSide === "player" ? playerMove : enemyMove,
+      },
     ];
 
     let currentState = {
@@ -143,7 +213,8 @@ export function useBattle({
 
     for (const turn of turns) {
       if (currentState.player.hp <= 0 || currentState.enemy.hp <= 0) break;
-      const attacker = turn.side === "player" ? currentState.player : currentState.enemy;
+      const attacker =
+        turn.side === "player" ? currentState.player : currentState.enemy;
       let skipTurn = false;
 
       // Status Checks (Sleep, Freeze, Paralysis, Flinch, Confusion)
@@ -151,14 +222,23 @@ export function useBattle({
         if (attacker.statusTurns && attacker.statusTurns > 0) {
           setCurrentMessage(`${attacker.name.toUpperCase()} is fast asleep!`);
           await delay(1200);
-          const updated = { ...attacker, statusTurns: attacker.statusTurns - 1 };
-          currentState = turn.side === "player" ? { ...currentState, player: updated } : { ...currentState, enemy: updated };
+          const updated = {
+            ...attacker,
+            statusTurns: attacker.statusTurns - 1,
+          };
+          currentState =
+            turn.side === "player"
+              ? { ...currentState, player: updated }
+              : { ...currentState, enemy: updated };
           skipTurn = true;
         } else {
           setCurrentMessage(`${attacker.name.toUpperCase()} woke up!`);
           await delay(1200);
           const updated = { ...attacker, status: null, statusTurns: 0 };
-          currentState = turn.side === "player" ? { ...currentState, player: updated } : { ...currentState, enemy: updated };
+          currentState =
+            turn.side === "player"
+              ? { ...currentState, player: updated }
+              : { ...currentState, enemy: updated };
         }
       }
 
@@ -167,7 +247,10 @@ export function useBattle({
           setCurrentMessage(`${attacker.name.toUpperCase()} thawed out!`);
           await delay(1200);
           const updated = { ...attacker, status: null };
-          currentState = turn.side === "player" ? { ...currentState, player: updated } : { ...currentState, enemy: updated };
+          currentState =
+            turn.side === "player"
+              ? { ...currentState, player: updated }
+              : { ...currentState, enemy: updated };
         } else {
           setCurrentMessage(`${attacker.name.toUpperCase()} is frozen solid!`);
           await delay(1200);
@@ -177,18 +260,26 @@ export function useBattle({
 
       if (!skipTurn && attacker.status === "paralysis") {
         if (Math.random() < 0.25) {
-          setCurrentMessage(`${attacker.name.toUpperCase()} is paralyzed! It can't move!`);
+          setCurrentMessage(
+            `${attacker.name.toUpperCase()} is paralyzed! It can't move!`,
+          );
           await delay(1200);
           skipTurn = true;
         }
       }
 
       if (!skipTurn && turn.side === secondSide) {
-        const wasFlinched = turn.side === "player" ? currentState.playerFlinched : currentState.enemyFlinched;
+        const wasFlinched =
+          turn.side === "player"
+            ? currentState.playerFlinched
+            : currentState.enemyFlinched;
         if (wasFlinched) {
           setCurrentMessage(`${attacker.name.toUpperCase()} flinched!`);
           await delay(1200);
-          currentState = turn.side === "player" ? { ...currentState, playerFlinched: false } : { ...currentState, enemyFlinched: false };
+          currentState =
+            turn.side === "player"
+              ? { ...currentState, playerFlinched: false }
+              : { ...currentState, enemyFlinched: false };
           skipTurn = true;
         }
       }
@@ -196,18 +287,38 @@ export function useBattle({
       if (!skipTurn && attacker.confusionTurns && attacker.confusionTurns > 0) {
         setCurrentMessage(`${attacker.name.toUpperCase()} is confused!`);
         await delay(1200);
-        const updated = { ...attacker, confusionTurns: attacker.confusionTurns - 1 };
-        currentState = turn.side === "player" ? { ...currentState, player: updated } : { ...currentState, enemy: updated };
+        const updated = {
+          ...attacker,
+          confusionTurns: attacker.confusionTurns - 1,
+        };
+        currentState =
+          turn.side === "player"
+            ? { ...currentState, player: updated }
+            : { ...currentState, enemy: updated };
 
         if (updated.confusionTurns === 0) {
-          setCurrentMessage(`${attacker.name.toUpperCase()} snapped out of its confusion!`);
+          setCurrentMessage(
+            `${attacker.name.toUpperCase()} snapped out of its confusion!`,
+          );
           await delay(1200);
         } else if (Math.random() < 0.5) {
           setCurrentMessage(`It hurt itself in its confusion!`);
           await delay(600);
-          const confDamage = Math.floor((((2 * attacker.level) / 5 + 2) * 40 * (attacker.attack / attacker.defense)) / 50 + 2);
-          const damaged = { ...updated, hp: Math.max(0, updated.hp - confDamage) };
-          currentState = turn.side === "player" ? { ...currentState, player: damaged, hitSide: "player" } : { ...currentState, enemy: damaged, hitSide: "enemy" };
+          const confDamage = Math.floor(
+            (((2 * attacker.level) / 5 + 2) *
+              40 *
+              (attacker.attack / attacker.defense)) /
+              50 +
+              2,
+          );
+          const damaged = {
+            ...updated,
+            hp: Math.max(0, updated.hp - confDamage),
+          };
+          currentState =
+            turn.side === "player"
+              ? { ...currentState, player: damaged, hitSide: "player" }
+              : { ...currentState, enemy: damaged, hitSide: "enemy" };
           setState(currentState);
           await delay(600);
           setState((s) => ({ ...s, hitSide: null }));
@@ -218,23 +329,39 @@ export function useBattle({
       if (skipTurn) {
         setState(currentState);
         const winner = isGameOver(currentState);
-        if (winner) { winHandler(winner, currentState, getWinContext(currentState)); return; }
+        if (winner) {
+          winHandler(winner, currentState, getWinContext(currentState));
+          return;
+        }
         continue;
       }
 
       if (turn.side === "player") {
         const updatedMoves = [...currentState.player.moves];
-        const moveIdx = currentState.player.moves.findIndex((m) => m.name === turn.move.name);
+        const moveIdx = currentState.player.moves.findIndex(
+          (m) => m.name === turn.move.name,
+        );
         if (moveIdx !== -1) {
           updatedMoves[moveIdx] = { ...turn.move, pp: turn.move.pp - 1 };
-          currentState = { ...currentState, player: { ...currentState.player, moves: updatedMoves } };
+          currentState = {
+            ...currentState,
+            player: { ...currentState.player, moves: updatedMoves },
+          };
         }
       }
 
-      currentState = await executeMove(turn.move, turn.side as "player" | "enemy", currentState, execContext);
+      currentState = await executeMove(
+        turn.move,
+        turn.side as "player" | "enemy",
+        currentState,
+        execContext,
+      );
       setState(currentState);
       const winner = isGameOver(currentState);
-      if (winner) { winHandler(winner, currentState, getWinContext(currentState)); return; }
+      if (winner) {
+        winHandler(winner, currentState, getWinContext(currentState));
+        return;
+      }
       await delay(1000);
     }
 
@@ -245,30 +372,56 @@ export function useBattle({
     if (finalState.weather) {
       setCurrentMessage(getWeatherContinueMessage(finalState.weather));
       await delay(1200);
-      finalState = { ...finalState, weatherTurns: finalState.weatherTurns - 1 };
-      if (finalState.weatherTurns <= 0) {
-        setCurrentMessage("The weather returned to normal.");
-        await delay(1200);
-        finalState = { ...finalState, weather: null, weatherTurns: 0 };
+      if (finalState.weatherTurns !== -1) {
+        finalState = {
+          ...finalState,
+          weatherTurns: finalState.weatherTurns - 1,
+        };
+        if (finalState.weatherTurns <= 0) {
+          setCurrentMessage("The weather returned to normal.");
+          await delay(1200);
+          finalState = { ...finalState, weather: null, weatherTurns: 0 };
+        }
       }
+
       if (finalState.weather === "sandstorm" || finalState.weather === "hail") {
         for (const side of ["player", "enemy"] as const) {
           const p = side === "player" ? finalState.player : finalState.enemy;
           if (p.hp <= 0) continue;
           let isImmune = false;
-          if (finalState.weather === "sandstorm") isImmune = p.type.some(t => ["rock", "ground", "steel"].includes(t));
-          else if (finalState.weather === "hail") isImmune = p.type.includes("ice");
+          if (finalState.weather === "sandstorm")
+            isImmune = p.type.some((t) =>
+              ["rock", "ground", "steel"].includes(t),
+            );
+          else if (finalState.weather === "hail")
+            isImmune = p.type.includes("ice");
           if (!isImmune) {
             const damage = Math.max(1, Math.floor(p.maxHp / 16));
             const nextHp = Math.max(0, p.hp - damage);
-            setCurrentMessage(`${p.name.toUpperCase()} was buffeted by the ${finalState.weather}!`);
+            setCurrentMessage(
+              `${p.name.toUpperCase()} was buffeted by the ${finalState.weather}!`,
+            );
             await delay(1200);
-            finalState = side === "player" ? { ...finalState, player: { ...p, hp: nextHp }, hitSide: "player" } : { ...finalState, enemy: { ...p, hp: nextHp }, hitSide: "enemy" };
+            finalState =
+              side === "player"
+                ? {
+                    ...finalState,
+                    player: { ...p, hp: nextHp },
+                    hitSide: "player",
+                  }
+                : {
+                    ...finalState,
+                    enemy: { ...p, hp: nextHp },
+                    hitSide: "enemy",
+                  };
             setState(finalState);
             await delay(600);
-            setState(s => ({ ...s, hitSide: null }));
+            setState((s) => ({ ...s, hitSide: null }));
             const winner = isGameOver(finalState);
-            if (winner) { winHandler(winner, finalState, getWinContext(finalState)); return; }
+            if (winner) {
+              winHandler(winner, finalState, getWinContext(finalState));
+              return;
+            }
           }
         }
       }
@@ -283,37 +436,87 @@ export function useBattle({
       if (p.hp <= 0) continue;
       const damage = Math.max(1, Math.floor(p.maxHp * trap.damagePerTurn));
       const nextHp = Math.max(0, p.hp - damage);
-      setCurrentMessage(`${p.name.toUpperCase()} is hurt by ${trap.moveId.toUpperCase()}!`);
+      setCurrentMessage(
+        `${p.name.toUpperCase()} is hurt by ${trap.moveId.toUpperCase()}!`,
+      );
       await delay(1200);
-      const newTrap = trap.turnsLeft <= 1 ? undefined : { ...trap, turnsLeft: trap.turnsLeft - 1 };
-      finalState = side === "player" ? { ...finalState, player: { ...p, hp: nextHp }, [trapKey]: newTrap, hitSide: "player" } : { ...finalState, enemy: { ...p, hp: nextHp }, [trapKey]: newTrap, hitSide: "enemy" };
+      const newTrap =
+        trap.turnsLeft <= 1
+          ? undefined
+          : { ...trap, turnsLeft: trap.turnsLeft - 1 };
+      finalState =
+        side === "player"
+          ? {
+              ...finalState,
+              player: { ...p, hp: nextHp },
+              [trapKey]: newTrap,
+              hitSide: "player",
+            }
+          : {
+              ...finalState,
+              enemy: { ...p, hp: nextHp },
+              [trapKey]: newTrap,
+              hitSide: "enemy",
+            };
       setState(finalState);
       await delay(600);
-      setState(s => ({ ...s, hitSide: null }));
-      if (!newTrap) { setCurrentMessage(`${p.name.toUpperCase()} was freed!`); await delay(1000); }
+      setState((s) => ({ ...s, hitSide: null }));
+      if (!newTrap) {
+        setCurrentMessage(`${p.name.toUpperCase()} was freed!`);
+        await delay(1000);
+      }
       const winner = isGameOver(finalState);
-      if (winner) { winHandler(winner, finalState, getWinContext(finalState)); return; }
+      if (winner) {
+        winHandler(winner, finalState, getWinContext(finalState));
+        return;
+      }
     }
 
     // 3. Status damage (Poison/Burn)
     for (const side of ["player", "enemy"] as const) {
       const p = side === "player" ? finalState.player : finalState.enemy;
       if (p.hp <= 0 || (p.status !== "poison" && p.status !== "burn")) continue;
-      const isBadPoison = side === "player" ? finalState.playerBadPoison : finalState.enemyBadPoison;
-      let damage = Math.max(1, Math.floor(p.maxHp / (isBadPoison ? (16 - (p.statusTurns ?? 16)) : 8)));
+      const isBadPoison =
+        side === "player"
+          ? finalState.playerBadPoison
+          : finalState.enemyBadPoison;
+      let damage = Math.max(
+        1,
+        Math.floor(p.maxHp / (isBadPoison ? 16 - (p.statusTurns ?? 16) : 8)),
+      );
       if (p.status === "poison" && isBadPoison) {
-        const updatedP = { ...p, statusTurns: Math.max(1, (p.statusTurns ?? 16) - 1) };
-        finalState = side === "player" ? { ...finalState, player: updatedP } : { ...finalState, enemy: updatedP };
+        const updatedP = {
+          ...p,
+          statusTurns: Math.max(1, (p.statusTurns ?? 16) - 1),
+        };
+        finalState =
+          side === "player"
+            ? { ...finalState, player: updatedP }
+            : { ...finalState, enemy: updatedP };
       }
       const nextHp = Math.max(0, p.hp - damage);
       setCurrentMessage(`${p.name.toUpperCase()} was hurt by its status!`);
       await delay(1200);
-      finalState = side === "player" ? { ...finalState, player: { ...finalState.player, hp: nextHp }, hitSide: "player" } : { ...finalState, enemy: { ...finalState.enemy, hp: nextHp }, hitSide: "enemy" };
+      finalState =
+        side === "player"
+          ? {
+              ...finalState,
+              player: { ...finalState.player, hp: nextHp },
+              hitSide: "player",
+            }
+          : {
+              ...finalState,
+              enemy: { ...finalState.enemy, hp: nextHp },
+              hitSide: "enemy",
+            };
       setState(finalState);
       await delay(600);
-      setState(s => ({ ...s, hitSide: null }));
+      setState((s) => ({ ...s, hitSide: null }));
       const winner = isGameOver(finalState);
-      if (winner) { winHandler(winner, finalState, getWinContext(finalState)); return; }
+      if (winner) {
+        winHandler(winner, finalState, getWinContext(finalState));
+        return;
+      }
     }
 
     finalState = {
@@ -353,7 +556,9 @@ export function useBattle({
     if (winner) {
       winHandler(winner, afterEnemyState, getWinContext(afterEnemyState));
     } else if (afterEnemyState.player.hp <= 0) {
-      setCurrentMessage(`${afterEnemyState.player.name.toUpperCase()} fainted!`);
+      setCurrentMessage(
+        `${afterEnemyState.player.name.toUpperCase()} fainted!`,
+      );
       await delay(1200);
       teamMgmt.setSwitchModalVisible(true);
     } else {

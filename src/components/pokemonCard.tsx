@@ -279,22 +279,41 @@ export default function PokemonCard({
             alignItems: "center",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-            <Text 
-              style={{ fontWeight: "bold", fontSize: 14, color: "white", flex: 1 }}
-              adjustsFontSizeToFit
-              numberOfLines={1}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              flex: 1,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                flex: 1,
+              }}
             >
-              {pokemon.name.toUpperCase()}
+              <Text
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 14,
+                  color: "white",
+                }}
+                adjustsFontSizeToFit
+                numberOfLines={1}
+              >
+                {pokemon.name.toUpperCase()}
+              </Text>
+
               {pokemon.isShiny && (
                 <Ionicons
                   name="star"
                   size={12}
                   color="#facc15"
-                  style={{ marginLeft: 5 }}
+                  style={{ marginLeft: 4 }}
                 />
               )}
-            </Text>
+            </View>
           </View>
 
           <Text style={{ fontSize: 14, color: "white" }}>
@@ -400,8 +419,14 @@ export default function PokemonCard({
         style={{
           transform: [{ translateY: moveAnim }, { translateX: shakeAnim }],
           position: "absolute",
-          bottom: 0,
-          [isBack ? "left" : "right"]: isBack ? (isMega ? -20 : 0) : (isMega ? 20 : 40),
+          bottom: isBack ? 0 : -20,
+          [isBack ? "left" : "right"]: isBack
+            ? isMega
+              ? -20
+              : 0
+            : isMega
+              ? 60
+              : 70,
           opacity: opacityAnim,
           zIndex: 0,
         }}
@@ -409,8 +434,8 @@ export default function PokemonCard({
         <Image
           source={{ uri: imageSource }}
           style={{
-            width: isBack ? (isMega ? 220 : 160) : (isMega ? 140 : 100),
-            height: isBack ? (isMega ? 220 : 160) : (isMega ? 140 : 100),
+            width: isBack ? (isMega ? 220 : 160) : isMega ? 140 : 100,
+            height: isBack ? (isMega ? 220 : 160) : isMega ? 140 : 100,
             resizeMode: "contain",
           }}
         />

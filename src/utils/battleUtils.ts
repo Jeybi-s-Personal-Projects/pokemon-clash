@@ -3,6 +3,7 @@ import { BattleMove, TrapState } from "../types/moveBattle";
 import { Pokemon, StatusCondition } from "../types/pokemon";
 import { getStatusDuration } from "./statusUtils";
 import { getWeatherStartMessage } from "./weatherUtils";
+import { getAbilityDisplayName, isImmuneToStatReduction, isImmuneToStatus } from "../battle/abilityHandler";
 
 /**
  * Delays execution for a specified number of milliseconds.
@@ -170,7 +171,8 @@ export const processMoveEffects = (
         const { newStages, logs } = applyStatChanges(
           stagesToUpdate,
           changes,
-          targetPokemon.name,
+          targetPokemon,
+          isTargetUser ? "self" : "opponent"
         );
 
         if (targetSide === "player") {
@@ -192,14 +194,22 @@ export const processMoveEffects = (
 
         // ── Flinch ──
         if (statusValue === "flinch") {
+          const ability = targetPokemon.ability?.toLowerCase();
+          if (ability === "inner-focus") {
+            // Inner Focus prevents flinching
+            break;
+          }
           if (targetSide === "player") result.playerFlinched = true;
           else result.enemyFlinched = true;
-          // No log here — the message shows when the turn is actually skipped
           break;
         }
 
         // ── Confusion ──
         if (statusValue === "confusion") {
+          if (isImmuneToStatus(targetPokemon, "confusion")) {
+            result.logs.push(`${targetName}'s ${getAbilityDisplayName(targetPokemon.ability!)} prevents confusion!`);
+            break;
+          }
           // Don't re-apply if already confused
           if (
             (targetSide === "player" && (target.confusionTurns ?? 0) > 0) ||
@@ -216,6 +226,10 @@ export const processMoveEffects = (
 
         // ── Bad Poison (Toxic) ──
         if (statusValue === "bad-poison") {
+          if (isImmuneToStatus(targetPokemon, "poison")) {
+             result.logs.push(`${targetName}'s ${getAbilityDisplayName(targetPokemon.ability!)} prevents poisoning!`);
+             break;
+          }
           if (targetPokemon.status) {
             if (effect.chance === 100) {
               result.logs.push(
@@ -241,6 +255,11 @@ export const processMoveEffects = (
         // ── All other standard statuses (burn, paralysis, sleep, freeze, poison) ──
         const status = statusValue as StatusCondition;
         if (!status) break;
+
+        if (isImmuneToStatus(targetPokemon, status)) {
+          result.logs.push(`${targetName}'s ${getAbilityDisplayName(targetPokemon.ability!)} prevents ${status}!`);
+          break;
+        }
 
         if (targetPokemon.status) {
           if (effect.chance === 100 && effect.target === "target") {
@@ -438,13 +457,11 @@ export const processMoveEffects = (
       // ─────────────────────────────────────────────────────
       case "self-faint": {
         result.selfFaint = true;
-        // No log here — handled in executeMove after effects are processed
         break;
       }
 
       // ─────────────────────────────────────────────────────
-      // CHARGE and MULTI-HIT are handled in executeMove directly,
-      // not here. UNIQUE effects are handled by handleUniqueMove.
+      // CHARGE and MULTI-HIT are handled in executeMove directly
       // ─────────────────────────────────────────────────────
       case "charge":
       case "multi-hit":
@@ -462,14 +479,22 @@ export const processMoveEffects = (
 export const applyStatChanges = (
   currentStages: StatStages,
   changes: { stat: string; change: number }[],
-  targetName: string,
+  target: Pokemon,
+  source: "self" | "opponent" = "opponent"
 ) => {
   const newStages = { ...currentStages };
   let logs: string[] = [];
+  const targetName = target.name.toUpperCase();
 
   changes.forEach((c) => {
     const statKey = c.stat as keyof StatStages;
     if (newStages[statKey] !== undefined) {
+      // Ability Check for reduction
+      if (c.change < 0 && isImmuneToStatReduction(target, statKey, source)) {
+        logs.push(`${targetName}'s ${getAbilityDisplayName(target.ability!)} prevents its ${c.stat.toUpperCase()} from falling!`);
+        return;
+      }
+
       const oldStage = newStages[statKey];
       newStages[statKey] = Math.max(-6, Math.min(6, oldStage + c.change));
 
@@ -479,13 +504,13 @@ export const applyStatChanges = (
       if (currentStage === oldStage) {
         const limitWord = c.change > 0 ? "higher" : "lower";
         logs.push(
-          `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} won't go any ${limitWord}! (${stageSign}${currentStage})`,
+          `${targetName}'s ${c.stat.toUpperCase()} won't go any ${limitWord}! (${stageSign}${currentStage})`,
         );
       } else {
         const degree = Math.abs(c.change) >= 2 ? "sharply " : "";
         const direction = c.change > 0 ? "rose" : "fell";
         logs.push(
-          `${targetName.toUpperCase()}'s ${c.stat.toUpperCase()} ${degree}${direction}! (${stageSign}${currentStage})`,
+          `${targetName}'s ${c.stat.toUpperCase()} ${degree}${direction}! (${stageSign}${currentStage})`,
         );
       }
     }
