@@ -210,7 +210,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         // Session ended by defeat
         await syncAllProgress(updatedTeam);
         reset();
-        navigation.navigate("Dashboard" as any);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Dashboard" as any }],
+        });
         return;
       }
 
@@ -228,7 +231,10 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       // Session ended by choice
       await syncAllProgress(finalTeam);
       reset();
-      navigation.navigate("Dashboard" as any);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Dashboard" as any }],
+      });
     },
     [reset, navigation],
   );
