@@ -179,8 +179,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       }
 
       if (winner === "enemy") {
-        // Session ended by defeat
-        await syncAllProgress(updatedTeam);
+        // Session ended by defeat - Heal the team (whiteout logic)
+        await syncAllProgress(updatedTeam, true);
         reset();
         navigation.reset({
           index: 0,

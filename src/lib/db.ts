@@ -32,6 +32,7 @@ export const initDatabase = () => {
       pk_held_item TEXT,
       pk_front_image TEXT,
       pk_back_image TEXT,
+      pk_is_shiny INTEGER DEFAULT 0, -- 0 for false, 1 for true
       pk_cry TEXT,
       pk_order INTEGER, -- NULL for boxed, 1-6 for team
       pk_pk_order INTEGER DEFAULT 0, -- Legacy support if needed

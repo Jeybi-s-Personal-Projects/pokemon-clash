@@ -57,6 +57,7 @@ export function useTeam(userId: string) {
           heldItem: p.pk_held_item,
           frontImage: p.pk_front_image,
           backImage: p.pk_back_image,
+          isShiny: !!p.pk_is_shiny,
           cry: p.pk_cry,
           moves: moveRows.map((m: any) => {
             const detail = MOVES[m.move_name] || {};

@@ -1,15 +1,14 @@
-import { Modal, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal as RNModal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Modal as RNModal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PokemonCard from "../components/pokemonRosterCard";
@@ -19,7 +18,6 @@ import { getPokemon } from "../hooks/usePokemon";
 import { colors } from "../theme/color";
 import { SelectStarterScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
-import { parseRawMoves, selectMoves } from "../utils/moveSelector";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -56,7 +54,7 @@ export default function SelectStarterScreen({
 
   const loadStarters = async () => {
     try {
-      const promises = STARTER_NAMES.map((name) => getPokemon(name, 5));
+      const promises = STARTER_NAMES.map((name) => getPokemon(name, 10));
       const results = await Promise.all(promises);
       setStarters(results);
     } catch (error) {
@@ -110,12 +108,12 @@ export default function SelectStarterScreen({
         columnWrapperStyle={styles.columnWrapper}
         renderItem={({ item }) => (
           <View style={styles.cardWrapper}>
-            <PokemonCard 
-              pokemon={item} 
+            <PokemonCard
+              pokemon={item}
               onPress={() => {
                 playClick();
                 setConfirmModal(item);
-              }} 
+              }}
             />
           </View>
         )}
@@ -124,15 +122,24 @@ export default function SelectStarterScreen({
       <RNModal visible={!!confirmModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose {confirmModal?.name.toUpperCase()}?</Text>
+            <Text style={styles.modalTitle}>
+              Choose {confirmModal?.name.toUpperCase()}?
+            </Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want {confirmModal?.name} as your partner? This choice is permanent.
+              Are you sure you want {confirmModal?.name} as your partner? This
+              choice is permanent.
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setConfirmModal(null)}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setConfirmModal(null)}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={confirmSelection}>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={confirmSelection}
+              >
                 <Text style={styles.confirmButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>

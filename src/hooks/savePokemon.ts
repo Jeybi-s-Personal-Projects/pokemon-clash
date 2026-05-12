@@ -32,8 +32,8 @@ export async function savePokemon(
       id, user_id, pk_species_id, pk_name, pk_level, pk_experience, 
       pk_hp, pk_max_hp, pk_attack, pk_defense, pk_special_attack, 
       pk_special_defense, pk_speed, pk_types, pk_ability, 
-      pk_front_image, pk_back_image, pk_cry, pk_order
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      pk_front_image, pk_back_image, pk_is_shiny, pk_cry, pk_order
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       pkId,
       userId,
@@ -52,6 +52,7 @@ export async function savePokemon(
       pokemon.ability || null,
       pokemon.frontImage,
       pokemon.backImage,
+      pokemon.isShiny ? 1 : 0,
       pokemon.cry,
       null, // Initially null
     ]
@@ -153,7 +154,7 @@ export async function syncAllProgress(
       db.runSync(
         `UPDATE pokemon SET 
           pk_species_id = ?, pk_name = ?, pk_types = ?, pk_ability = ?,
-          pk_front_image = ?, pk_back_image = ?, pk_cry = ?,
+          pk_front_image = ?, pk_back_image = ?, pk_is_shiny = ?, pk_cry = ?,
           pk_level = ?, pk_experience = ?, pk_hp = ?, pk_max_hp = ?,
           pk_attack = ?, pk_defense = ?, pk_special_attack = ?,
           pk_special_defense = ?, pk_speed = ?
@@ -165,6 +166,7 @@ export async function syncAllProgress(
           p.ability || null,
           p.frontImage,
           p.backImage,
+          p.isShiny ? 1 : 0,
           p.cry,
           p.level,
           p.experience,
@@ -199,7 +201,7 @@ export async function syncAllProgress(
             p.id,
             m.name,
             m.power ?? 0,
-            m.pp ?? 0,
+            shouldHeal ? (m.maxPp ?? m.pp) : m.pp,
             m.type ?? "normal",
             m.damageClass ?? "status",
             m.accuracy ?? 100,

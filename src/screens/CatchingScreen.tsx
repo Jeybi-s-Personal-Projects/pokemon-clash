@@ -5,7 +5,7 @@ import { BattleField } from "../components/battle/BattleField";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
 import { SPECIES } from "../data/pokemon/species/species";
-import { savePokemon, syncTeamProgress } from "../hooks/savePokemon";
+import { savePokemon, syncAllProgress } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
 
 const initialStages = {
@@ -267,8 +267,8 @@ export default function CatchingScreen({
               finalTeam = route.params.revertMegaInTeam(finalTeam);
             }
 
-            // 2. Sync the player's team progress (HP, EXP, etc.)
-            await syncTeamProgress(finalTeam);
+            // 2. Sync the player's team progress (HP, EXP, etc.) and HEAL
+            await syncAllProgress(finalTeam, true);
 
             // 3. Save the newly caught pokemon
             const { teamFull } = await savePokemon(enemy, user.id);
