@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pokemon } from "../../types/pokemon";
 import { getPokemonIcon } from "../../utils/pokemonImageUtils";
 
@@ -30,12 +31,24 @@ export const SwitchModal = ({
   onClose,
   canCancel,
 }: SwitchModalProps) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
-        <View style={styles.container}>
+        <View
+          style={[
+            styles.container,
+            { paddingBottom: Math.max(insets.bottom, 20) },
+          ]}
+        >
           <View style={styles.header}>
-            <Text style={styles.title}>Choose a Pokémon:</Text>
+            <View>
+              <Text style={styles.title}>Choose a Pokémon:</Text>
+              {!canCancel && (
+                <Text style={styles.subtitle}>Your Pokémon fainted! Switch now.</Text>
+              )}
+            </View>
             {canCancel && (
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close-circle" size={28} color="#9CA3AF" />
@@ -46,6 +59,7 @@ export const SwitchModal = ({
           <FlatList
             data={team}
             keyExtractor={(p, i) => i.toString()}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item, index }) => {
               const isCurrent = index === activeIndex;
               const isFainted = item.hp <= 0;
@@ -54,7 +68,11 @@ export const SwitchModal = ({
                 <TouchableOpacity
                   onPress={() => onSwitch(index)}
                   disabled={isCurrent || isFainted}
-                  style={[styles.item, isFainted && styles.fainted]}
+                  style={[
+                    styles.item,
+                    isCurrent && styles.currentItem,
+                    isFainted && styles.fainted,
+                  ]}
                 >
                   <Image
                     source={{ uri: getPokemonIcon(item.speciesId) }}
@@ -62,9 +80,10 @@ export const SwitchModal = ({
                     resizeMode="contain"
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>
-                      {item.name} {isCurrent && "(On Field)"}
-                    </Text>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.name}>{item.name}</Text>
+                      {isCurrent && <Text style={styles.onFieldLabel}>ON FIELD</Text>}
+                    </View>
                     <View style={styles.statsRow}>
                       <Text style={styles.level}>Lv. {item.level}</Text>
                       <View style={styles.hpBarBg}>
@@ -95,7 +114,7 @@ export const SwitchModal = ({
           />
           {canCancel && (
             <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>Go Back</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -108,90 +127,133 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
   },
   container: {
-    backgroundColor: colors.modalBackground,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "80%",
-    paddingVertical: 4,
-    paddingHorizontal: 24,
+    backgroundColor: "#111827",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    maxHeight: "85%",
+    minHeight: "40%",
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "#374151",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-    marginTop: 8,
+    alignItems: "flex-start",
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   title: {
     color: "white",
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "bold",
+  },
+  subtitle: {
+    color: "#EF4444",
+    fontSize: 14,
+    marginTop: 2,
+    fontWeight: "600",
   },
   closeButton: {
     padding: 4,
   },
+  listContent: {
+    paddingBottom: 10,
+  },
   item: {
-    backgroundColor: "#253956",
+    backgroundColor: "#1F2937",
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
+    padding: 16,
     borderWidth: 1,
-    borderColor: colors.buttonBorder,
-    borderRadius: 10,
-    gap: 12,
-    marginBottom: 8,
+    borderColor: "#374151",
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  currentItem: {
+    borderColor: "#818CF8",
+    backgroundColor: "#1e1b4b",
   },
   pokemonIcon: {
-    width: 40,
-    height: 40,
-    marginRight: 14,
+    width: 44,
+    height: 44,
+    marginRight: 12,
   },
   fainted: {
-    opacity: 0.5,
+    opacity: 0.6,
+    backgroundColor: "#111827",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   name: {
     color: "white",
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: "bold",
+    textTransform: "capitalize",
+  },
+  onFieldLabel: {
+    color: "#818CF8",
+    fontSize: 10,
+    fontWeight: "bold",
+    backgroundColor: "#312e81",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 4,
+    gap: 10,
+    marginTop: 6,
   },
   level: {
     color: "#9CA3AF",
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "600",
   },
   hpBarBg: {
     flex: 1,
-    height: 4,
+    height: 6,
     backgroundColor: "#374151",
-    borderRadius: 2,
+    borderRadius: 3,
+    overflow: "hidden",
   },
   hpBarFill: {
     height: "100%",
-    borderRadius: 2,
+    borderRadius: 3,
   },
   hpText: {
-    color: "white",
+    color: "#D1D5DB",
     fontSize: 12,
+    fontWeight: "500",
+    minWidth: 45,
+    textAlign: "right",
   },
   fntLabel: {
     color: "#EF4444",
     fontWeight: "bold",
+    fontSize: 14,
+    marginLeft: 8,
   },
   cancelButton: {
-    marginTop: 16,
+    marginTop: 8,
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#1F2937",
   },
   cancelText: {
-    color: "#9CA3AF",
+    color: "#D1D5DB",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
