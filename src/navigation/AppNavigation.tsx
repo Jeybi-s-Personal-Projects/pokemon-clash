@@ -12,9 +12,10 @@ import LoginScreen from "@/src/screens/LoginScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
 import PokemonStatsScreen from "@/src/screens/PokemonStatsScreen";
 import PokemonTeamScreen from "@/src/screens/PokemonTeamScreen";
-import SelectFromPCScreen from "@/src/screens/SelectFromPCScreen";
 import RegionSelectScreen from "@/src/screens/RegionSelectScreen";
+import SelectFromPCScreen from "@/src/screens/SelectFromPCScreen";
 import SelectPokemonScreen from "@/src/screens/SelectPokemonScreen";
+import SelectStarterScreen from "@/src/screens/selectStarterScreen";
 import SignupScreen from "@/src/screens/SignupScreen";
 import { RootStackParamList } from "../types/navigation"; // adjust path as needed
 
@@ -95,6 +96,16 @@ export default function AppNavigator() {
               headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
             }}
             component={PokemonTeamScreen}
+          />
+          <Stack.Screen
+            name="SelectStarter"
+            options={{
+              title: "Pick Your Starter",
+              headerStyle: { backgroundColor: "#111827" },
+              headerTintColor: "#F9FAFB",
+              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
+            }}
+            component={SelectStarterScreen}
           />
           <Stack.Screen
             name="SelectFromPC"

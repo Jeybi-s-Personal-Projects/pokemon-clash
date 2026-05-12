@@ -1,23 +1,28 @@
 import { fetchPokemon } from "../api/pokeApi";
 import { fetchMoveBatch } from "../encounter/fetchWithCache";
 import { Pokemon } from "../types/pokemon";
-import { selectMoves } from "../utils/moveSelector";
+import { parseRawMoves, selectMoves } from "../utils/moveSelector";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { getExpForLevel, getGrowthRate } from "../utils/experienceCalculator";
+import { SPECIES } from "../data/pokemon/species/species";
 
 export async function getPokemon(
   name: string,
   level: number,
 ): Promise<Pokemon> {
   const data = await fetchPokemon(name);
+  const speciesId = data.id;
 
-  // 1. Get Move Selection (logic for most recent level-up moves)
-  const selectedMoveData = selectMoves(data.moves, level);
+  // 1. Parse PokeAPI moves into our RawMove shape
+  const allParsedMoves = parseRawMoves(data.moves);
 
-  // 2. Fetch Move Details in parallel with caching
+  // 2. Get Move Selection (logic for most recent level-up moves)
+  const selectedMoveData = selectMoves(allParsedMoves, level);
+
+  // 3. Fetch Move Details in parallel with caching
   const moveDetails = await fetchMoveBatch(selectedMoveData);
 
-  // 3. Map to final Move format
+  // 4. Map to final Move format
   const moves = moveDetails.map((detail) => ({
     name: detail.name,
     power: detail.power ?? 0,
@@ -37,9 +42,12 @@ export async function getPokemon(
   const baseHp = getBaseStat("hp");
   const hp = calculateHp(baseHp, level);
 
-  const speciesId = data.id;
   const growthRate = getGrowthRate(speciesId);
   const experience = getExpForLevel(level, growthRate);
+
+  // Get ability from local species data
+  const speciesData = SPECIES[speciesId];
+  const ability = speciesData?.abilities[0] ?? "none";
 
   return {
     speciesId,
@@ -58,6 +66,7 @@ export async function getPokemon(
     frontImage: data.sprites.other.showdown.front_default,
     backImage: data.sprites.other.showdown.back_default,
     moves,
+    ability,
     cry: `https://play.pokemonshowdown.com/audio/cries/${data.name}.mp3`,
   };
 }

@@ -44,6 +44,7 @@ export type RootStackParamList = {
   };
   PokemonStats: { pokemon: Pokemon; onRelease?: () => void };
   PokemonTeam: { initialTeam: Pokemon[]; onSave?: () => void };
+  SelectStarter: undefined;
   SelectFromPC: {
     currentTeamIds: (string | number)[];
     teamLength: number;
@@ -70,6 +71,11 @@ export type RootStackParamList = {
     isMega?: boolean;
   };
 };
+
+export type SelectStarterScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "SelectStarter"
+>;
 
 export type CatchingScreenProps = NativeStackScreenProps<
   RootStackParamList,

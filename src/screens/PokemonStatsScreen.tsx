@@ -17,28 +17,9 @@ import { EvolutionGuideModal } from "../components/pokemonData/EvolutionGuideMod
 import { MoveEditModal } from "../components/pokemonData/MoveEditModal";
 import StatusModal from "../components/statusModal";
 
-import { colors } from "@/src/theme/color";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useAudioPlayer } from "expo-audio";
-import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
-import {
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { MovesetViewModal } from "../components/MovesetViewModal";
-import { EvolutionGuideModal } from "../components/pokemonData/EvolutionGuideModal";
-import { MoveEditModal } from "../components/pokemonData/MoveEditModal";
-import StatusModal from "../components/statusModal";
-
+import * as Crypto from "expo-crypto";
 import { TYPE_COLORS, TypeBadge } from "../components/TypeBadge";
 import db from "../lib/db";
-import * as Crypto from "expo-crypto";
 
 import { ItemEquipModal } from "@/src/components/ItemEquipModal";
 import { getItem } from "@/src/data/items/items";
@@ -91,7 +72,8 @@ export default function PokemonStatsScreen({
         newMoves.length === pokemonState.moves.length && replacedMoveId;
 
       if (isRemoval) {
-        if (!replacedMoveId) throw new Error("No move ID provided for removal.");
+        if (!replacedMoveId)
+          throw new Error("No move ID provided for removal.");
         db.runSync(`DELETE FROM pokemon_moves WHERE id = ?`, [replacedMoveId]);
       } else if (isAddition || isReplacement) {
         const updatedMove =
@@ -119,7 +101,7 @@ export default function PokemonStatsScreen({
               updatedMove.description,
               updatedMove.priority,
               replacedMoveId,
-            ]
+            ],
           );
         } else {
           // Addition
@@ -141,7 +123,7 @@ export default function PokemonStatsScreen({
               JSON.stringify(updatedMove.statChanges || []),
               updatedMove.description,
               updatedMove.priority,
-            ]
+            ],
           );
         }
       }
@@ -149,10 +131,10 @@ export default function PokemonStatsScreen({
       // Fetch fresh moves from local DB
       const moveRows = db.getAllSync<any>(
         `SELECT * FROM pokemon_moves WHERE pokemon_id = ?`,
-        [pokemonState.id]
+        [pokemonState.id],
       );
-      
-      const finalMoves = moveRows.map(m => {
+
+      const finalMoves = moveRows.map((m) => {
         const detail = MOVES[m.move_name.toLowerCase()] || {};
         return {
           id: m.id,
@@ -189,10 +171,10 @@ export default function PokemonStatsScreen({
     setItemModalVisible(false);
 
     try {
-      db.runSync(
-        `UPDATE pokemon SET pk_held_item = ? WHERE id = ?`,
-        [itemId, pokemonState.id]
-      );
+      db.runSync(`UPDATE pokemon SET pk_held_item = ? WHERE id = ?`, [
+        itemId,
+        pokemonState.id,
+      ]);
 
       const updatedPokemon = { ...pokemonState, heldItem: itemId || undefined };
       setPokemon(updatedPokemon);
@@ -214,9 +196,11 @@ export default function PokemonStatsScreen({
 
     try {
       db.runSync(`DELETE FROM pokemon WHERE id = ?`, [pokemonState.id]);
-      // Dependent moves should be deleted via ON DELETE CASCADE in schema, 
+      // Dependent moves should be deleted via ON DELETE CASCADE in schema,
       // but let's be explicit just in case.
-      db.runSync(`DELETE FROM pokemon_moves WHERE pokemon_id = ?`, [pokemonState.id]);
+      db.runSync(`DELETE FROM pokemon_moves WHERE pokemon_id = ?`, [
+        pokemonState.id,
+      ]);
 
       setStatusMessage(`${pokemonState.name} was released into the wild.`);
       setStatusType("success");
@@ -295,14 +279,14 @@ export default function PokemonStatsScreen({
           resetPokemon.ability,
           resetPokemon.frontImage,
           resetPokemon.backImage,
-          pokemonState.id
-        ]
+          pokemonState.id,
+        ],
       );
 
       // Reset moves to maximum of 4
       const currentMoves = db.getAllSync<any>(
         `SELECT id FROM pokemon_moves WHERE pokemon_id = ? ORDER BY id ASC`,
-        [pokemonState.id]
+        [pokemonState.id],
       );
 
       if (currentMoves && currentMoves.length > 4) {
@@ -315,9 +299,9 @@ export default function PokemonStatsScreen({
       // Fetch fresh moves
       const moveRows = db.getAllSync<any>(
         `SELECT * FROM pokemon_moves WHERE pokemon_id = ?`,
-        [pokemonState.id]
+        [pokemonState.id],
       );
-      const finalMoves = moveRows.map(m => {
+      const finalMoves = moveRows.map((m) => {
         const detail = MOVES[m.move_name.toLowerCase()] || {};
         return {
           id: m.id,
@@ -337,7 +321,9 @@ export default function PokemonStatsScreen({
       const fullyResetPokemon = { ...resetPokemon, moves: finalMoves };
       setPokemon(fullyResetPokemon);
       navigation.setParams({ pokemon: fullyResetPokemon });
-      setStatusMessage(`${fullyResetPokemon.name} has been reset to base form.`);
+      setStatusMessage(
+        `${fullyResetPokemon.name} has been reset to base form.`,
+      );
       setStatusType("success");
       setStatusVisible(true);
     } catch (e: any) {
