@@ -17,8 +17,28 @@ import { EvolutionGuideModal } from "../components/pokemonData/EvolutionGuideMod
 import { MoveEditModal } from "../components/pokemonData/MoveEditModal";
 import StatusModal from "../components/statusModal";
 
+import { colors } from "@/src/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAudioPlayer } from "expo-audio";
+import * as Haptics from "expo-haptics";
+import React, { useState } from "react";
+import {
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { MovesetViewModal } from "../components/MovesetViewModal";
+import { EvolutionGuideModal } from "../components/pokemonData/EvolutionGuideModal";
+import { MoveEditModal } from "../components/pokemonData/MoveEditModal";
+import StatusModal from "../components/statusModal";
+
 import { TYPE_COLORS, TypeBadge } from "../components/TypeBadge";
-import { supabase } from "../lib/supabase";
+import db from "../lib/db";
+import * as Crypto from "expo-crypto";
 
 import { ItemEquipModal } from "@/src/components/ItemEquipModal";
 import { getItem } from "@/src/data/items/items";
@@ -72,11 +92,7 @@ export default function PokemonStatsScreen({
 
       if (isRemoval) {
         if (!replacedMoveId) throw new Error("No move ID provided for removal.");
-        const { error } = await supabase
-          .from("pokemon_moves")
-          .delete()
-          .eq("id", replacedMoveId);
-        if (error) throw error;
+        db.runSync(`DELETE FROM pokemon_moves WHERE id = ?`, [replacedMoveId]);
       } else if (isAddition || isReplacement) {
         const updatedMove =
           newMoves.find(
@@ -86,57 +102,72 @@ export default function PokemonStatsScreen({
         if (!updatedMove) throw new Error("No new move detected.");
 
         if (isReplacement) {
-          const { error } = await supabase
-            .from("pokemon_moves")
-            .update({
-              move_name: updatedMove.name,
-              move_power: updatedMove.power,
-              move_pp: updatedMove.pp,
-              move_type: updatedMove.type ?? "normal",
-              move_damageClass: updatedMove.damageClass,
-              move_accuracy: updatedMove.accuracy,
-              move_statChanges: JSON.stringify(updatedMove.statChanges || []),
-              move_description: updatedMove.description,
-              move_priority: updatedMove.priority,
-            })
-            .eq("id", replacedMoveId);
-          if (error) throw error;
+          db.runSync(
+            `UPDATE pokemon_moves SET 
+              move_name = ?, move_power = ?, move_pp = ?, move_type = ?,
+              move_damageClass = ?, move_accuracy = ?, move_statChanges = ?,
+              move_description = ?, move_priority = ?
+            WHERE id = ?`,
+            [
+              updatedMove.name,
+              updatedMove.power,
+              updatedMove.pp,
+              updatedMove.type ?? "normal",
+              updatedMove.damageClass,
+              updatedMove.accuracy,
+              JSON.stringify(updatedMove.statChanges || []),
+              updatedMove.description,
+              updatedMove.priority,
+              replacedMoveId,
+            ]
+          );
         } else {
           // Addition
-          const { error } = await supabase.from("pokemon_moves").insert({
-            pokemon_id: pokemonState.id,
-            move_name: updatedMove.name,
-            move_power: updatedMove.power,
-            move_pp: updatedMove.pp,
-            move_type: updatedMove.type ?? "normal",
-            move_damageClass: updatedMove.damageClass,
-            move_accuracy: updatedMove.accuracy,
-            move_statChanges: JSON.stringify(updatedMove.statChanges || []),
-            move_description: updatedMove.description,
-            move_priority: updatedMove.priority,
-          });
-          if (error) throw error;
+          db.runSync(
+            `INSERT INTO pokemon_moves (
+              id, pokemon_id, move_name, move_power, move_pp, 
+              move_type, move_damageClass, move_accuracy, 
+              move_statChanges, move_description, move_priority
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              Crypto.randomUUID(),
+              pokemonState.id,
+              updatedMove.name,
+              updatedMove.power,
+              updatedMove.pp,
+              updatedMove.type ?? "normal",
+              updatedMove.damageClass,
+              updatedMove.accuracy,
+              JSON.stringify(updatedMove.statChanges || []),
+              updatedMove.description,
+              updatedMove.priority,
+            ]
+          );
         }
       }
 
-      // Update local state. 
-      // For removals, just use the new array.
-      // For additions/replacements, we might need a fresh fetch to get database IDs, 
-      // but for now we'll update the UI state directly.
-      let finalMoves = newMoves;
-      if (isAddition || isReplacement) {
-        const updatedMove =
-          newMoves.find(
-            (m: any) => !pokemonState.moves.find((om: any) => om.id === m.id),
-          ) || newMoves.find((m: any) => !m.id);
-        
-        finalMoves = newMoves.map((m) => {
-          if (m.name === updatedMove?.name && !m.id) {
-            return { ...m, id: replacedMoveId }; // ID might be null for additions until refetch
-          }
-          return m;
-        });
-      }
+      // Fetch fresh moves from local DB
+      const moveRows = db.getAllSync<any>(
+        `SELECT * FROM pokemon_moves WHERE pokemon_id = ?`,
+        [pokemonState.id]
+      );
+      
+      const finalMoves = moveRows.map(m => {
+        const detail = MOVES[m.move_name.toLowerCase()] || {};
+        return {
+          id: m.id,
+          name: m.move_name,
+          power: m.move_power,
+          pp: m.move_pp,
+          maxPp: detail.pp || m.move_pp,
+          type: m.move_type,
+          damageClass: m.move_damageClass,
+          accuracy: m.move_accuracy,
+          statChanges: m.move_statChanges ? JSON.parse(m.move_statChanges) : [],
+          description: m.move_description,
+          priority: m.move_priority,
+        };
+      });
 
       const updatedPokemon = { ...pokemonState, moves: finalMoves };
       setPokemon(updatedPokemon);
@@ -145,9 +176,6 @@ export default function PokemonStatsScreen({
       setStatusMessage("Moveset updated successfully!");
       setStatusType("success");
       setStatusVisible(true);
-
-      // Trigger a refresh of the pokemon data to ensure IDs are correct
-      // This is optional but recommended if the UI relies on move IDs later
     } catch (error: any) {
       console.error("Move update error:", error);
       setStatusMessage(error.message);
@@ -161,12 +189,10 @@ export default function PokemonStatsScreen({
     setItemModalVisible(false);
 
     try {
-      const { error } = await supabase
-        .from("pokemon")
-        .update({ pk_held_item: itemId })
-        .eq("id", pokemonState.id);
-
-      if (error) throw error;
+      db.runSync(
+        `UPDATE pokemon SET pk_held_item = ? WHERE id = ?`,
+        [itemId, pokemonState.id]
+      );
 
       const updatedPokemon = { ...pokemonState, heldItem: itemId || undefined };
       setPokemon(updatedPokemon);
@@ -187,12 +213,10 @@ export default function PokemonStatsScreen({
     setConfirmVisible(false);
 
     try {
-      const { error } = await supabase
-        .from("pokemon")
-        .delete()
-        .eq("id", pokemonState.id);
-
-      if (error) throw error;
+      db.runSync(`DELETE FROM pokemon WHERE id = ?`, [pokemonState.id]);
+      // Dependent moves should be deleted via ON DELETE CASCADE in schema, 
+      // but let's be explicit just in case.
+      db.runSync(`DELETE FROM pokemon_moves WHERE pokemon_id = ?`, [pokemonState.id]);
 
       setStatusMessage(`${pokemonState.name} was released into the wild.`);
       setStatusType("success");
@@ -232,7 +256,7 @@ export default function PokemonStatsScreen({
       ...pokemonState,
       name: localData.name.charAt(0).toUpperCase() + localData.name.slice(1),
       type: localData.types,
-      ability: speciesData.abilities,
+      ability: speciesData.abilities[0], // Use first ability as default
       hp: calculateHp(speciesData.baseStats.hp, pokemonState.level),
       maxHp: calculateHp(speciesData.baseStats.hp, pokemonState.level),
       attack: calculateStat(speciesData.baseStats.attack, pokemonState.level),
@@ -251,41 +275,69 @@ export default function PokemonStatsScreen({
     };
 
     try {
-      const { error } = await supabase
-        .from("pokemon")
-        .update({
-          pk_name: resetPokemon.name,
-          pk_hp: resetPokemon.hp,
-          pk_max_hp: resetPokemon.maxHp,
-          pk_attack: resetPokemon.attack,
-          pk_defense: resetPokemon.defense,
-          pk_special_attack: resetPokemon.specialAttack,
-          pk_special_defense: resetPokemon.specialDefense,
-          pk_speed: resetPokemon.speed,
-          pk_types: resetPokemon.type,
-          pk_ability: resetPokemon.ability,
-          pk_front_image: resetPokemon.frontImage,
-          pk_back_image: resetPokemon.backImage,
-        })
-        .eq("id", pokemonState.id);
-
-      if (error) throw error;
+      db.runSync(
+        `UPDATE pokemon SET 
+          pk_name = ?, pk_hp = ?, pk_max_hp = ?,
+          pk_attack = ?, pk_defense = ?, pk_special_attack = ?,
+          pk_special_defense = ?, pk_speed = ?, pk_types = ?,
+          pk_ability = ?, pk_front_image = ?, pk_back_image = ?
+        WHERE id = ?`,
+        [
+          resetPokemon.name,
+          resetPokemon.hp,
+          resetPokemon.maxHp,
+          resetPokemon.attack,
+          resetPokemon.defense,
+          resetPokemon.specialAttack,
+          resetPokemon.specialDefense,
+          resetPokemon.speed,
+          JSON.stringify(resetPokemon.type),
+          resetPokemon.ability,
+          resetPokemon.frontImage,
+          resetPokemon.backImage,
+          pokemonState.id
+        ]
+      );
 
       // Reset moves to maximum of 4
-      const { data: currentMoves, error: fetchMovesError } = await supabase
-        .from("pokemon_moves")
-        .select("id")
-        .eq("pokemon_id", pokemonState.id)
-        .order("id", { ascending: true });
+      const currentMoves = db.getAllSync<any>(
+        `SELECT id FROM pokemon_moves WHERE pokemon_id = ? ORDER BY id ASC`,
+        [pokemonState.id]
+      );
 
-      if (!fetchMovesError && currentMoves && currentMoves.length > 4) {
+      if (currentMoves && currentMoves.length > 4) {
         const movesToDelete = currentMoves.slice(4).map((m) => m.id);
-        await supabase.from("pokemon_moves").delete().in("id", movesToDelete);
+        for (const moveId of movesToDelete) {
+          db.runSync(`DELETE FROM pokemon_moves WHERE id = ?`, [moveId]);
+        }
       }
 
-      setPokemon(resetPokemon);
-      navigation.setParams({ pokemon: resetPokemon });
-      setStatusMessage(`${resetPokemon.name} has been reset to base form.`);
+      // Fetch fresh moves
+      const moveRows = db.getAllSync<any>(
+        `SELECT * FROM pokemon_moves WHERE pokemon_id = ?`,
+        [pokemonState.id]
+      );
+      const finalMoves = moveRows.map(m => {
+        const detail = MOVES[m.move_name.toLowerCase()] || {};
+        return {
+          id: m.id,
+          name: m.move_name,
+          power: m.move_power,
+          pp: m.move_pp,
+          maxPp: detail.pp || m.move_pp,
+          type: m.move_type,
+          damageClass: m.move_damageClass,
+          accuracy: m.move_accuracy,
+          statChanges: m.move_statChanges ? JSON.parse(m.move_statChanges) : [],
+          description: m.move_description,
+          priority: m.move_priority,
+        };
+      });
+
+      const fullyResetPokemon = { ...resetPokemon, moves: finalMoves };
+      setPokemon(fullyResetPokemon);
+      navigation.setParams({ pokemon: fullyResetPokemon });
+      setStatusMessage(`${fullyResetPokemon.name} has been reset to base form.`);
       setStatusType("success");
       setStatusVisible(true);
     } catch (e: any) {

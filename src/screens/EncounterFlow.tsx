@@ -11,6 +11,7 @@ import { getExpForLevel, getGrowthRate } from "../utils/experienceCalculator";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { Battle } from "./BattleScreen";
 import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
+import { syncAllProgress } from "../hooks/savePokemon";
 
 type Screen = "transition" | "battle";
 
@@ -155,42 +156,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const activePlayer = localTeam[activeIndex];
 
-  const syncAllProgress = async (finalTeam: Pokemon[]) => {
-    try {
-      const syncData = finalTeam
-        .filter((p) => !!p.id)
-        .map((p) => ({
-          id: p.id,
-          pk_species_id: p.speciesId,
-          pk_name: p.name,
-          pk_types: p.type,
-          pk_ability: p.ability,
-          pk_front_image: p.frontImage,
-          pk_back_image: p.backImage,
-          pk_cry: p.cry,
-          pk_level: p.level,
-          pk_experience: p.experience,
-          pk_hp: p.maxHp, // Fully heal
-          pk_max_hp: p.maxHp,
-          pk_attack: p.attack,
-          pk_defense: p.defense,
-          pk_special_attack: p.specialAttack,
-          pk_special_defense: p.specialDefense,
-          pk_speed: p.speed,
-        }));
-
-      if (syncData.length === 0) return;
-
-      const { error } = await supabase.from("pokemon").upsert(syncData);
-
-      if (error) console.error("Error syncing progress:", error);
-    } catch (e) {
-      console.error("Failed to sync progress", e);
-    }
-  };
-
   const checkpointProgress = async (finalTeam: Pokemon[]) => {
-    await syncAllProgress(finalTeam);
+    await syncAllProgress(finalTeam, true); // Heal at checkpoint
   };
 
   const handleTransitionReady = useCallback(() => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Alert } from "react-native";
-import { supabase } from "../../lib/supabase";
+import db from "../../lib/db";
 import { swapIntoTeam } from "../savePokemon";
 import { Pokemon } from "../../types/pokemon";
 import { BattleState } from "../../battle/battleTypes";
@@ -36,15 +36,12 @@ export function useTeamManagement(
   const loadTeamForSwap = async (caughtId: string) => {
     if (!userId) return;
     try {
-      const { data, error } = await supabase
-        .from("pokemon")
-        .select("id, pk_name, pk_level")
-        .eq("user_id", userId)
-        .not("pk_order", "is", null)
-        .neq("pk_order", 0)
-        .order("pk_order", { ascending: true });
-
-      if (error) throw error;
+      const data = db.getAllSync<any>(
+        `SELECT id, pk_name, pk_level FROM pokemon 
+         WHERE user_id = ? AND pk_order IS NOT NULL AND pk_order != 0
+         ORDER BY pk_order ASC`,
+        [userId]
+      );
 
       const members = data.map((p: any) => ({
         id: p.id,
@@ -56,7 +53,7 @@ export function useTeamManagement(
       setPendingCaughtId(caughtId);
       setSwapModalVisible(true);
     } catch (e) {
-      console.error("Failed to load team for swap", e);
+      console.error("Failed to load team for swap from local DB", e);
     }
   };
 

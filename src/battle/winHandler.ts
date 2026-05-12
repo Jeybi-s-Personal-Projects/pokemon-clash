@@ -1,4 +1,3 @@
-import { supabase } from "../lib/supabase";
 import { Move, Pokemon } from "../types/pokemon";
 import { BattleState } from "./battleTypes";
 import { calculateExpGain, checkLevelUp } from "../utils/experienceCalculator";
@@ -6,6 +5,8 @@ import { delay } from "../utils/battleUtils";
 import { fetchPokemon } from "../api/pokeApi";
 import { checkEvolution } from "../utils/evolutionChecker";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
+import db from "../lib/db";
+import * as Crypto from "expo-crypto";
 
 export type WinHandlerContext = {
   setCurrentMessage: (msg: string | null) => void;
@@ -247,15 +248,28 @@ export const handleWinner = async (
     }
 
     if (newMovesToSave.length > 0) {
-      const uniqueMoves = Array.from(
-        new Map(
-          newMovesToSave.map((m) => [`${m.pokemon_id}-${m.move_name}`, m]),
-        ).values(),
-      );
-      const { error } = await supabase
-        .from("pokemon_moves")
-        .insert(uniqueMoves);
-      if (error) console.error("Error batch saving moves:", error);
+      for (const m of newMovesToSave) {
+        db.runSync(
+          `INSERT INTO pokemon_moves (
+            id, pokemon_id, move_name, move_power, move_pp, 
+            move_type, move_damageClass, move_accuracy, 
+            move_statChanges, move_description, move_priority
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            Crypto.randomUUID(),
+            m.pokemon_id,
+            m.move_name,
+            m.move_power,
+            m.move_pp,
+            m.move_type,
+            m.move_damageClass,
+            m.move_accuracy,
+            m.move_statChanges,
+            m.move_description,
+            m.move_priority,
+          ]
+        );
+      }
     }
 
     if (hasMilestone && onCheckpoint) {

@@ -12,10 +12,10 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabase";
 import { colors } from "../theme/color";
 import { SelectFromPCScreenProps } from "../types/navigation";
 import { getPokemonIcon } from "../utils/pokemonImageUtils";
+import db from "../lib/db";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -66,17 +66,22 @@ export default function SelectFromPCScreen({
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("pokemon")
-        .select("id, pk_name, pk_level, pk_front_image, pk_types, pk_species_id")
-        .eq("user_id", user.id)
-        .is("pk_order", null)
-        .order("created_at", { ascending: false });
+      const data = db.getAllSync<any>(
+        `SELECT id, pk_name, pk_level, pk_front_image, pk_types, pk_species_id 
+         FROM pokemon 
+         WHERE user_id = ? AND pk_order IS NULL 
+         ORDER BY created_at DESC`,
+        [user.id]
+      );
 
-      if (error) throw error;
-      setPcPokemon(data || []);
+      const mapped = data.map(p => ({
+        ...p,
+        pk_types: JSON.parse(p.pk_types)
+      }));
+
+      setPcPokemon(mapped || []);
     } catch (e) {
-      console.error("Error fetching PC:", e);
+      console.error("Error fetching PC from local DB:", e);
     } finally {
       setLoading(false);
     }
@@ -89,35 +94,25 @@ export default function SelectFromPCScreen({
 
     try {
       if (replacedId && replacedOrder) {
-        // SWAP LOGIC: Use individual updates to avoid NOT NULL constraints
-        const { error: error1 } = await supabase
-          .from("pokemon")
-          .update({ pk_order: null })
-          .eq("id", replacedId);
-
-        if (error1) throw error1;
-
-        const { error: error2 } = await supabase
-          .from("pokemon")
-          .update({ pk_order: replacedOrder })
-          .eq("id", p.id);
-
-        if (error2) throw error2;
+        db.runSync(
+          `UPDATE pokemon SET pk_order = NULL WHERE id = ?`,
+          [replacedId]
+        );
+        db.runSync(
+          `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
+          [replacedOrder, p.id]
+        );
       } else {
-        // ADD LOGIC
         const nextOrder = (teamLength || 0) + 1;
-        const { error } = await supabase
-          .from("pokemon")
-          .update({ pk_order: nextOrder })
-          .eq("id", p.id);
-
-        if (error) throw error;
+        db.runSync(
+          `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
+          [nextOrder, p.id]
+        );
       }
 
-      // Successfully finished
       navigation.goBack();
     } catch (e) {
-      console.error("Error updating team:", e);
+      console.error("Error updating team in local DB:", e);
       setIsProcessing(false);
     }
   };
