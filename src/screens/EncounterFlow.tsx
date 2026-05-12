@@ -200,8 +200,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const handleExit = useCallback(
     async (finalTeam: Pokemon[]) => {
-      // Session ended by choice
-      await syncAllProgress(finalTeam);
+      // Session ended by choice - Heal the team
+      await syncAllProgress(finalTeam, true);
       reset();
       navigation.reset({
         index: 0,

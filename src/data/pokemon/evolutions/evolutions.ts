@@ -206,7 +206,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "pikachu",
     toId: 26,
     toName: "raichu",
-    condition: { trigger: "use-item", item: "thunder-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 27,
@@ -227,7 +227,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "nidorina",
     toId: 31,
     toName: "nidoqueen",
-    condition: { trigger: "use-item", item: "moon-stone" },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 32,
@@ -241,28 +241,28 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "nidorino",
     toId: 34,
     toName: "nidoking",
-    condition: { trigger: "use-item", item: "moon-stone" },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 35,
     fromName: "clefairy",
     toId: 36,
     toName: "clefable",
-    condition: { trigger: "use-item", item: "moon-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 37,
     fromName: "vulpix",
     toId: 38,
     toName: "ninetales",
-    condition: { trigger: "use-item", item: "fire-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 39,
     fromName: "jigglypuff",
     toId: 40,
     toName: "wigglytuff",
-    condition: { trigger: "use-item", item: "moon-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 41,
@@ -290,7 +290,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "gloom",
     toId: 45,
     toName: "vileplume",
-    condition: { trigger: "use-item", item: "leaf-stone" },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 44,
@@ -346,7 +346,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "growlithe",
     toId: 59,
     toName: "arcanine",
-    condition: { trigger: "use-item", item: "fire-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 60,
@@ -367,7 +367,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "poliwhirl",
     toId: 186,
     toName: "politoed",
-    condition: { trigger: "trade", heldItem: "kings-rock" },
+    condition: { trigger: "use-item", item: "kings-rock" },
   },
   {
     fromId: 63,
@@ -409,7 +409,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "weepinbell",
     toId: 71,
     toName: "victreebel",
-    condition: { trigger: "use-item", item: "leaf-stone" },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 72,
@@ -486,7 +486,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "shellder",
     toId: 91,
     toName: "cloyster",
-    condition: { trigger: "use-item", item: "water-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 92,
@@ -535,7 +535,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "exeggcute",
     toId: 103,
     toName: "exeggutor",
-    condition: { trigger: "use-item", item: "leaf-stone" },
+    condition: { trigger: "level-up", level: 30 },
   },
   {
     fromId: 104,
@@ -591,7 +591,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "staryu",
     toId: 121,
     toName: "starmie",
-    condition: { trigger: "use-item", item: "water-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 123,
@@ -696,7 +696,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "cyndaquil",
     toId: 156,
     toName: "quilava",
-    condition: { trigger: "level-up", level: 14 },
+    condition: { trigger: "level-up", level: 16 },
   },
   {
     fromId: 156,
@@ -829,7 +829,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "sunkern",
     toId: 192,
     toName: "sunflora",
-    condition: { trigger: "use-item", item: "sun-stone" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 194,
