@@ -381,21 +381,21 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "kadabra",
     toId: 65,
     toName: "alakazam",
-    condition: { trigger: "trade", heldItem: null },
+    condition: { trigger: "level-up", level: 25 },
   },
   {
     fromId: 66,
     fromName: "machop",
     toId: 67,
     toName: "machoke",
-    condition: { trigger: "level-up", level: 28 },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 67,
     fromName: "machoke",
     toId: 68,
     toName: "machamp",
-    condition: { trigger: "trade", heldItem: null },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 69,
@@ -430,7 +430,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "graveler",
     toId: 76,
     toName: "golem",
-    condition: { trigger: "trade", heldItem: null },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 77,
@@ -507,7 +507,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "onix",
     toId: 208,
     toName: "steelix",
-    condition: { trigger: "trade", heldItem: "metal-coat" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 96,
@@ -577,7 +577,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "seadra",
     toId: 230,
     toName: "kingdra",
-    condition: { trigger: "trade", heldItem: "dragon-scale" },
+    condition: { trigger: "level-up", level: 42 },
   },
   {
     fromId: 118,
@@ -598,7 +598,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "scyther",
     toId: 212,
     toName: "scizor",
-    condition: { trigger: "trade", heldItem: "metal-coat" },
+    condition: { trigger: "level-up", level: 36 },
   },
   {
     fromId: 129,
@@ -647,7 +647,7 @@ export const EVOLUTIONS: EvolutionStep[] = [
     fromName: "porygon",
     toId: 233,
     toName: "porygon2",
-    condition: { trigger: "trade", heldItem: "up-grade" },
+    condition: { trigger: "level-up", level: 28 },
   },
   {
     fromId: 138,
