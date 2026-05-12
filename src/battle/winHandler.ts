@@ -262,18 +262,26 @@ export const handleWinner = async (
       await onCheckpoint(finalTeam);
     }
 
-    await delay(1500);
+    // Ensure state is fully synced before finalizing
+    setState((s) => ({
+      ...s,
+      player: finalTeam[currentState.activePlayerIndex],
+      team: finalTeam,
+    }));
 
     const teamForEnd = revertMegaInTeam(finalTeam);
     resetMegaState();
 
-    if (onBattleEnd)
+    await delay(1500);
+
+    if (onBattleEnd) {
       onBattleEnd(
         "player",
         teamForEnd,
         hasMilestone,
         currentState.activePlayerIndex,
       );
+    }
   } else {
     setCurrentMessage(`${currentState.player.name.toUpperCase()} fainted!`);
     setState((s) => ({ ...s, hitSide: "player" }));
@@ -282,7 +290,8 @@ export const handleWinner = async (
     const teamForEnd = revertMegaInTeam(currentState.team);
     resetMegaState();
 
-    if (onBattleEnd)
+    if (onBattleEnd) {
       onBattleEnd("enemy", teamForEnd, false, currentState.activePlayerIndex);
+    }
   }
 };
