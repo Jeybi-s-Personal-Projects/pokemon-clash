@@ -35,6 +35,7 @@ const POKEBALL_ITEMS: BagItem[] = [
     sprite: require("../../assets/items/pokeball.png"),
   },
   {
+    
     id: "great-ball",
     name: "Great Ball",
     description: "Better catch rate than Poké Ball",

@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -26,46 +27,47 @@ export const MoveEditModal: React.FC<Props> = ({
   pokemon,
   onConfirm,
 }) => {
-  const [step, setStep] = useState<1 | 2>(1); // 1: Choose move to relearn, 2: Choose move to forget
+  const [activeTab, setActiveTab] = useState<"relearn" | "edit">("relearn");
+  const [relearnStep, setRelearnStep] = useState<1 | 2>(1);
+  const [manageStep, setManageStep] = useState<"list" | "add">("list");
   const [selectedNewMove, setSelectedNewMove] = useState<Move | null>(null);
   const [availableMoves, setAvailableMoves] = useState<Move[]>([]);
 
   useEffect(() => {
     if (visible) {
-      setStep(1);
+      setRelearnStep(1);
+      setManageStep("list");
       setSelectedNewMove(null);
 
       const speciesData = SPECIES[pokemon.speciesId];
       if (!speciesData) return;
 
       const normalize = (s: string) => s.toLowerCase().replace(/[\s]/g, "-");
-      const currentMoveNorm = pokemon.moves.map((m) => normalize(m.name));
+      const currentMoveNames = pokemon.moves.map((m) => normalize(m.name));
 
       const learnable = speciesData.rawMoves
         .filter((m) => m.levelLearned <= pokemon.level)
-        .filter((m) => !currentMoveNorm.includes(normalize(m.name)))
+        .filter((m) => !currentMoveNames.includes(normalize(m.name)))
         .map((m) => {
           const slug = normalize(m.name);
           const battleData = BATTLE_MOVES[slug];
-
           if (!battleData || battleData.category === "unique") return null;
 
           return {
-            name: m.name,
+            name: battleData.name,
             power: battleData.power || 0,
             pp: battleData.pp || 0,
             maxPp: battleData.pp || 0,
             type: battleData.type,
             accuracy: battleData.accuracy,
             damageClass: battleData.damageClass,
-            effects: battleData.effects,
             description: battleData.description,
-            priority: battleData.priority
-            } as Move;
+            effects: battleData.effects,
+            priority: battleData.priority,
+          } as Move;
         })
         .filter((m): m is Move => m !== null);
 
-      // Deduplicate by name
       const uniqueLearnable = Array.from(
         new Map(learnable.map((m) => [m.name.toLowerCase(), m])).values(),
       );
@@ -73,12 +75,12 @@ export const MoveEditModal: React.FC<Props> = ({
     }
   }, [visible, pokemon]);
 
-  const handleSelectNewMove = (move: Move) => {
+  const handleSelectRelearnMove = (move: Move) => {
     setSelectedNewMove(move);
-    setStep(2);
+    setRelearnStep(2);
   };
 
-  const handleForgetMove = (index: number) => {
+  const handleConfirmRelearn = (index: number) => {
     if (!selectedNewMove) return;
     const newMoves = [...pokemon.moves];
     const replacedMoveId = newMoves[index].id;
@@ -86,87 +88,213 @@ export const MoveEditModal: React.FC<Props> = ({
     onConfirm(newMoves, replacedMoveId);
   };
 
+  const handleRemoveMove = (index: number) => {
+    if (pokemon.moves.length <= 1) return;
+    const moveToRemoveId = pokemon.moves[index].id;
+    const newMoves = pokemon.moves.filter((_, i) => i !== index);
+    onConfirm(newMoves, moveToRemoveId);
+  };
+
+  const handleAddMove = (move: Move) => {
+    if (pokemon.moves.length >= 4) return;
+    const newMoves = [...pokemon.moves, move];
+    onConfirm(newMoves);
+  };
+
+  const renderMoveItem = (move: Move, onPress: () => void) => (
+    <TouchableOpacity style={styles.moveItem} onPress={onPress}>
+      <View style={styles.moveHeader}>
+        <Text style={styles.moveName}>{move.name.toUpperCase()}</Text>
+        <TypeBadge type={move.type || "normal"} size="small" />
+      </View>
+      <View style={styles.moveStats}>
+        <Text style={styles.moveDetailText}>PWR: {move.power || "-"}</Text>
+        <Text style={styles.moveDetailText}>
+          ACC: {move.accuracy ? `${move.accuracy}%` : "-"}
+        </Text>
+        <Text style={styles.moveDetailText}>PP: {move.pp}</Text>
+      </View>
+      {move.description && (
+        <Text style={styles.moveDescription} numberOfLines={2}>
+          {move.description}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>
-            {step === 1 ? "Relearn a Move" : "Forget a Move"}
-          </Text>
-
-          {step === 1 ? (
-            <ScrollView style={styles.scroll}>
-              {availableMoves.length > 0 ? (
-                availableMoves.map((move, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={styles.moveItem}
-                    onPress={() => handleSelectNewMove(move)}
-                  >
-                    <View style={styles.moveHeader}>
-                      <Text style={styles.moveName}>
-                        {move.name.replace(/-/g, " ").toUpperCase()}
-                      </Text>
-                      <TypeBadge type={move.type || "normal"} size="small" />
-                    </View>
-                    <Text style={styles.moveDetail}>
-                      PWR: {move.power || "-"} | ACC:{" "}
-                      {move.accuracy ? `${move.accuracy}%` : "-"} | PP:{" "}
-                      {move.pp}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>
-                  No previously learned moves to relearn.
-                </Text>
-              )}
-            </ScrollView>
-          ) : (
-            <View>
-              <View style={styles.replacingBox}>
-                <Text style={styles.replacingLabel}>Relearning:</Text>
-                <View style={styles.moveHeader}>
-                  <Text style={styles.replacingName}>
-                    {selectedNewMove?.name.replace(/-/g, " ").toUpperCase()}
-                  </Text>
-                  <TypeBadge
-                    type={selectedNewMove?.type || "normal"}
-                    size="small"
-                  />
-                </View>
-              </View>
-
-              <Text style={styles.instruction}>
-                Select which move to replace:
-              </Text>
-
-              {pokemon.moves.map((move, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.moveItem}
-                  onPress={() => handleForgetMove(i)}
-                >
-                  <View style={styles.moveHeader}>
-                    <Text style={styles.moveName}>
-                      {move.name.toUpperCase()}
-                    </Text>
-                    <TypeBadge type={move.type || "normal"} size="small" />
-                  </View>
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => setStep(1)}
+          <Text style={styles.modalTitle}>Manage Moves</Text>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "relearn" && styles.activeTab]}
+              onPress={() => {
+                setActiveTab("relearn");
+                setRelearnStep(1);
+              }}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "relearn" && styles.activeTabText,
+                ]}
               >
-                <Text style={styles.backButtonText}>Back to Selection</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                Relearn
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "edit" && styles.activeTab]}
+              onPress={() => {
+                setActiveTab("edit");
+                setManageStep("list");
+              }}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "edit" && styles.activeTabText,
+                ]}
+              >
+                Manage
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.contentArea}>
+            {activeTab === "relearn" ? (
+              relearnStep === 1 ? (
+                <>
+                  <Text style={styles.instruction}>
+                    Select a move to learn:
+                  </Text>
+                  <ScrollView style={styles.scroll}>
+                    {availableMoves.length > 0 ? (
+                      availableMoves.map((move, i) => (
+                        <View key={i}>
+                          {renderMoveItem(move, () =>
+                            handleSelectRelearnMove(move),
+                          )}
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.emptyText}>
+                        No available moves at this level.
+                      </Text>
+                    )}
+                  </ScrollView>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.instruction}>
+                    Replace move with {selectedNewMove?.name}:
+                  </Text>
+                  <ScrollView style={styles.scroll}>
+                    {pokemon.moves.map((move, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={styles.moveItem}
+                        onPress={() => handleConfirmRelearn(i)}
+                      >
+                        <View style={styles.moveHeader}>
+                          <Text style={styles.moveName}>
+                            {move.name.toUpperCase()}
+                          </Text>
+                          <TypeBadge
+                            type={move.type || "normal"}
+                            size="small"
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => setRelearnStep(1)}
+                  >
+                    <Text style={styles.backButtonText}>Back to List</Text>
+                  </TouchableOpacity>
+                </>
+              )
+            ) : manageStep === "list" ? (
+              <>
+                <Text style={styles.instruction}>
+                  Current Moves ({pokemon.moves.length}/4):
+                </Text>
+                <ScrollView style={styles.scroll}>
+                  {pokemon.moves.map((move, i) => (
+                    <View key={i} style={styles.editMoveItem}>
+                      <View style={{ flex: 1 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <Text style={styles.moveName}>
+                            {move.name.toUpperCase()}
+                          </Text>
+                          <TypeBadge
+                            type={move.type || "normal"}
+                            size="small"
+                          />
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.removeButton,
+                          pokemon.moves.length <= 1 && { opacity: 0.5 },
+                        ]}
+                        onPress={() => handleRemoveMove(i)}
+                        disabled={pokemon.moves.length <= 1}
+                      >
+                        <MaterialCommunityIcons
+                          name="trash-can-outline"
+                          size={20}
+                          color="white"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+                {pokemon.moves.length < 4 && (
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => setManageStep("add")}
+                  >
+                    <MaterialCommunityIcons
+                      name="plus"
+                      size={20}
+                      color="white"
+                    />
+                    <Text style={styles.addButtonText}>Add New Move</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.instruction}>Select a move to add:</Text>
+                <ScrollView style={styles.scroll}>
+                  {availableMoves.length > 0 ? (
+                    availableMoves.map((move, i) => (
+                      <View key={i}>
+                        {renderMoveItem(move, () => handleAddMove(move))}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>
+                      No available moves to add.
+                    </Text>
+                  )}
+                </ScrollView>
+              </>
+            )}
+          </View>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Cancel</Text>
+            <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -184,65 +312,145 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.modalBackgroundPrimary,
     padding: 20,
-    borderRadius: 20,
-    maxHeight: "80%",
+    borderRadius: 24,
+    maxHeight: "85%",
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },
-  title: {
+  modalTitle: {
     color: "white",
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
   },
-  scroll: { maxHeight: 400 },
+  tabContainer: {
+    flexDirection: "row",
+    marginBottom: 20,
+    backgroundColor: colors.modalContent,
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  activeTab: {
+    backgroundColor: colors.accent,
+  },
+  tabText: {
+    color: "#9CA3AF",
+    fontWeight: "bold",
+  },
+  activeTabText: {
+    color: "white",
+  },
+  contentArea: {
+    minHeight: 200,
+  },
+  scroll: {
+    maxHeight: 350,
+    marginBottom: 10,
+  },
   moveItem: {
     backgroundColor: colors.modalContent,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.modalBorderSubtle,
+    borderColor: colors.modalBorder,
+  },
+  editMoveItem: {
+    backgroundColor: colors.modalContent,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.modalBorder,
   },
   moveHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  moveName: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  moveStats: {
+    flexDirection: "row",
+    gap: 12,
     marginBottom: 4,
   },
-  moveName: { color: "white", fontWeight: "bold", fontSize: 16 },
-  moveDetail: { color: "#9CA3AF", fontSize: 12 },
-  emptyText: {
+  moveDetailText: {
+    color: "#D1D5DB",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  moveDescription: {
     color: "#9CA3AF",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  instruction: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  emptyText: {
+    color: "#6B7280",
     textAlign: "center",
-    marginTop: 20,
+    marginVertical: 20,
     fontStyle: "italic",
   },
-  replacingBox: {
-    backgroundColor: "#111827",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.accent,
-  },
-  replacingLabel: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  replacingName: { color: "white", fontWeight: "bold", fontSize: 18 },
-  instruction: { color: "#9CA3AF", marginBottom: 12, textAlign: "center" },
-  backButton: { marginTop: 10, padding: 10, alignItems: "center" },
-  backButtonText: { color: colors.accent, fontWeight: "bold" },
-  closeButton: {
-    marginTop: 20,
-    backgroundColor: "#374151",
+  backButton: {
     padding: 12,
-    borderRadius: 12,
     alignItems: "center",
   },
-  closeButtonText: { color: "white", fontWeight: "bold" },
+  backButtonText: {
+    color: colors.accent,
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  removeButton: {
+    backgroundColor: "#7F1D1D",
+    padding: 10,
+    borderRadius: 10,
+    marginLeft: 10,
+  },
+  addButton: {
+    backgroundColor: colors.accent,
+    padding: 16,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 10,
+  },
+  addButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  closeButton: {
+    marginTop: 10,
+    backgroundColor: "#374151",
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });
