@@ -58,6 +58,35 @@ export const executeMove = async (
     enhancedMove?.category === "status" ||
     (move.statChanges && move.statChanges.length > 0 && move.statChanges[0].change < 0);
 
+  // ── 0. Decrement PP ──────────────────────────────────────
+  const currentAttacker = isPlayerAttacking
+    ? currentState.player
+    : currentState.enemy;
+    
+  const updatedAttackerMoves = currentAttacker.moves.map((m) => {
+    if (m.name === move.name) {
+      return { ...m, pp: Math.max(0, m.pp - 1) };
+    }
+    return m;
+  });
+
+  const nextAttacker: Pokemon = {
+    ...currentAttacker,
+    moves: updatedAttackerMoves,
+  };
+
+  // Update State with new PP before continuing
+  if (isPlayerAttacking) {
+    currentState = { ...currentState, player: nextAttacker };
+  } else {
+    currentState = { ...currentState, enemy: nextAttacker };
+  }
+  
+  // Use current state to get final attacker reference
+  const activeAttacker = isPlayerAttacking
+    ? currentState.player
+    : currentState.enemy;
+
   // ── 0.5 Protection check ──────────────────────────────────
   const defenderProtected = isPlayerAttacking
     ? currentState.enemyProtected

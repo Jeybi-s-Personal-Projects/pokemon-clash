@@ -6,23 +6,25 @@ import { Move, Pokemon } from "../types/pokemon";
  */
 export function getAIMove(attacker: Pokemon, defender: Pokemon): Move {
   const hpPercent = (attacker.hp / attacker.maxHp) * 100;
-  const movesWithData = attacker.moves
-    .filter((m) => BATTLE_MOVES[m.name.toLowerCase()]?.category !== "unique")
-    .map((m) => ({
-      move: m,
-      data: BATTLE_MOVES[m.name.toLowerCase()],
-    }));
+  
+  // Filter moves that have PP left and are not "unique" category
+  const availableMoves = attacker.moves.filter((m) => m.pp > 0 && BATTLE_MOVES[m.name.toLowerCase()]?.category !== "unique");
+  
+  const movesWithData = availableMoves.map((m) => ({
+    move: m,
+    data: BATTLE_MOVES[m.name.toLowerCase()],
+  }));
 
   // 1. If HP is low, prioritize healing
   if (hpPercent < 40) {
     const healMove = movesWithData.find((m) => m.data?.category === "heal");
-    if (healMove && healMove.move.pp > 0) return healMove.move;
+    if (healMove) return healMove.move;
   }
 
   // 2. If target has no status, try to inflict one
   if (!defender.status) {
     const statusMove = movesWithData.find((m) => m.data?.category === "status");
-    if (statusMove && statusMove.move.pp > 0) return statusMove.move;
+    if (statusMove) return statusMove.move;
   }
 
   // 3. If attacker has high HP, try to boost stats
@@ -32,15 +34,26 @@ export function getAIMove(attacker: Pokemon, defender: Pokemon): Move {
         m.data?.category === "stat-change" &&
         m.data.effects.some((e) => e.target === "user"),
     );
-    if (boostMove && boostMove.move.pp > 0) return boostMove.move;
+    if (boostMove) return boostMove.move;
   }
 
-  // 4. Default: Highest power move that has PP
+  // 4. Default: Highest power move available
   const damagingMoves = movesWithData
-    .filter((m) => m.move.pp > 0)
     .sort((a, b) => (b.data?.power || 0) - (a.data?.power || 0));
 
-  return damagingMoves[0]?.move || movesWithData[0]?.move || attacker.moves[0];
+  if (damagingMoves.length > 0) return damagingMoves[0].move;
+
+  // 5. Fallback to Struggle if no moves have PP
+  return {
+    name: "struggle",
+    power: 50,
+    pp: 1,
+    maxPp: 1,
+    damageClass: "physical",
+    type: "normal",
+    accuracy: 100,
+    description: "An all-out attack that also hurts the user.",
+  };
 }
 
 /**
