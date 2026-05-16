@@ -34,7 +34,6 @@ export default function SelectStarterScreen({
   navigation,
 }: SelectStarterScreenProps) {
   const { user } = useAuth();
-  const insets = useSafeAreaInsets();
   const [starters, setStarters] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState(false);
