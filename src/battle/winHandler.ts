@@ -43,7 +43,6 @@ export const handleWinner = async (
     setResolveEvolution,
     revertMegaInTeam,
     resetMegaState,
-    onToggleAutoBattle,
     onCheckpoint,
     onBattleEnd,
     defeatCount = 0,
