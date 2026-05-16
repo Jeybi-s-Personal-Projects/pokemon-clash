@@ -67,7 +67,8 @@ export const MoveLearningModal = ({
   const newMoveDetails = MOVES[newMove.name.toLowerCase()];
   const newMoveType = newMove.type || "normal";
   const newMoveColor = TYPE_COLORS[newMoveType] ?? "#888";
-  const isNewMoveUnique = BATTLE_MOVES[newMove.name.toLowerCase()]?.category === "unique";
+  const isNewMoveUnique =
+    BATTLE_MOVES[newMove.name.toLowerCase()]?.category === "unique";
 
   const renderMoveCategoryIcon = (damageClass: string | undefined) => {
     switch (damageClass) {
@@ -106,7 +107,12 @@ export const MoveLearningModal = ({
           <Text style={styles.pokemonName}>{pokemon.name.toUpperCase()}</Text>
           <Text style={styles.title}>NEW MOVE LEARNED</Text>
 
-          <View style={[styles.newMoveCard, { borderColor: newMoveColor, opacity: isNewMoveUnique ? 0.6 : 1 }]}>
+          <View
+            style={[
+              styles.newMoveCard,
+              { borderColor: newMoveColor, opacity: isNewMoveUnique ? 0.6 : 1 },
+            ]}
+          >
             <View style={styles.moveHeader}>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
@@ -142,12 +148,12 @@ export const MoveLearningModal = ({
                 <TouchableOpacity
                   key={index}
                   onPress={() => handleSelect(index)}
-                  disabled={isProcessing || isPpEmpty}
+                  disabled={isProcessing}
                   style={[
                     styles.moveButton,
                     {
                       borderColor: typeColor,
-                      opacity: isPpEmpty || isUnique ? 0.6 : 1,
+                      opacity: isUnique ? 0.6 : 1,
                     },
                   ]}
                 >
@@ -161,7 +167,6 @@ export const MoveLearningModal = ({
                     >
                       <Text style={styles.moveName}>
                         {move.name.toUpperCase()}
-                        {isPpEmpty && " (EMPTY)"}
                         {isUnique && " (UNIQUE)"}
                       </Text>
                       <TypeBadge type={move.type || "normal"} size="small" />
