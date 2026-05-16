@@ -142,7 +142,6 @@ export const MoveLearningModal = ({
               const typeColor = TYPE_COLORS[move.type || "normal"] ?? "#888";
               const isUnique =
                 BATTLE_MOVES[move.name.toLowerCase()]?.category === "unique";
-              const isPpEmpty = (move.pp ?? 0) <= 0;
 
               return (
                 <TouchableOpacity
