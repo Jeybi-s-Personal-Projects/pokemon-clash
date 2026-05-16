@@ -82,11 +82,6 @@ export const executeMove = async (
     currentState = { ...currentState, enemy: nextAttacker };
   }
   
-  // Use current state to get final attacker reference
-  const activeAttacker = isPlayerAttacking
-    ? currentState.player
-    : currentState.enemy;
-
   // ── 0.5 Protection check ──────────────────────────────────
   const defenderProtected = isPlayerAttacking
     ? currentState.enemyProtected
