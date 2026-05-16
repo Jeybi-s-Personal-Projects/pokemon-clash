@@ -67,7 +67,7 @@ export default function SelectFromPCScreen({
     setLoading(true);
     try {
       const data = db.getAllSync<any>(
-        `SELECT id, pk_name, pk_level, pk_front_image, pk_types, pk_species_id 
+        `SELECT id, pk_name, pk_level, pk_front_image, pk_types, pk_species_id, pk_is_shiny 
          FROM pokemon 
          WHERE user_id = ? AND pk_order IS NULL 
          ORDER BY created_at DESC`,
@@ -76,7 +76,8 @@ export default function SelectFromPCScreen({
 
       const mapped = data.map(p => ({
         ...p,
-        pk_types: JSON.parse(p.pk_types)
+        pk_types: JSON.parse(p.pk_types),
+        pk_is_shiny: !!p.pk_is_shiny
       }));
 
       setPcPokemon(mapped || []);
@@ -128,7 +129,7 @@ export default function SelectFromPCScreen({
         disabled={isProcessing}
       >
         <Image
-          source={{ uri: getPokemonIcon(item.pk_species_id) }}
+          source={{ uri: getPokemonIcon(item.pk_species_id, item.pk_is_shiny) }}
           style={styles.sprite}
           resizeMode="contain"
         />
