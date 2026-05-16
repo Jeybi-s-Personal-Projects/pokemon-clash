@@ -133,6 +133,7 @@ export function useBattle({
       milestonePlayer.seekTo(0);
       milestonePlayer.play();
     },
+    userId: user?.id,
   });
 
   const teamMgmt = useTeamManagement(

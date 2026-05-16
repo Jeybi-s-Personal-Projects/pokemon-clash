@@ -58,6 +58,18 @@ export const initDatabase = () => {
     );
   `);
 
+  // Create Trainer Stats Table
+  db.execSync(`
+    CREATE TABLE IF NOT EXISTS trainer_stats (
+      user_id TEXT PRIMARY KEY,
+      pokecoins INTEGER DEFAULT 0,
+      total_battles INTEGER DEFAULT 0,
+      total_wins INTEGER DEFAULT 0,
+      highest_streak INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   console.log('Local SQLite Database initialized successfully.');
 };
 

@@ -826,6 +826,133 @@ export const ITEMS: Item[] = [
     },
   },
 
+  //   {
+  //   id: "choice-scarf",
+  //   name: "Choice Scarf",
+  //   gen: 3,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts Speed by 1.5× but locks holder into one move.",
+  //   },
+  // },
+  // {
+  //   id: "choice-band",
+  //   name: "Choice Band",
+  //   gen: 3,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts Attack by 1.5× but locks holder into one move.",
+  //   },
+  // },
+  // {
+  //   id: "choice-specs",
+  //   name: "Choice Specs",
+  //   gen: 3,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts Special Attack by 1.5× but locks holder into one move.",
+  //   },
+  // },
+  // {
+  //   id: "life-orb",
+  //   name: "Life Orb",
+  //   gen: 4,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts damage by 30% but loses 10% HP on attack.",
+  //   },
+  // },
+  // {
+  //   id: "focus-sash",
+  //   name: "Focus Sash",
+  //   gen: 4,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Survives a hit at full HP with 1 HP remaining.",
+  //   },
+  // },
+  // {
+  //   id: "assault-vest",
+  //   name: "Assault Vest",
+  //   gen: 6,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts Special Defense by 50% but prevents status moves.",
+  //   },
+  // },
+  // {
+  //   id: "rocky-helmet",
+  //   name: "Rocky Helmet",
+  //   gen: 5,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Damages attackers that use contact moves.",
+  //   },
+  // },
+  // {
+  //   id: "expert-belt",
+  //   name: "Expert Belt",
+  //   gen: 4,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts super-effective move damage by 20%.",
+  //   },
+  // },
+  // {
+  //   id: "eviolite",
+  //   name: "Eviolite",
+  //   gen: 5,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Boosts Defense and Sp. Def of unevolved Pokémon by 50%.",
+  //   },
+  // },
+  // {
+  //   id: "black-sludge",
+  //   name: "Black Sludge",
+  //   gen: 4,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Restores HP each turn for Poison types; damages others.",
+  //   },
+  // },
+  // {
+  //   id: "toxic-orb",
+  //   name: "Toxic Orb",
+  //   gen: 4,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Badly poisons holder after one turn.",
+  //   },
+  // },
+  // {
+  //   id: "flame-orb",
+  //   name: "Flame Orb",
+  //   gen: 4,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Burns holder after one turn.",
+  //   },
+  // },
+  // {
+  //   id: "air-balloon",
+  //   name: "Air Balloon",
+  //   gen: 5,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Grants immunity to Ground-type moves until hit.",
+  //   },
+  // },
+  // {
+  //   id: "weakness-policy",
+  //   name: "Weakness Policy",
+  //   gen: 6,
+  //   category: {
+  //     category: "held-item",
+  //     effect: "Raises Attack and Sp. Atk by 2 stages when hit super-effectively.",
+  //   },
+  // },
+
   // ══════════════════════════════════════════════════════════════════
   // BERRIES — Gen 2
   // ══════════════════════════════════════════════════════════════════

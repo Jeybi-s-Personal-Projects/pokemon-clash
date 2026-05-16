@@ -27,6 +27,7 @@ export type WinHandlerContext = {
   ) => void;
   defeatCount?: number;
   playMilestoneSound?: () => void;
+  userId?: string;
 };
 
 export const handleWinner = async (
@@ -47,9 +48,20 @@ export const handleWinner = async (
     onBattleEnd,
     defeatCount = 0,
     playMilestoneSound,
+    userId,
   } = context;
 
   setState((s) => ({ ...currentState, winner }));
+
+  // Update total battles
+  if (userId) {
+    db.runSync(
+      `INSERT INTO trainer_stats (user_id, total_battles) 
+       VALUES (?, 1) 
+       ON CONFLICT(user_id) DO UPDATE SET total_battles = total_battles + 1, updated_at = CURRENT_TIMESTAMP`,
+      [userId]
+    );
+  }
 
   if (winner === "player") {
     await delay(1200);
@@ -64,7 +76,27 @@ export const handleWinner = async (
       true,
     );
 
-    // 2. Add Milestone Bonus
+    // 2. Add PokeCoins Reward
+    if (userId) {
+      const currentStreak = defeatCount; // defeatCount from EncounterFlow is the number of opponents ALREADY defeated
+      const coinsEarned = Math.floor((baseExpGain * 6) * 0.05 * (1 + (currentStreak / 10)));
+      
+      db.runSync(
+        `UPDATE trainer_stats 
+         SET pokecoins = pokecoins + ?, 
+             total_wins = total_wins + ?,
+             highest_streak = MAX(highest_streak, ?),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ?`,
+        [coinsEarned, 1, currentStreak + 1, userId]
+      );
+
+      await delay(1200);
+      setCurrentMessage(`You earned ${coinsEarned} PokéCoins!`);
+      await delay(1200);
+    }
+
+    // 3. Add Milestone Bonus
     const currentDefeat = defeatCount + 1;
     if (currentDefeat % 10 === 0) {
       const n = currentDefeat / 10;
