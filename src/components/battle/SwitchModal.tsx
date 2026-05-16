@@ -75,7 +75,7 @@ export const SwitchModal = ({
                   ]}
                 >
                   <Image
-                    source={{ uri: getPokemonIcon(item.speciesId) }}
+                    source={{ uri: getPokemonIcon(item.speciesId, item.isShiny) }}
                     style={styles.pokemonIcon}
                     resizeMode="contain"
                   />

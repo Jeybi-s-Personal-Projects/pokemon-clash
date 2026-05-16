@@ -176,7 +176,7 @@ export default function BattleActions({
               fontWeight: "bold",
             }}
           >
-            DEFEATS: {defeatCount}
+            STREAK: {defeatCount}
           </Text>
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>

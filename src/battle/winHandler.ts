@@ -1,12 +1,12 @@
-import { Move, Pokemon } from "../types/pokemon";
-import { BattleState } from "./battleTypes";
-import { calculateExpGain, checkLevelUp } from "../utils/experienceCalculator";
-import { delay } from "../utils/battleUtils";
-import { fetchPokemon } from "../api/pokeApi";
-import { checkEvolution } from "../utils/evolutionChecker";
-import { calculateHp, calculateStat } from "../utils/statCalculator";
-import db from "../lib/db";
 import * as Crypto from "expo-crypto";
+import { fetchPokemon } from "../api/pokeApi";
+import db from "../lib/db";
+import { Move, Pokemon } from "../types/pokemon";
+import { delay } from "../utils/battleUtils";
+import { checkEvolution } from "../utils/evolutionChecker";
+import { calculateExpGain, checkLevelUp } from "../utils/experienceCalculator";
+import { calculateHp, calculateStat } from "../utils/statCalculator";
+import { BattleState } from "./battleTypes";
 
 export type WinHandlerContext = {
   setCurrentMessage: (msg: string | null) => void;
@@ -26,6 +26,7 @@ export type WinHandlerContext = {
     activeIndex: number,
   ) => void;
   defeatCount?: number;
+  playMilestoneSound?: () => void;
 };
 
 export const handleWinner = async (
@@ -46,6 +47,7 @@ export const handleWinner = async (
     onCheckpoint,
     onBattleEnd,
     defeatCount = 0,
+    playMilestoneSound,
   } = context;
 
   setState((s) => ({ ...currentState, winner }));
@@ -71,6 +73,7 @@ export const handleWinner = async (
       baseExpGain += bonusXP;
 
       await delay(1200);
+      playMilestoneSound?.();
       setCurrentMessage("MILESTONE REACHED!");
       await delay(1000);
       setCurrentMessage(`BONUS ${bonusXP} XP GRANTED TO TEAM!`);
@@ -86,9 +89,7 @@ export const handleWinner = async (
       if (p.hp <= 0) continue;
 
       const isActive = i === currentState.activePlayerIndex;
-      const sharedExp = isActive
-        ? baseExpGain
-        : Math.floor(baseExpGain * 0.5);
+      const sharedExp = isActive ? baseExpGain : Math.floor(baseExpGain * 0.5);
 
       if (sharedExp <= 0) continue;
 
@@ -232,9 +233,7 @@ export const handleWinner = async (
         updatedPokemon.experience += sharedExp;
         if (isActive) {
           await delay(1200);
-          setCurrentMessage(
-            `${p.name.toUpperCase()} gained ${sharedExp} EXP!`,
-          );
+          setCurrentMessage(`${p.name.toUpperCase()} gained ${sharedExp} EXP!`);
         }
       }
 
@@ -267,7 +266,7 @@ export const handleWinner = async (
             m.move_statChanges,
             m.move_description,
             m.move_priority,
-          ]
+          ],
         );
       }
     }

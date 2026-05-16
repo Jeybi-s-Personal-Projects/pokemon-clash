@@ -8,6 +8,7 @@ import { delay } from "../utils/battleUtils";
 import { getWeatherContinueMessage } from "../utils/weatherUtils";
 
 // Modularized components
+import { useAudioPlayer } from "expo-audio";
 import { processEndTurnAbilities, processSwitchInAbilities } from "../battle/abilityHandler";
 import { initialStages } from "../battle/battleConstants";
 import { executeMove, ExecutionContext } from "../battle/moveExecutor";
@@ -20,7 +21,10 @@ import { useMegaEvolution } from "./battle/useMegaEvolution";
 import { useMoveLearning } from "./battle/useMoveLearning";
 import { useTeamManagement } from "./battle/useTeamManagement";
 
+const milestoneSound = require("../../assets/sounds/milestone.mp3");
+
 interface UseBattleOptions {
+// ... (rest of the interface)
   player: Pokemon;
   team: Pokemon[];
   enemy: Pokemon;
@@ -92,6 +96,8 @@ export function useBattle({
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
   const [isPlayerEntering, setIsPlayerEntering] = useState(false);
 
+  const milestonePlayer = useAudioPlayer(milestoneSound);
+
   // specialized hooks
   const mega = useMegaEvolution(
     state.player,
@@ -123,6 +129,10 @@ export function useBattle({
     onCheckpoint,
     onBattleEnd,
     defeatCount,
+    playMilestoneSound: () => {
+      milestonePlayer.seekTo(0);
+      milestonePlayer.play();
+    },
   });
 
   const teamMgmt = useTeamManagement(

@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     paddingBottom: 15,
+    paddingTop: 10,
     paddingHorizontal: 10,
     backgroundColor: "#030712",
     borderTopWidth: 1,
