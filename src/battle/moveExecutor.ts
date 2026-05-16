@@ -494,7 +494,7 @@ export const executeMove = async (
   }
 
   if (hitCount > 1) {
-    setCurrentMessage(`Hit ${hitCount} time${hitCount > 1 ? "s" : ""}!`);
+    setCurrentMessage(`Hit ${hitCount} times!`);
     await delay(1200);
   }
 
