@@ -129,7 +129,7 @@ export default function BattleButton({
             styles.label,
             {
               color: disabled ? "#555" : "white",
-              fontSize: isExpanded ? 14 : 16,
+              fontSize: 16,
               marginTop: moveType ? 12 : 0,
             },
           ]}
