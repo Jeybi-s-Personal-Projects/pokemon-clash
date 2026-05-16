@@ -201,7 +201,10 @@ export const handleWinner = async (
               oldName: updatedPokemon.name,
               newSpeciesId: evolutionTargetId,
               newName: newSpeciesData.name,
-              spriteUrl: newSpeciesData.sprites.other.showdown.front_default,
+              spriteUrl: updatedPokemon.isShiny
+                ? newSpeciesData.sprites.other.showdown.front_shiny ||
+                  newSpeciesData.sprites.other.showdown.front_default
+                : newSpeciesData.sprites.other.showdown.front_default,
             });
             setEvolutionVisible(true);
             setResolveEvolution({ resolve });
@@ -209,15 +212,19 @@ export const handleWinner = async (
 
           await evolve;
 
+          const showdown = newSpeciesData.sprites.other.showdown;
           updatedPokemon = {
             ...updatedPokemon,
             speciesId: evolutionTargetId,
             name: newSpeciesData.name,
             type: newSpeciesData.types.map((t: any) => t.type.name),
-            frontImage: newSpeciesData.sprites.other.showdown.front_default,
-            backImage: newSpeciesData.sprites.other.showdown.back_default,
-            hp: calculateHp(
-              newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
+            frontImage: updatedPokemon.isShiny
+              ? showdown.front_shiny || showdown.front_default
+              : showdown.front_default,
+            backImage: updatedPokemon.isShiny
+              ? showdown.back_shiny || showdown.back_default
+              : showdown.back_default,
+            hp: calculateHp(              newSpeciesData.stats.find((s: any) => s.stat.name === "hp")
                 .base_stat,
               updatedPokemon.level,
             ),
