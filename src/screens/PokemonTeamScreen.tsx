@@ -41,7 +41,6 @@ export default function PokemonTeamScreen({
   const {
     team: dbTeam,
     refetch,
-    loading: isLoadingTeam,
   } = useTeam(user?.id ?? "");
   const [team, setTeam] = useState<Pokemon[]>([]);
   const [isSaving, setIsSaving] = useState(false);
