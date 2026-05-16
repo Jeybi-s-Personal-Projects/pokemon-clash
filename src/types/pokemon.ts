@@ -1,6 +1,8 @@
 import { GrowthRate } from "../data/level/growthRates";
+import { MoveEffect } from "./moveBattle";
 
 export type Move = {
+  id?: string; // Database primary key
   name: string;
   power: number;
   pp: number;
@@ -9,11 +11,18 @@ export type Move = {
   type?: string;
   accuracy?: number | null;
   statChanges?: { stat: string; change: number }[];
+  effects?: MoveEffect[];
   description?: string | null;
   priority?: number | null;
 };
 
-export type StatusCondition = "poison" | "burn" | "paralysis" | "sleep" | "freeze" | null;
+export type StatusCondition =
+  | "poison"
+  | "burn"
+  | "paralysis"
+  | "sleep"
+  | "freeze"
+  | null;
 
 export type Pokemon = {
   id?: number | string;
@@ -41,4 +50,8 @@ export type Pokemon = {
   status?: StatusCondition;
   statusTurns?: number; // For sleep
   confusionTurns?: number; // Volatile status
+
+  // pokemon.ts — add to Pokemon type:
+  flinched?: boolean; // cleared each turn start
+  badPoisonTurns?: number; // escalating toxic counter
 };

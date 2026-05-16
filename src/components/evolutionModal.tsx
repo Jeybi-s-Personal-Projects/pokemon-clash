@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     paddingVertical: 14,
     paddingHorizontal: 40,
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.modalBorderSubtle,
   },

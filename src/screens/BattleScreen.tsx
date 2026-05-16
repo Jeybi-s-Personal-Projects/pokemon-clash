@@ -31,12 +31,12 @@ interface BattleProps {
   ) => void;
   onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onRun?: (finalTeam: Pokemon[]) => void;
-  // In Battle component, change onBagPress prop type:
   onBagPress?: (
     player: Pokemon,
     team: Pokemon[],
     currentEnemy: Pokemon,
     onCatchFailed: () => void,
+    revertMega?: (team: Pokemon[]) => Pokemon[],
   ) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
@@ -44,6 +44,7 @@ interface BattleProps {
   onToggleAutoBattle?: (v: boolean) => void;
   catchFailed?: boolean;
   onClearCatchFailed?: () => void;
+  defeatCount?: number;
 }
 
 export function Battle({
@@ -60,6 +61,7 @@ export function Battle({
   onToggleAutoBattle,
   catchFailed,
   onClearCatchFailed,
+  defeatCount = 0,
 }: BattleProps) {
   const battle = useBattle({
     player,
@@ -70,6 +72,7 @@ export function Battle({
     onSave,
     catchPending,
     onToggleAutoBattle,
+    defeatCount,
   });
 
   const { state, currentMessage } = battle;
@@ -109,6 +112,7 @@ export function Battle({
         attackingSide={state.attackingSide}
         dancingSide={state.dancingSide}
         hitSide={state.hitSide}
+        floatingDamage={state.floatingDamage}
         isPlayerEntering={battle.isPlayerEntering}
         onEnemyPress={() => setInfoModalVisible(true)}
         onPlayerPress={() => setStatsModalVisible(true)}
@@ -139,13 +143,15 @@ export function Battle({
             state.player,
             state.team,
             state.enemy,
-            () => battle.processTurnPenalty(), // pass penalty as callback
+            () => battle.processTurnPenalty(),
+            battle.revertMegaInTeam,
           )
         }
         onRun={() => onRun?.(battle.revertMegaInTeam(state.team))}
         onMegaEvolve={battle.handleMegaEvolution}
         canMegaEvolve={battle.canMegaEvolve}
         disabled={
+          battle.isBusy ||
           !!state.attackingSide ||
           !!state.dancingSide ||
           !!state.winner ||
@@ -154,6 +160,8 @@ export function Battle({
         currentLog={currentMessage}
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={onToggleAutoBattle}
+        isEnemyShiny={state.enemy.isShiny}
+        defeatCount={defeatCount}
       />
 
       {/* 3. Utility Modals */}
@@ -236,15 +244,17 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
         if (onRun) onRun(finalTeam);
         else navigation.goBack();
       }}
-      onBagPress={(p, t, e, onCatchFailed) =>
+      onBagPress={(p, t, e, onCatchFailed, revertMega) =>
         navigation.navigate("InventoryBag", {
           player: p,
           team: t,
           pokemon: e,
           fromScreen: "Battle",
           onCatchFailed,
+          revertMegaInTeam: revertMega,
         } as any)
       }
+
       isAutoBattle={isAutoBattle}
       onToggleAutoBattle={onToggleAutoBattle}
       catchFailed={catchFailed}

@@ -1,30 +1,12 @@
 import { colors } from "@/src/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { TypeBadge, TYPE_COLORS } from "./TypeBadge";
+
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
-
-const TYPE_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  water: "#4FC3F7",
-  grass: "#66BB6A",
-  electric: "#FFD600",
-  psychic: "#F06292",
-  ice: "#80DEEA",
-  dragon: "#7C4DFF",
-  dark: "#546E7A",
-  normal: "#9E9E9E",
-  fighting: "#EF5350",
-  poison: "#AB47BC",
-  ground: "#FFA726",
-  flying: "#80CBC4",
-  bug: "#8BC34A",
-  rock: "#A1887F",
-  ghost: "#5C6BC0",
-  steel: "#78909C",
-  fairy: "#F48FB1",
-};
 
 export default function BattleButton({
   label,
@@ -36,6 +18,7 @@ export default function BattleButton({
   icon,
   onPress,
   disabled,
+  effects,
   variant = "action",
   width = "48%",
   height = "46%",
@@ -56,18 +39,31 @@ export default function BattleButton({
   const accentColor = typeColor ?? (variant === "back" ? "#ffffff" : "#4299b7");
 
   const getEffectivenessLabel = () => {
-    if (effectiveness === 0) return { text: "NO EFFECT", color: "#9E9E9E" };
+    if (effectiveness === 0) return { text: "X", icon: "close", color: "#9E9E9E" };
     if (effectiveness === 0.25)
-      return { text: "NOT VERY EFFECTIVE", color: "#4469ef" };
+      return { text: "0.25X", icon: "chevron-double-down", color: "#4469ef" };
     if (effectiveness === 0.5)
-      return { text: "NOT EFFECTIVE", color: "#EF4444" };
-    if (effectiveness === 2) return { text: "EFFECTIVE", color: "#22C55E" };
+      return { text: "0.5X", icon: "chevron-down", color: "#EF4444" };
+    if (effectiveness === 2)
+      return { text: "2X", icon: "chevron-up", color: "#22C55E" };
     if (effectiveness === 4)
-      return { text: "SUPER EFFECTIVE", color: "#d5ef44" };
+      return { text: "4X", icon: "chevron-double-up", color: "#d5ef44" };
     return null;
   };
 
   const effLabel = getEffectivenessLabel();
+
+  const getProcessedDescription = () => {
+    if (!description) return "";
+    let processed = description;
+    if (processed.includes("$effect_chance%") && effects) {
+      const effect = effects.find((e: any) => e.chance !== undefined);
+      if (effect) {
+        processed = processed.replace("$effect_chance%", effect.chance.toString());
+      }
+    }
+    return processed;
+  };
 
   return (
     <TouchableOpacity
@@ -93,56 +89,26 @@ export default function BattleButton({
             {
               backgroundColor: effLabel.color + "44",
               borderColor: effLabel.color,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 2,
             },
           ]}
         >
-          <Text style={[styles.effText, { color: effLabel.color }]}>
+          <Text style={[styles.effText, { color: "white" }]}>
             {effLabel.text}
           </Text>
+          <MaterialCommunityIcons name={effLabel.icon as any} size={10} color="white" />
         </View>
       )}
-
-      {/* Pixel corner accents */}
-      <View
-        style={[
-          styles.corner,
-          styles.topLeft,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          styles.topRight,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          styles.bottomLeft,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          styles.bottomRight,
-          { backgroundColor: accentColor },
-        ]}
-      />
-
       {/* Type badge */}
-      {moveType && (
-        <View
-          style={[
-            styles.typeBadge,
-            { backgroundColor: accentColor + "33", borderColor: accentColor },
-          ]}
-        >
-          <Text style={[styles.typeText, { color: "white" }]}>
-            {moveType.toUpperCase()}
-          </Text>
+      {!isExpanded && moveType && (
+        <View style={styles.typeBadgeContainer}>
+          <TypeBadge
+            type={moveType}
+            size="small"
+            borderColor={colors.modalBorderSubtle}
+          />
         </View>
       )}
 
@@ -157,23 +123,27 @@ export default function BattleButton({
           {icon}
         </View>
       )}
-      <Text
-        style={[
-          styles.label,
-          {
-            color: disabled ? "#555" : "white",
-            fontSize: isExpanded ? 14 : 16,
-          },
-        ]}
-      >
-        {label.toUpperCase()}
-      </Text>
+      {!isExpanded && (
+        <Text
+          style={[
+            styles.label,
+            {
+              color: disabled ? "#555" : "white",
+              fontSize: 16,
+              marginTop: moveType ? 12 : 0,
+            },
+          ]}
+        >
+          {label.toUpperCase()}
+        </Text>
+      )}
+
       {isExpanded && description ? (
         <Text
-          style={[styles.description, { color: "#9CA3AF" }]}
+          style={[styles.description, { color: "white" }]}
           numberOfLines={3}
         >
-          {description}
+          {getProcessedDescription()}
         </Text>
       ) : subLabel ? (
         <Text
@@ -194,7 +164,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modalBackgroundPrimary,
     margin: "1%",
     borderWidth: 1.5,
-    borderRadius: 18,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     shadowOffset: { width: 0, height: 0 },
@@ -218,20 +188,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     opacity: 0.9,
   },
-  typeBadge: {
+  typeBadgeContainer: {
     position: "absolute",
     top: 5,
     right: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    borderWidth: 1,
-  },
-  typeText: {
-    fontFamily: "monospace",
-    fontSize: 7,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
   },
   effBadge: {
     position: "absolute",
@@ -248,16 +208,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.2,
   },
-  // Pixel corner accents
-  corner: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-  },
-  topLeft: { top: -1, left: -1 },
-  topRight: { top: -1, right: -1 },
-  bottomLeft: { bottom: -1, left: -1 },
-  bottomRight: { bottom: -1, right: -1 },
   description: {
     fontFamily: "monospace",
     fontSize: 7.5,

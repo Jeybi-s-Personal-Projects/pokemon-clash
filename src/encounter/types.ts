@@ -24,6 +24,7 @@ export type MoveDetail = {
   power: number | null;
   accuracy: number | null;
   pp: number | null;
+  maxPp?: number;
   type: string;
   damageClass: "physical" | "special" | "status";
   effectChance: number | null;

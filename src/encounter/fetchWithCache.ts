@@ -39,6 +39,7 @@ export function buildMoveFallback(name: string): MoveDetail {
     power: 0,
     accuracy: 100,
     pp: 35,
+    maxPp: 35,
     type: "normal",
     damageClass: "physical",
     effectChance: null,
@@ -114,7 +115,10 @@ export async function fetchMoveBatch(
   moves: { name: string; url: string }[],
 ): Promise<MoveDetail[]> {
   return moves.map(m => {
-    if (MOVES[m.name]) return MOVES[m.name];
+    if (MOVES[m.name]) {
+      const move = MOVES[m.name];
+      return { ...move, maxPp: (move.maxPp ?? move.pp) ?? 0 };
+    }
     return buildMoveFallback(m.name);
   });
 }

@@ -12,6 +12,7 @@ interface BattleFieldProps {
   attackingSide: "player" | "enemy" | null;
   dancingSide: "player" | "enemy" | null;
   hitSide: "player" | "enemy" | null;
+  floatingDamage: { amount: number; side: "player" | "enemy" } | null;
   isPlayerEntering?: boolean;
   isEnemyCaught?: boolean;
   onEnemyPress?: () => void;
@@ -28,6 +29,7 @@ export const BattleField = ({
   attackingSide,
   dancingSide,
   hitSide,
+  floatingDamage,
   isPlayerEntering,
   isEnemyCaught,
   onEnemyPress,
@@ -44,6 +46,7 @@ export const BattleField = ({
           isDancing={dancingSide === "enemy"}
           isHit={hitSide === "enemy"}
           isCaught={isEnemyCaught}
+          floatingDamage={floatingDamage?.side === "enemy" ? floatingDamage.amount : null}
         />
       </TouchableOpacity>
       <View style={styles.spacer} />
@@ -56,6 +59,7 @@ export const BattleField = ({
           isDancing={dancingSide === "player"}
           isHit={hitSide === "player"}
           isEntering={isPlayerEntering}
+          floatingDamage={floatingDamage?.side === "player" ? floatingDamage.amount : null}
           exp={
             player.experience -
             getExpForLevel(player.level, player.growthRate || "medium-fast")

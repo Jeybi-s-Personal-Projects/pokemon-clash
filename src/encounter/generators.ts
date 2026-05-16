@@ -1,6 +1,6 @@
 import type { EncounterEntry } from "./types";
 
-const DEFAULT_SHINY_RATE = 1 / 4096;
+const DEFAULT_SHINY_RATE = 1 / 32;
 
 /**
  * Generates a random level within the entry's min/max range (inclusive).

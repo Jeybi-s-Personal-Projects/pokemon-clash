@@ -17,6 +17,7 @@ type Props = {
   stages?: StatStages;
   exp?: number;
   maxExp?: number;
+  floatingDamage?: number | null;
 };
 
 const getStatMultiplier = (stage: number) => {
@@ -118,12 +119,28 @@ export default function PokemonCard({
   stages,
   exp,
   maxExp,
+  floatingDamage,
 }: Props) {
   const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
+  const isMega = pokemon.name.toLowerCase().includes("mega");
 
   // Animation values
   const moveAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (floatingDamage) {
+      floatAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -60,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [floatingDamage]);
 
   useEffect(() => {
     if (isAttacking) {
@@ -254,12 +271,38 @@ export default function PokemonCard({
         justifyContent: "center",
       }}
     >
+      {/* Floating Damage Text */}
+      {floatingDamage && (
+        <Animated.View
+          style={{
+            position: "absolute",
+            zIndex: 10,
+            top: 50,
+            [isBack ? "left" : "right"]: 50,
+            transform: [{ translateY: floatAnim }],
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: "900",
+              color: "#EF4444",
+              textShadowColor: "black",
+              textShadowOffset: { width: 1, height: 1 },
+              textShadowRadius: 2,
+            }}
+          >
+            -{Math.round(floatingDamage)}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* Static Info Box */}
       <View
         style={{
           padding: 8,
           width: isBack ? "43%" : "50%",
-          zIndex: 1,
+          zIndex: 2,
           position: "absolute",
           top: isBack ? -20 : 0, // Adjusted top
           [isBack ? "right" : "left"]: 10,
@@ -278,18 +321,41 @@ export default function PokemonCard({
             alignItems: "center",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={{ fontWeight: "bold", fontSize: 14, color: "white" }}>
-              {pokemon.name.toUpperCase()}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              flex: 1,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                flex: 1,
+              }}
+            >
+              <Text
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 14,
+                  color: "white",
+                }}
+                adjustsFontSizeToFit
+                numberOfLines={1}
+              >
+                {pokemon.name.toUpperCase()}
+              </Text>
+
               {pokemon.isShiny && (
                 <Ionicons
                   name="star"
                   size={12}
                   color="#facc15"
-                  style={{ marginLeft: 5 }}
+                  style={{ marginLeft: 4 }}
                 />
               )}
-            </Text>
+            </View>
           </View>
 
           <Text style={{ fontSize: 14, color: "white" }}>
@@ -395,18 +461,23 @@ export default function PokemonCard({
         style={{
           transform: [{ translateY: moveAnim }, { translateX: shakeAnim }],
           position: "absolute",
-          bottom: 0,
-          [isBack ? "left" : "right"]: isBack ? 0 : 40,
+          bottom: isBack ? 0 : -10,
+          [isBack ? "left" : "right"]: isBack
+            ? isMega
+              ? -20
+              : 0
+            : isMega
+              ? 60
+              : 70,
           opacity: opacityAnim,
+          zIndex: 0,
         }}
       >
         <Image
           source={{ uri: imageSource }}
           style={{
-            width: isBack ? 160 : 100,
-            marginRight: isBack ? 0 : 15,
-            marginLeft: isBack ? 15 : 0,
-            height: isBack ? 160 : 100,
+            width: isBack ? (isMega ? 220 : 160) : isMega ? 140 : 100,
+            height: isBack ? (isMega ? 220 : 160) : isMega ? 140 : 100,
             resizeMode: "contain",
           }}
         />

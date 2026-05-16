@@ -5,7 +5,7 @@ import { BattleField } from "../components/battle/BattleField";
 import StatusModal from "../components/statusModal";
 import { useAuth } from "../context/AuthContext";
 import { SPECIES } from "../data/pokemon/species/species";
-import { savePokemon } from "../hooks/savePokemon";
+import { savePokemon, syncAllProgress } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
 
 const initialStages = {
@@ -14,6 +14,8 @@ const initialStages = {
   specialAttack: 0,
   specialDefense: 0,
   speed: 0,
+  accuracy: 0,
+  evasion: 0,
 };
 
 const BALL_IMAGES: Record<string, any> = {
@@ -259,14 +261,19 @@ export default function CatchingScreen({
       if (success) {
         if (user) {
           try {
+            // 1. Revert Mega if active before saving anything
+            let finalTeam = team || [];
+            if (route.params.revertMegaInTeam) {
+              finalTeam = route.params.revertMegaInTeam(finalTeam);
+            }
+
+            // 2. Sync the player's team progress (HP, EXP, etc.) and HEAL
+            await syncAllProgress(finalTeam, true);
+
+            // 3. Save the newly caught pokemon
             const { teamFull } = await savePokemon(enemy, user.id);
             setIsSuccess(true);
             setMessage(`GOTCHA! ${enemy.name.toUpperCase()} was caught!`);
-
-            // Revert Mega if active
-            if (route.params.isMega && route.params.revertMegaInTeam) {
-              route.params.revertMegaInTeam();
-            }
 
             // 🌟 Trigger star burst
             setShowStars(true);
@@ -336,6 +343,7 @@ export default function CatchingScreen({
           attackingSide={null}
           dancingSide={null}
           hitSide={null}
+          floatingDamage={null}
           isEnemyCaught={isEnemyCaught}
         />
 

@@ -1,3 +1,4 @@
+import { BATTLE_MOVES } from "@/src/data/pokemon/moves/movesBattle";
 import { colors } from "@/src/theme/color";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
@@ -27,6 +28,8 @@ type Props = {
   onToggleAutoBattle?: (value: boolean) => void;
   onMegaEvolve?: () => void;
   canMegaEvolve?: boolean;
+  isEnemyShiny?: boolean;
+  defeatCount?: number;
 };
 
 const ACTION_CONFIG = [
@@ -68,52 +71,52 @@ export default function BattleActions({
   onToggleAutoBattle,
   onMegaEvolve,
   canMegaEvolve,
+  isEnemyShiny,
+  defeatCount,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
   const cursorOpacity = useRef(new Animated.Value(1)).current;
 
-  const findBestMoveIndex = () => {
+  const findBestMoveIndex = (): number => {
     let bestIndex = -1;
-    let maxEffectivePower = -1;
+    let maxScore = -1;
 
     moves.forEach((move, i) => {
+      // 1. Skip if no PP
       if ((move.pp ?? 0) <= 0) return;
 
+      let score = 0;
       const power = move.power ?? 0;
-      if (power === 0) return;
-
       const moveType = (move.type || "normal") as PokemonType;
-      const effectiveness = getTypeMultiplier(
-        moveType,
-        enemyTypes as PokemonType[],
-      );
 
-      // STAB: Same Type Attack Bonus (1.5x)
-      const stab = playerTypes.includes(moveType) ? 1.5 : 1;
-      const effectivePower = power * (effectiveness ?? 1) * stab;
+      // 2. Damage-based scoring
+      if (power > 0) {
+        const effectiveness =
+          getTypeMultiplier(moveType, enemyTypes as PokemonType[]) ?? 1;
+        const stab = playerTypes.includes(moveType) ? 1.5 : 1;
+        score = power * effectiveness * stab;
+      } else {
+        // 3. Status/Utility move scoring (fallback)
+        // Give base utility score to non-damage moves
+        score = 50;
+      }
 
-      if (effectivePower > maxEffectivePower) {
-        maxEffectivePower = effectivePower;
+      if (score > maxScore) {
+        maxScore = score;
         bestIndex = i;
       }
     });
-
-    if (bestIndex === -1) {
-      let maxPP = -1;
-      moves.forEach((move, i) => {
-        if ((move.pp ?? 0) > maxPP) {
-          maxPP = move.pp ?? 0;
-          bestIndex = i;
-        }
-      });
-    }
 
     return bestIndex;
   };
 
   useEffect(() => {
     if (isAutoBattle && !disabled && !currentLog) {
+      if (isEnemyShiny) {
+        onToggleAutoBattle?.(false);
+        return;
+      }
       const bestIdx = findBestMoveIndex();
       if (bestIdx !== -1) {
         const timer = setTimeout(() => {
@@ -122,7 +125,7 @@ export default function BattleActions({
         return () => clearTimeout(timer);
       }
     }
-  }, [isAutoBattle, disabled, currentLog]);
+  }, [isAutoBattle, disabled, currentLog, isEnemyShiny]);
 
   useEffect(() => {
     if (currentLog) {
@@ -153,26 +156,81 @@ export default function BattleActions({
       ]}
     >
       <View style={styles.toggleRow}>
-        {menu === "fight" && !currentLog && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsExpanded(!isExpanded)}
-            style={styles.toggleButton}
+        <View
+          style={{
+            height: 24,
+            paddingHorizontal: 10,
+            backgroundColor: "#080B14",
+            borderWidth: 1,
+            borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+            borderTopLeftRadius: 10,
+            borderTopRightRadius: 10,
+            justifyContent: "center",
+          }}
+        >
+          <Text
+            style={{
+              color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+              fontFamily: "monospace",
+              fontSize: 8,
+              fontWeight: "bold",
+            }}
           >
-            <Ionicons
-              name={isExpanded ? "chevron-down" : "chevron-up"}
-              size={16}
-              color={colors.neonBlue}
-            />
-            <Text style={styles.toggleText}>
-              {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {canMegaEvolve && (
+            STREAK: {defeatCount}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {menu === "fight" && !currentLog && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setIsExpanded(!isExpanded)}
+              style={styles.toggleButton}
+            >
+              <Ionicons
+                name={isExpanded ? "chevron-down" : "chevron-up"}
+                size={16}
+                color={colors.neonBlue}
+              />
+              <Text style={styles.toggleText}>
+                {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {canMegaEvolve && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onMegaEvolve}
+              disabled={disabled}
+              style={[
+                styles.toggleButton,
+                {
+                  borderColor: isAutoBattle
+                    ? colors.neonOrange
+                    : colors.neonBlue,
+                  opacity: disabled ? 0.5 : 1,
+                },
+              ]}
+            >
+              <Image
+                source={require("@/assets/icons/mega-evolution-icon.png")}
+                style={{ width: 14, height: 14, opacity: disabled ? 0.5 : 1 }}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  {
+                    color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                    opacity: disabled ? 0.5 : 1,
+                  },
+                ]}
+              >
+                MEGA
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={onMegaEvolve}
+            onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
             style={[
               styles.toggleButton,
               {
@@ -180,9 +238,10 @@ export default function BattleActions({
               },
             ]}
           >
-            <Image
-              source={require("@/assets/icons/mega-evolution-icon.png")}
-              style={{ width: 14, height: 14 }}
+            <MaterialCommunityIcons
+              name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
+              size={12}
+              color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
             />
             <Text
               style={[
@@ -190,32 +249,10 @@ export default function BattleActions({
                 { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
               ]}
             >
-              MEGA
+              {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
             </Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
-          style={[
-            styles.toggleButton,
-            { borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
-            size={12}
-            color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
-          />
-          <Text
-            style={[
-              styles.toggleText,
-              { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
-            ]}
-          >
-            {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
-          </Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
       {currentLog ? (
@@ -272,13 +309,18 @@ export default function BattleActions({
                 <BattleButton
                   key={i}
                   label={move.name}
-                  subLabel={`PWR ${effectivePower} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
+                  subLabel={`PWR ${move.power ?? 0} PP ${move.pp ?? 0}/${move.maxPp ?? 0}`}
                   description={move.description}
                   isExpanded={isExpanded}
                   moveType={move.type}
                   effectiveness={effectiveness}
+                  effects={move.effects}
                   onPress={() => onMovePress(i)}
-                  disabled={disabled || (move.pp ?? 0) <= 0}
+                  disabled={
+                    disabled ||
+                    (move.pp ?? 0) <= 0 ||
+                    BATTLE_MOVES[move.name.toLowerCase()]?.category === "unique"
+                  }
                   variant="move"
                   height={"40%"}
                 />
@@ -391,10 +433,10 @@ const styles = StyleSheet.create({
     top: -24,
     left: 10,
     right: 10,
-    justifyContent: "flex-end",
-    gap: 8,
+    justifyContent: "space-between",
     zIndex: 10,
   },
+
   toggleButton: {
     height: 24,
     paddingHorizontal: 10,

@@ -11,6 +11,7 @@ import { getExpForLevel, getGrowthRate } from "../utils/experienceCalculator";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 import { Battle } from "./BattleScreen";
 import { EncounterTransitionScreen } from "./EncounterTransitionScreen";
+import { syncAllProgress } from "../hooks/savePokemon";
 
 type Screen = "transition" | "battle";
 
@@ -100,6 +101,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
   const { region, area, team: initialTeam } = route.params;
   const [localTeam, setLocalTeam] = useState<Pokemon[]>(initialTeam);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [defeatCount, setDefeatCount] = useState(0);
   const [isAutoBattle, setIsAutoBattle] = useState(false);
   const [screen, setScreen] = useState<Screen>("transition");
   const [fullyLoadedEnemy, setFullyLoadedEnemy] = useState<Pokemon | null>(
@@ -154,42 +156,8 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const activePlayer = localTeam[activeIndex];
 
-  const syncAllProgress = async (finalTeam: Pokemon[]) => {
-    try {
-      const syncData = finalTeam
-        .filter((p) => !!p.id)
-        .map((p) => ({
-          id: p.id,
-          pk_species_id: p.speciesId,
-          pk_name: p.name,
-          pk_types: p.type,
-          pk_ability: p.ability,
-          pk_front_image: p.frontImage,
-          pk_back_image: p.backImage,
-          pk_cry: p.cry,
-          pk_level: p.level,
-          pk_experience: p.experience,
-          pk_hp: p.maxHp, // Fully heal
-          pk_max_hp: p.maxHp,
-          pk_attack: p.attack,
-          pk_defense: p.defense,
-          pk_special_attack: p.specialAttack,
-          pk_special_defense: p.specialDefense,
-          pk_speed: p.speed,
-        }));
-
-      if (syncData.length === 0) return;
-
-      const { error } = await supabase.from("pokemon").upsert(syncData);
-
-      if (error) console.error("Error syncing progress:", error);
-    } catch (e) {
-      console.error("Failed to sync progress", e);
-    }
-  };
-
   const checkpointProgress = async (finalTeam: Pokemon[]) => {
-    await syncAllProgress(finalTeam);
+    await syncAllProgress(finalTeam, true); // Heal at checkpoint
   };
 
   const handleTransitionReady = useCallback(() => {
@@ -206,11 +174,18 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
       setLocalTeam(updatedTeam);
       setActiveIndex(newIndex);
 
+      if (winner === "player") {
+        setDefeatCount((prev) => prev + 1);
+      }
+
       if (winner === "enemy") {
-        // Session ended by defeat
-        await syncAllProgress(updatedTeam);
+        // Session ended by defeat - Heal the team (whiteout logic)
+        await syncAllProgress(updatedTeam, true);
         reset();
-        navigation.navigate("Dashboard" as any);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Dashboard" as any }],
+        });
         return;
       }
 
@@ -225,10 +200,13 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
 
   const handleExit = useCallback(
     async (finalTeam: Pokemon[]) => {
-      // Session ended by choice
-      await syncAllProgress(finalTeam);
+      // Session ended by choice - Heal the team
+      await syncAllProgress(finalTeam, true);
       reset();
-      navigation.navigate("Dashboard" as any);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Dashboard" as any }],
+      });
     },
     [reset, navigation],
   );
@@ -268,6 +246,7 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         catchPending={route.params.catchPending}
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={setIsAutoBattle}
+        defeatCount={defeatCount}
       />
     </View>
   );

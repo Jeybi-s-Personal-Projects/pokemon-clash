@@ -4,7 +4,6 @@ import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -29,7 +28,6 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const insets = useSafeAreaInsets();
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const screenWidth = Dimensions.get("window").width;
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -52,9 +50,8 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       </View>
     );
 
-  // ...
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container]}>
       <DashboardHeader
         userName={user?.name ?? "Trainer"}
         team={team}
@@ -82,77 +79,73 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
         }}
       />
 
-      {team.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <MaterialCommunityIcons name="pokeball" size={60} color="#818CF8" />
+      <View style={styles.contentArea}>
+        {team.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="pokeball" size={60} color="#818CF8" />
 
-          <Text style={styles.emptyTitle}>No Pokémon yet</Text>
+            <Text style={styles.emptyTitle}>No Pokémon yet</Text>
 
-          <Text style={styles.emptySubtitle}>
-            Start your journey by recruiting your first team member.
-          </Text>
-
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => {
-              playClick();
-              navigation.navigate("SelectPokemon", { team });
-            }}
-          >
-            <Text style={styles.emptyButtonText}>Start Journey</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.carouselContainer}>
-          <FlatList
-            data={team}
-            keyExtractor={(_, i) => i.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            contentContainerStyle={styles.carouselContent}
-            renderItem={({ item }) => (
-              <View style={styles.cardWrapper}>
-                <PokemonCard
-                  pokemon={item}
-                  onPress={() => {
-                    playClick();
-                    navigation.navigate("PokemonStats", {
-                      pokemon: item,
-                      onRelease: refetch,
-                    });
-                  }}
-                />
-              </View>
-            )}
-          />
-          <View style={styles.pagination}>
-            {team.slice(0, 3).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor:
-                      i === activeIndex % 3 ? "#818CF8" : "#374151",
-                  },
-                ]}
-              />
-            ))}
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => {
+                playClick();
+                navigation.navigate("SelectStarter");
+              }}
+            >
+              <Text style={styles.emptyButtonText}>Start Journey</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        ) : (
+          <View style={styles.carouselContainer}>
+            <FlatList
+              data={team}
+              keyExtractor={(_, i) => i.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.carouselContent}
+              renderItem={({ item }) => (
+                <View style={styles.cardWrapper}>
+                  <PokemonCard
+                    pokemon={item}
+                    onPress={() => {
+                      playClick();
+                      navigation.navigate("PokemonStats", {
+                        pokemon: item,
+                        onRelease: refetch,
+                      });
+                    }}
+                  />
+                </View>
+              )}
+            />
+            <View style={styles.pagination}>
+              {team.slice(0, 3).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor:
+                        i === activeIndex % 3 ? "#818CF8" : "#374151",
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+
       <View style={styles.actionDock}>
         <TouchableOpacity
           style={[styles.battleButton, true && styles.disabled]}
           onPress={() => {
             playClick();
             if (team.length === 0) return;
-
-            navigation.navigate("RegionSelect", {
-              team,
-            });
+            navigation.navigate("RegionSelect", { team });
           }}
           disabled={true}
         >
@@ -165,10 +158,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           onPress={() => {
             playClick();
             if (team.length === 0) return;
-
-            navigation.navigate("RegionSelect", {
-              team,
-            });
+            navigation.navigate("RegionSelect", { team });
           }}
           disabled={team.length === 0}
         >
@@ -181,92 +171,27 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingVertical: 20 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingVertical: 40 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#030712",
   },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 5,
-    backgroundColor: "#030712",
-  },
-  greeting: { fontSize: 13, color: "#6B7280", letterSpacing: 0.5 },
-  username: { fontSize: 24, fontWeight: "800", color: "#F9FAFB" },
-  trainerBadge: {
-    backgroundColor: "#1F2937",
-    borderWidth: 1,
-    borderColor: "#374151",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  trainerBadgeText: { color: "#D1D5DB", fontSize: 13 },
-
-  statsBar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#111827",
-    marginHorizontal: 16,
-    borderRadius: 8,
-    paddingVertical: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#1F2937",
-  },
-  statBox: { alignItems: "center", flex: 1 },
-  statNumber: { fontSize: 22, fontWeight: "bold", color: "#818CF8" },
-  statLabel: { fontSize: 11, color: "#6B7280", marginTop: 2 },
-  statDivider: { width: 1, height: 30, backgroundColor: "#1F2937" },
-
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#F9FAFB" },
-  addButton: {
-    backgroundColor: colors.bgButton,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    justifyContent: "center",
-  },
-  addButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 13,
-  },
-  configureButton: {
-    backgroundColor: "#1F2937",
-    borderWidth: 1,
-    borderColor: "#374151",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  configureButtonText: { color: "#818CF8", fontWeight: "bold", fontSize: 13 },
-
-  emptyContainer: {
+  contentArea: {
     flex: 1,
+    justifyContent: "center",
+    paddingBottom: 20,
+  },
+  emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
   },
-  emptyEmoji: { fontSize: 56, marginBottom: 8 },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#F9FAFB",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
     marginBottom: 24,
   },
   emptyButton: {
@@ -280,36 +205,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 15,
   },
-  refreshButton: {
-    backgroundColor: "#1F2937",
-    borderWidth: 1,
-    borderColor: "#374151",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  refreshButtonText: { color: "#9CA3AF", fontWeight: "bold", fontSize: 16 },
-
-  logoutButton: {
-    backgroundColor: "#1F2937",
-    borderWidth: 1,
-    borderColor: "#374151",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  logoutButtonText: { color: "#EF4444", fontWeight: "bold", fontSize: 16 },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
   actionDock: {
     flexDirection: "row",
     gap: 10,
-    padding: 8,
-    marginBottom: "auto",
+    paddingBottom: 15,
+    paddingTop: 10,
+    paddingHorizontal: 10,
     backgroundColor: "#030712",
     borderTopWidth: 1,
     borderTopColor: "#1F2937",
@@ -338,62 +239,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-
   actionText: {
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
   },
-
   disabled: {
     backgroundColor: "#374151",
     opacity: 0.6,
   },
-
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-
-  sectionSub: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-
-  headerActions: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-  },
-
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#111827",
-    borderWidth: 1,
-    borderColor: "#1F2937",
-    justifyContent: "center",
-    alignItems: "center",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
   carouselContainer: {
-    height: 250,
-    paddingVertical: 5,
+    height: 220,
     paddingHorizontal: 10,
-    borderWidth: 1,
-    borderTopColor: colors.subtleNeonBlue,
-    borderBottomColor: colors.subtleNeonBlue,
-    backgroundColor: "#000000",
   },
   carouselContent: {
     alignItems: "center",
@@ -404,10 +261,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   pagination: {
+    marginTop: 5,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
     gap: 6,
   },
   dot: {

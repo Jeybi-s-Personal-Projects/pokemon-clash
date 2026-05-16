@@ -1,6 +1,9 @@
 import { Pokemon } from "@/src/types/pokemon";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import React, { useEffect, useRef } from "react";
 import { Animated, ImageBackground, StyleSheet, View } from "react-native";
+
+const megaEvolveSound = require("@/assets/sounds/mega-evolve.mp3");
 
 interface Props {
   visible: boolean;
@@ -10,13 +13,46 @@ interface Props {
 export const MegaEvolutionOverlay = ({ visible, pokemon }: Props) => {
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const flashOpacity = useRef(new Animated.Value(0)).current;
+  const cryPlayedRef = useRef(false);
+
+  const player = useAudioPlayer(megaEvolveSound);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  const baseName = pokemon?.name?.replace(/^Mega /i, "").toLowerCase();
+
+  const crySource = baseName
+    ? {
+        uri: `https://play.pokemonshowdown.com/audio/cries/${baseName}-mega.mp3`,
+      }
+    : null;
+  const cryPlayer = useAudioPlayer(crySource);
+  const cryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Replace the didJustFinish useEffect with this:
+  useEffect(() => {
+    if (playerStatus.duration && visible && pokemon && !cryPlayedRef.current) {
+      const msUntilEarly = (playerStatus.duration - 1) * 1000;
+
+      cryTimerRef.current = setTimeout(() => {
+        cryPlayedRef.current = true;
+        cryPlayer.play();
+      }, msUntilEarly);
+    }
+
+    return () => {
+      if (cryTimerRef.current) clearTimeout(cryTimerRef.current);
+    };
+  }, [playerStatus.duration, visible, pokemon]);
 
   useEffect(() => {
     if (visible && pokemon) {
-      // Visual Animations
+      cryPlayedRef.current = false;
+      player.seekTo(0);
+      player.play();
+
       Animated.timing(contentOpacity, {
         toValue: 1,
-        duration: 5000,
+        duration: 4300,
         useNativeDriver: true,
       }).start();
 

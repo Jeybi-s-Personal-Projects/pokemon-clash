@@ -1,27 +1,8 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Pokemon } from "../types/pokemon";
-
-const TYPE_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  water: "#4FC3F7",
-  grass: "#66BB6A",
-  electric: "#FFD54F",
-  psychic: "#F48FB1",
-  ice: "#80DEEA",
-  dragon: "#7986CB",
-  dark: "#616161",
-  fairy: "#F06292",
-  normal: "#BDBDBD",
-  fighting: "#EF5350",
-  flying: "#90CAF9",
-  poison: "#AB47BC",
-  ground: "#D4A574",
-  rock: "#8D6E63",
-  bug: "#AED581",
-  ghost: "#7E57C2",
-  steel: "#78909C",
-};
+import { TypeBadge } from "./TypeBadge";
+import { TYPE_COLORS } from "./TypeBadge";
 
 type Props = {
   pokemon: Pokemon;
@@ -56,19 +37,7 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
       {/* Type badges */}
       <View style={styles.typeBadges}>
         {pokemon.type.map((t) => (
-          <View
-            key={t}
-            style={[
-              styles.badge,
-              { backgroundColor: (TYPE_COLORS[t] ?? "#888") + "33" },
-            ]}
-          >
-            <Text
-              style={[styles.badgeText, { color: TYPE_COLORS[t] ?? "#888" }]}
-            >
-              {t}
-            </Text>
-          </View>
+          <TypeBadge key={t} type={t} />
         ))}
       </View>
 
@@ -152,16 +121,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     alignSelf: "center",
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "bold",
-    textTransform: "uppercase",
   },
   sprite: {
     width: 100,
