@@ -2,7 +2,7 @@
   "expo": {
     "name": "pokemon-pvp",
     "slug": "pokemon-pvp",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pokemonpvp",
@@ -55,9 +55,7 @@
             "ndkVersion": "26.1.10909125",
             "externalNativeBuild": {
               "cmake": {
-                "arguments": [
-                  "-DANDROID_STL=c++_shared"
-                ]
+                "arguments": ["-DANDROID_STL=c++_shared"]
               }
             }
           }
