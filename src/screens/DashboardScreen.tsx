@@ -17,6 +17,7 @@ import DashboardHeader from "../components/dashboardHeader";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { useTeam } from "../hooks/useTeam";
+import { useTrainer } from "../hooks/useTrainer";
 import { colors } from "../theme/color";
 import { DashboardScreenProps } from "../types/navigation";
 
@@ -24,7 +25,8 @@ const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, signOut } = useAuth();
-  const { team, loading, refetch } = useTeam(user?.id ?? "");
+  const { team, loading: teamLoading, refetch: refetchTeam } = useTeam(user?.id ?? "");
+  const { stats, loading: trainerLoading, refetch: refetchTrainer } = useTrainer(user?.id);
   const insets = useSafeAreaInsets();
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -43,7 +45,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     player.play();
   };
 
-  if (loading)
+  const handleRefresh = () => {
+    playClick();
+    refetchTeam();
+    refetchTrainer();
+  };
+
+  if (teamLoading || trainerLoading)
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator color="#818CF8" size="large" />
@@ -55,20 +63,18 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       <DashboardHeader
         userName={user?.name ?? "Trainer"}
         team={team}
+        pokecoins={stats?.pokecoins || 0}
         onLogout={() => {
           playClick();
           signOut();
           navigation.replace("Login");
         }}
-        onRefresh={() => {
-          playClick();
-          refetch();
-        }}
+        onRefresh={handleRefresh}
         onEditTeam={() => {
           playClick();
           navigation.navigate("PokemonTeam", {
             initialTeam: team,
-            onSave: refetch,
+            onSave: refetchTeam,
           });
         }}
         onViewList={() => {
@@ -114,7 +120,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
                       playClick();
                       navigation.navigate("PokemonStats", {
                         pokemon: item,
-                        onRelease: refetch,
+                        onRelease: refetchTeam,
                       });
                     }}
                   />

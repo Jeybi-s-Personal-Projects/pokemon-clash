@@ -8,6 +8,7 @@ import { Pokemon } from "../types/pokemon";
 type Props = {
   userName: string;
   team: Pokemon[];
+  pokecoins: number;
   onLogout: () => void;
   onRefresh: () => void;
   onEditTeam: () => void;
@@ -25,12 +26,13 @@ const BADGES = [
   require("../../assets/badges/bagde-water.png"),
 ];
 const banner = require("../../assets/banners/banner.jpg");
-const rank = require("../../assets/rank/rank-1.png");
+const pokecoin = require("../../assets/icons/pokecoin.png");
 
 const obtained = 4;
 export default function DashboardHeader({
   userName,
   team,
+  pokecoins,
   onLogout,
   onRefresh,
   onEditTeam,
@@ -51,12 +53,12 @@ export default function DashboardHeader({
         </View>
 
         <View style={styles.headerRight}>
-          <View style={styles.trainerBadge}>
+          <View style={styles.coinBadge}>
             <Image
-              source={rank}
-              style={{ width: 30, height: 30, resizeMode: "cover" }}
+              source={pokecoin}
+              style={{ width: 22, height: 22, resizeMode: "contain" }}
             />
-            <Text style={styles.trainerBadgeText}>Elite Trainer</Text>
+            <Text style={styles.coinBadgeText}>{pokecoins.toLocaleString()}</Text>
           </View>
 
           <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
@@ -214,21 +216,21 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 13, color: "#6B7280", letterSpacing: 0.5 },
   username: { fontSize: 24, fontWeight: "800", color: "#F9FAFB" },
-  trainerBadge: {
+  coinBadge: {
     backgroundColor: "#1F2937",
     borderWidth: 1,
     borderColor: "#374151",
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 12,
     flexDirection: "row",
-    display: "flex",
     alignItems: "center",
-    justifyContent: "space-around",
+    gap: 6,
   },
-  trainerBadgeText: {
-    color: "#D1D5DB",
-    fontSize: 13,
+  coinBadgeText: {
+    color: "#FACC15",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   logoutButton: {
     backgroundColor: "#1F2937",
