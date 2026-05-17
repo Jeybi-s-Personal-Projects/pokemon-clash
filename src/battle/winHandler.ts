@@ -212,7 +212,6 @@ export const handleWinner = async (
           });
 
           await evolve;
-          playMilestoneSound?.();
 
           const showdown = newSpeciesData.sprites.other.showdown;
           updatedPokemon = {

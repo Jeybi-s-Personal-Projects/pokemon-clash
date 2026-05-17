@@ -258,7 +258,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.modalBackground,
+    backgroundColor: colors.modalBackgroundPrimary,
     paddingVertical: 40,
   },
   loadingContainer: {
@@ -297,8 +297,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     paddingBottom: 15,
+    paddingTop: 10,
     paddingHorizontal: 10,
     borderTopWidth: 1,
+    backgroundColor: "#030303",
   },
   battleButton: {
     flex: 1,

@@ -1,9 +1,19 @@
 import { colors } from "@/src/theme/color";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Pokemon } from "../types/pokemon";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 type Props = {
   userName: string;
@@ -26,7 +36,42 @@ const BADGES = [
   require("../../assets/badges/bagde-water.png"),
 ];
 const banner = require("../../assets/banners/banner.jpg");
+const dynamaxRaidBanner = require("../../assets/banners/banner-dynamax-raid.jpg");
+const pokestore = require("../../assets/banners/banner-pokestore.jpg");
 const pokecoin = require("../../assets/icons/pokecoin.png");
+
+const BANNER_CONTENT = [
+  {
+    image: banner,
+    title: "Mega Raid",
+    subtitle: "Ultra Trials",
+    details: "Take down Mega Evolved bosses!",
+    icon: "sword-cross",
+    buttonText: "Battle",
+    onPress: () => console.log("Mega Raid Battle"),
+    layout: "right",
+  },
+  {
+    image: dynamaxRaidBanner,
+    title: "Dynamax Raid",
+    subtitle: "Giant Challenges",
+    details: "Face off against towering Dynamax Pokémon!",
+    icon: "lightning-bolt",
+    buttonText: "Join Raid",
+    onPress: () => console.log("Dynamax Raid Battle"),
+    layout: "right",
+  },
+  {
+    image: pokestore,
+    title: "Pokemart",
+    subtitle: "Supplies & Gear",
+    details: "Restock Pokéballs and healing items.",
+    icon: "storefront",
+    buttonText: "Shop Now",
+    onPress: () => console.log("Pokemart Shop"),
+    layout: "right",
+  },
+];
 
 const obtained = 4;
 export default function DashboardHeader({
@@ -38,6 +83,24 @@ export default function DashboardHeader({
   onViewList,
   onProfilePress,
 }: Props) {
+  const flatListRef = useRef<FlatList>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % BANNER_CONTENT.length;
+        flatListRef.current?.scrollToIndex({
+          index: next,
+          animated: true,
+        });
+        return next;
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <>
       <View style={styles.header}>
@@ -46,7 +109,11 @@ export default function DashboardHeader({
           <TouchableOpacity onPress={onProfilePress} activeOpacity={0.7}>
             <Text style={styles.username}>
               {userName}{" "}
-              <MaterialCommunityIcons name="pokeball" size={25} color="#818CF8" />
+              <MaterialCommunityIcons
+                name="pokeball"
+                size={25}
+                color="#818CF8"
+              />
             </Text>
           </TouchableOpacity>
           <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
@@ -138,19 +205,54 @@ export default function DashboardHeader({
         </View>
       </View>
 
-      <View
-        style={{
-          height: 140,
-          overflow: "hidden",
-          paddingHorizontal: 10,
-          opacity: 0.5,
-        }}
-      >
-        <Image
-          source={banner}
-          style={{ width: "auto", height: "100%", resizeMode: "cover" }}
+      <View style={styles.carouselContainer}>
+        <FlatList
+          ref={flatListRef}
+          data={BANNER_CONTENT}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(_, index) => index.toString()}
+          onScrollToIndexFailed={() => {}}
+          renderItem={({ item }) => (
+            <View style={styles.bannerItem}>
+              <Image source={item.image} style={styles.bannerImage} />
+              <LinearGradient
+                colors={["transparent", "rgba(0,0,0,0.4)", "rgba(0,0,0,2)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.bannerOverlay}
+              >
+                <View style={styles.bannerContent}>
+                  <View style={styles.bannerHeader}>
+                    <MaterialCommunityIcons
+                      name={item.icon as any}
+                      size={28}
+                      color={colors.neonOrange}
+                    />
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={styles.bannerTitle}>{item.title}</Text>
+                      <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.bannerDetails}>{item.details}</Text>
+
+                  <TouchableOpacity
+                    style={styles.bannerButton}
+                    onPress={item.onPress}
+                  >
+                    <Text style={styles.bannerButtonText}>
+                      {item.buttonText}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
         />
       </View>
+
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>Pokémon Team</Text>
@@ -353,5 +455,80 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     resizeMode: "contain",
+  },
+  carouselContainer: {
+    height: 140,
+    marginHorizontal: 16,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#111827",
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  bannerItem: {
+    width: SCREEN_WIDTH - 32, // Container margin
+    height: 140,
+    position: "relative",
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  bannerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "flex-end",
+    alignItems: "flex-end", // Enforce right alignment for the overlay content
+    padding: 16,
+  },
+  bannerContent: {
+    width: "100%",
+    gap: 4,
+    alignItems: "flex-end", // Enforce right alignment for content
+  },
+  bannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 2,
+  },
+  bannerTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "right", // Enforce right alignment for title
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  bannerSubtitle: {
+    color: colors.neonOrange, // Changed to a more visible color
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: -2,
+    textAlign: "right",
+  },
+  bannerDetails: {
+    color: "#E5E7EB",
+    fontSize: 11,
+    lineHeight: 14,
+    marginBottom: 8,
+    maxWidth: "80%",
+    textAlign: "right", // Enforce right alignment for details
+  },
+  bannerButton: {
+    backgroundColor: colors.neonOrange, // More visible background
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  bannerButtonText: {
+    color: "#111827", // Dark text on light background
+    fontWeight: "bold",
+    fontSize: 12,
   },
 });
