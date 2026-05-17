@@ -139,6 +139,7 @@ export const handleWinner = async (
         await delay(1200);
         setCurrentMessage(`${p.name.toUpperCase()} gained ${sharedExp} EXP!`);
         await delay(1200);
+        playMilestoneSound?.();
         setCurrentMessage(
           `${p.name.toUpperCase()} grew to Level ${levelUp.newLevel}!`,
         );
@@ -211,6 +212,7 @@ export const handleWinner = async (
           });
 
           await evolve;
+          playMilestoneSound?.();
 
           const showdown = newSpeciesData.sprites.other.showdown;
           updatedPokemon = {
