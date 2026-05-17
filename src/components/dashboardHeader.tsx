@@ -23,6 +23,7 @@ type Props = {
   onEditTeam: () => void;
   onViewList: () => void;
   onProfilePress: () => void;
+  onPokemartPress: () => void;
 };
 
 const BADGES = [
@@ -82,14 +83,45 @@ export default function DashboardHeader({
   onEditTeam,
   onViewList,
   onProfilePress,
+  onPokemartPress,
 }: Props) {
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const bannerContent = [
+    {
+      image: banner,
+      title: "Mega Raid",
+      subtitle: "Ultra Trials",
+      details: "Take down Mega Evolved bosses!",
+      icon: "sword-cross",
+      buttonText: "Battle",
+      onPress: () => console.log("Mega Raid Battle"),
+    },
+    {
+      image: dynamaxRaidBanner,
+      title: "Dynamax Raid",
+      subtitle: "Giant Challenges",
+      details: "Face off against towering Dynamax Pokémon!",
+      icon: "lightning-bolt",
+      buttonText: "Join Raid",
+      onPress: () => console.log("Dynamax Raid Battle"),
+    },
+    {
+      image: pokestore,
+      title: "Pokemart",
+      subtitle: "Supplies & Gear",
+      details: "Restock Pokéballs and healing items.",
+      icon: "storefront",
+      buttonText: "Shop Now",
+      onPress: onPokemartPress,
+    },
+  ];
+
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveIndex((prev) => {
-        const next = (prev + 1) % BANNER_CONTENT.length;
+        const next = (prev + 1) % bannerContent.length;
         flatListRef.current?.scrollToIndex({
           index: next,
           animated: true,
@@ -205,7 +237,7 @@ export default function DashboardHeader({
       <View style={styles.carouselContainer}>
         <FlatList
           ref={flatListRef}
-          data={BANNER_CONTENT}
+          data={bannerContent}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}

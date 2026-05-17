@@ -70,7 +70,13 @@ export type RootStackParamList = {
     revertMegaInTeam?: (team: Pokemon[]) => Pokemon[];
     isMega?: boolean;
   };
+  Pokemart: undefined;
 };
+
+export type PokemartScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "Pokemart"
+>;
 
 export type SelectStarterScreenProps = NativeStackScreenProps<
   RootStackParamList,

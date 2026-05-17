@@ -92,6 +92,10 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           playClick();
           setProfileVisible(true);
         }}
+        onPokemartPress={() => {
+          playClick();
+          navigation.navigate("Pokemart");
+        }}
       />
 
       {/* Profile Modal */}

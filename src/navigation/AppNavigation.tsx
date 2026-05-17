@@ -12,6 +12,7 @@ import LoginScreen from "@/src/screens/LoginScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
 import PokemonStatsScreen from "@/src/screens/PokemonStatsScreen";
 import PokemonTeamScreen from "@/src/screens/PokemonTeamScreen";
+import PokemartScreen from "@/src/screens/PokemartScreen";
 import RegionSelectScreen from "@/src/screens/RegionSelectScreen";
 import SelectFromPCScreen from "@/src/screens/SelectFromPCScreen";
 import SelectPokemonScreen from "@/src/screens/SelectPokemonScreen";
@@ -146,6 +147,16 @@ export default function AppNavigator() {
             name="CatchingScreen"
             component={CatchingScreen}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Pokemart"
+            component={PokemartScreen}
+            options={{
+              title: "POKÉMART",
+              headerStyle: { backgroundColor: "#111827" },
+              headerTintColor: "#F9FAFB",
+              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
+            }}
           />
         </>
       )}
