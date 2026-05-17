@@ -25,8 +25,16 @@ const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, signOut } = useAuth();
-  const { team, loading: teamLoading, refetch: refetchTeam } = useTeam(user?.id ?? "");
-  const { stats, loading: trainerLoading, refetch: refetchTrainer } = useTrainer(user?.id);
+  const {
+    team,
+    loading: teamLoading,
+    refetch: refetchTeam,
+  } = useTeam(user?.id ?? "");
+  const {
+    stats,
+    loading: trainerLoading,
+    refetch: refetchTrainer,
+  } = useTrainer(user?.id);
   const insets = useSafeAreaInsets();
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -177,17 +185,20 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingVertical: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.modalBackgroundPrimary,
+    paddingVertical: 40,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#030712",
+    backgroundColor: colors.modalBackgroundPrimary,
   },
   contentArea: {
     flex: 1,
     justifyContent: "center",
-    paddingBottom: 20,
   },
   emptyContainer: {
     alignItems: "center",
@@ -215,11 +226,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     paddingBottom: 15,
-    paddingTop: 10,
     paddingHorizontal: 10,
-    backgroundColor: "#030712",
     borderTopWidth: 1,
-    borderTopColor: "#1F2937",
   },
   battleButton: {
     flex: 1,
@@ -255,7 +263,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   carouselContainer: {
-    height: 220,
+    height: 210,
     paddingHorizontal: 10,
   },
   carouselContent: {
@@ -267,7 +275,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   pagination: {
-    marginTop: 5,
+    marginTop: 10,
+    paddingVertical: 5,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",

@@ -58,7 +58,9 @@ export default function DashboardHeader({
               source={pokecoin}
               style={{ width: 22, height: 22, resizeMode: "contain" }}
             />
-            <Text style={styles.coinBadgeText}>{pokecoins.toLocaleString()}</Text>
+            <Text style={styles.coinBadgeText}>
+              {pokecoins.toLocaleString()}
+            </Text>
           </View>
 
           <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
@@ -140,7 +142,7 @@ export default function DashboardHeader({
 
       <View
         style={{
-          height: 120,
+          height: 140,
           overflow: "hidden",
           paddingHorizontal: 10,
           opacity: 0.5,
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 5,
-    backgroundColor: "#030712",
+    backgroundColor: colors.modalBackgroundPrimary,
   },
   greeting: { fontSize: 13, color: "#6B7280", letterSpacing: 0.5 },
   username: { fontSize: 24, fontWeight: "800", color: "#F9FAFB" },
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.subtleNeonBlue,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#F9FAFB" },
   sectionSub: { fontSize: 12, color: "#6B7280", marginTop: 2 },
