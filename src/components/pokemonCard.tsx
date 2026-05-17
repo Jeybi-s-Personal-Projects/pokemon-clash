@@ -338,8 +338,9 @@ export default function PokemonCard({
               <Text
                 style={{
                   fontWeight: "bold",
-                  fontSize: 14,
+                  fontSize: 12,
                   color: "white",
+                  flex: 1,
                 }}
                 adjustsFontSizeToFit
                 numberOfLines={1}
@@ -352,7 +353,7 @@ export default function PokemonCard({
                   name="star"
                   size={12}
                   color="#facc15"
-                  style={{ marginLeft: 4 }}
+                  style={{ marginLeft: 4, marginRight: 8 }}
                 />
               )}
             </View>
