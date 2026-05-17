@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MOVES } from "../data/pokemon/moves/moves";
 import db from "../lib/db";
 import { Pokemon } from "../types/pokemon";
@@ -8,15 +8,7 @@ export function useTeam(userId: string) {
   const [team, setTeam] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    fetchTeam();
-  }, [userId]);
-
-  const fetchTeam = async () => {
+  const fetchTeam = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -85,7 +77,15 @@ export function useTeam(userId: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    fetchTeam();
+  }, [userId, fetchTeam]);
 
   return { team, loading, refetch: fetchTeam };
 }

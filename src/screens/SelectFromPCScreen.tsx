@@ -94,22 +94,27 @@ export default function SelectFromPCScreen({
     setIsProcessing(true);
 
     try {
-      if (replacedId && replacedOrder) {
-        db.runSync(
-          `UPDATE pokemon SET pk_order = NULL WHERE id = ?`,
-          [replacedId]
-        );
-        db.runSync(
-          `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
-          [replacedOrder, p.id]
-        );
-      } else {
-        const nextOrder = (teamLength || 0) + 1;
-        db.runSync(
-          `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
-          [nextOrder, p.id]
-        );
-      }
+      db.withTransactionSync(() => {
+        if (replacedId && replacedOrder) {
+          // 1. Move old pokemon to PC (pk_order = NULL)
+          db.runSync(
+            `UPDATE pokemon SET pk_order = NULL WHERE id = ?`,
+            [replacedId.toString()]
+          );
+          // 2. Move new pokemon to Team at the same order
+          db.runSync(
+            `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
+            [Number(replacedOrder), p.id.toString()]
+          );
+        } else {
+          // Traditional Add
+          const nextOrder = (Number(teamLength) || 0) + 1;
+          db.runSync(
+            `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
+            [nextOrder, p.id.toString()]
+          );
+        }
+      });
 
       navigation.goBack();
     } catch (e) {
