@@ -3,6 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { formatMoveDescription } from "../utils/battleUtils";
 import { TypeBadge, TYPE_COLORS } from "./TypeBadge";
 
 
@@ -54,15 +55,7 @@ export default function BattleButton({
   const effLabel = getEffectivenessLabel();
 
   const getProcessedDescription = () => {
-    if (!description) return "";
-    let processed = description;
-    if (processed.includes("$effect_chance%") && effects) {
-      const effect = effects.find((e: any) => e.chance !== undefined);
-      if (effect) {
-        processed = processed.replace("$effect_chance%", effect.chance.toString());
-      }
-    }
-    return processed;
+    return formatMoveDescription(description, { effects });
   };
 
   return (

@@ -13,6 +13,7 @@ import { ABILITIES } from "../../data/pokemon/abilities/abilities";
 import { MOVES } from "../../data/pokemon/moves/moves";
 import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { Pokemon } from "../../types/pokemon";
+import { formatMoveDescription } from "../../utils/battleUtils";
 import { TypeBadge, TYPE_COLORS } from "../TypeBadge";
 
 interface OpponentInfoModalProps {
@@ -121,9 +122,9 @@ export function OpponentInfoModal({
                   </View>
 
                   <Text style={styles.moveDesc}>
-                    {details?.description?.replace(
-                      /\$effect_chance/g,
-                      details.effectChance?.toString() || "",
+                    {formatMoveDescription(
+                      details?.description,
+                      moveBattleData || details,
                     )}
                   </Text>
                 </View>

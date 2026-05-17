@@ -2,6 +2,7 @@ import { TypeBadge } from "@/src/components/TypeBadge";
 import { BATTLE_MOVES } from "@/src/data/pokemon/moves/movesBattle";
 import { SPECIES } from "@/src/data/pokemon/species/species";
 import { colors } from "@/src/theme/color";
+import { formatMoveDescription } from "@/src/utils/battleUtils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
@@ -228,9 +229,9 @@ export const MovesetViewModal: React.FC<Props> = ({
                         </View>
 
                         <Text style={styles.description}>
-                          {moveData?.description?.replace(
-                            /\$effect_chance/g,
-                            (moveData as any).effectChance?.toString() || "10",
+                          {formatMoveDescription(
+                            moveData?.description,
+                            moveData,
                           ) || "No description available."}
                         </Text>
                       </View>

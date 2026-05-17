@@ -27,8 +27,10 @@ import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
 import { gen1Pokemon } from "../data/gen1Pokemon";
 import { gen2Pokemon } from "../data/gen2Pokemon";
 import { MOVES } from "../data/pokemon/moves/moves";
+import { BATTLE_MOVES } from "../data/pokemon/moves/movesBattle";
 import { SPECIES } from "../data/pokemon/species/species";
 import { PokemonStatsScreenProps } from "../types/navigation";
+import { formatMoveDescription } from "../utils/battleUtils";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 
 const ALL_LOCAL = [...gen1Pokemon, ...gen2Pokemon];
@@ -569,9 +571,9 @@ export default function PokemonStatsScreen({
                   </View>
                   {details?.description && (
                     <Text style={styles.moveDescription}>
-                      {details.description.replace(
-                        /\$effect_chance/g,
-                        details.effectChance?.toString() || "",
+                      {formatMoveDescription(
+                        details.description,
+                        BATTLE_MOVES[move.name.toLowerCase()] || details,
                       )}
                     </Text>
                   )}
