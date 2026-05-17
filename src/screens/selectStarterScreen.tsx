@@ -15,6 +15,7 @@ import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon } from "../hooks/savePokemon";
 import { getPokemon } from "../hooks/usePokemon";
+import { grantStarterItems } from "../hooks/useInventory";
 import { colors } from "../theme/color";
 import { SelectStarterScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
@@ -70,7 +71,12 @@ export default function SelectStarterScreen({
     setConfirmModal(null);
 
     try {
+      // 1. Save starter pokemon
       await savePokemon(confirmModal, user.id);
+
+      // 2. Grant starter items
+      grantStarterItems(user.id);
+
       navigation.reset({
         index: 0,
         routes: [{ name: "Dashboard" }],

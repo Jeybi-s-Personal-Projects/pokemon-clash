@@ -13,50 +13,11 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/color";
 import { InventoryBagScreenProps } from "../types/navigation";
+import { useInventory, InventoryItem } from "../hooks/useInventory";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
 type BagCategory = "pokeballs" | "items" | "battle" | "key";
-
-type BagItem = {
-  id: string;
-  name: string;
-  description: string;
-  catchRate: number;
-  sprite: any;
-};
-
-const POKEBALL_ITEMS: BagItem[] = [
-  {
-    id: "poke-ball",
-    name: "Pokéball",
-    description: "A standard Poké Ball",
-    catchRate: 1,
-    sprite: require("../../assets/items/pokeball.png"),
-  },
-  {
-    
-    id: "great-ball",
-    name: "Great Ball",
-    description: "Better catch rate than Poké Ball",
-    catchRate: 25,
-    sprite: require("../../assets/items/greatball.png"),
-  },
-  {
-    id: "ultra-ball",
-    name: "Ultra Ball",
-    description: "High performance ball",
-    catchRate: 50,
-    sprite: require("../../assets/items/ultraball.png"),
-  },
-  {
-    id: "master-ball",
-    name: "Master Ball",
-    description: "Catches without fail",
-    catchRate: 255,
-    sprite: require("../../assets/items/masterball.png"),
-  },
-];
 
 const TABS: { key: BagCategory; label: string }[] = [
   { key: "pokeballs", label: "Poké Balls" },
@@ -72,6 +33,7 @@ export default function InventoryBagScreen({
   const { pokemon, fromScreen, player: playerObj, team } = route.params as any;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
+  const { inventory, loading } = useInventory(user?.id);
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -81,28 +43,61 @@ export default function InventoryBagScreen({
     player.play();
   };
 
-  const data = useMemo(() => {
-    if (category === "pokeballs") return POKEBALL_ITEMS;
-    return [];
-  }, [category]);
+  const getItemSprite = (id: string) => {
+    switch (id) {
+      case "poke-ball": return require("../../assets/items/pokeball.png");
+      case "great-ball": return require("../../assets/items/greatball.png");
+      case "ultra-ball": return require("../../assets/items/ultraball.png");
+      case "master-ball": return require("../../assets/items/masterball.png");
+      default: return require("../../assets/items/pokeball.png");
+    }
+  };
 
-  const handleUseItem = (item: BagItem) => {
+  const getCatchRate = (item: InventoryItem) => {
+    if (item.category.category !== "pokeball") return 0;
+    if (item.id === "poke-ball") return 1;
+    if (item.id === "great-ball") return 25;
+    if (item.id === "ultra-ball") return 50;
+    if (item.id === "master-ball") return 255;
+    return 1;
+  };
+
+  const data = useMemo(() => {
+    if (category === "pokeballs") {
+      return inventory.filter(i => i.category.category === "pokeball");
+    }
+    if (category === "items") {
+      return inventory.filter(i => 
+        ["medicine", "evolution-stone", "berry", "held-item"].includes(i.category.category)
+      );
+    }
+    if (category === "battle") {
+       return inventory.filter(i => i.category.category === "battle-item");
+    }
+    return [];
+  }, [category, inventory]);
+
+  const handleUseItem = (item: InventoryItem) => {
     playClick();
     if (!user) {
       Alert.alert("Error", "You must be logged in.");
       return;
     }
 
-    // Replace the Bag screen with the dedicated Catching Screen
-    navigation.replace("CatchingScreen", {
-      player: playerObj,
-      team: team,
-      enemy: pokemon,
-      item: { id: item.id, name: item.name, catchRate: item.catchRate },
-      fromScreen: fromScreen,
-      onCatchFailed: route.params.onCatchFailed,
-      revertMegaInTeam: route.params.revertMegaInTeam,
-    });
+    if (item.category.category === "pokeball") {
+        // Replace the Bag screen with the dedicated Catching Screen
+        navigation.replace("CatchingScreen", {
+          player: playerObj,
+          team: team,
+          enemy: pokemon,
+          item: { id: item.id, name: item.name, catchRate: getCatchRate(item) },
+          fromScreen: fromScreen,
+          onCatchFailed: route.params.onCatchFailed,
+          revertMegaInTeam: route.params.revertMegaInTeam,
+        });
+    } else {
+        Alert.alert("Info", `${item.name} cannot be used here.`);
+    }
   };
 
   return (
@@ -138,24 +133,34 @@ export default function InventoryBagScreen({
         data={data}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 12, gap: 12 }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No items found in this category.</Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
             onPress={() => handleUseItem(item)}
           >
             <Image
-              source={item.sprite}
+              source={getItemSprite(item.id)}
               style={styles.ballSprite}
               resizeMode="contain"
             />
 
             <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemDesc}>{item.description}</Text>
+              <View style={styles.itemHeader}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemQuantity}>x{item.quantity}</Text>
+              </View>
+              <Text style={styles.itemDesc}>{item.description || "No description available."}</Text>
 
-              <Text style={styles.catchPreview}>
-                Catch Chance: {formatCatchRate(item.catchRate)}
-              </Text>
+              {item.category.category === "pokeball" && (
+                <Text style={styles.catchPreview}>
+                  Catch Chance: {formatCatchRate(getCatchRate(item))}
+                </Text>
+              )}
             </View>
 
             <Text style={styles.useText}>USE</Text>
@@ -168,8 +173,8 @@ export default function InventoryBagScreen({
 
 function formatCatchRate(rate: number) {
   if (rate === 255) return "Guaranteed";
-  if (rate >= 2) return "Very High";
-  if (rate >= 1.5) return "High";
+  if (rate >= 50) return "Very High";
+  if (rate >= 25) return "High";
   return "Normal";
 }
 
@@ -218,9 +223,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
+  itemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   itemName: {
     color: colors.textPrimary,
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  itemQuantity: {
+    color: colors.accent,
+    fontSize: 14,
     fontWeight: "bold",
   },
   itemDesc: {
@@ -238,5 +253,15 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: "bold",
     fontSize: 12,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 40,
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 14,
   },
 });

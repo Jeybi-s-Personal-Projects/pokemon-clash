@@ -78,6 +78,17 @@ export const initDatabase = () => {
     );
   `);
 
+  // Create Inventory Table
+  db.execSync(`
+    CREATE TABLE IF NOT EXISTS inventory (
+      user_id TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      quantity INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, item_id)
+    );
+  `);
+
   console.log('Local SQLite Database initialized successfully.');
 };
 

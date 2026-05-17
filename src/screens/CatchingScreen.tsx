@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { SPECIES } from "../data/pokemon/species/species";
 import { savePokemon, syncAllProgress } from "../hooks/savePokemon";
 import { CatchingScreenProps } from "../types/navigation";
+import db from "../lib/db";
 
 const initialStages = {
   attack: 0,
@@ -180,6 +181,19 @@ export default function CatchingScreen({
 
   useEffect(() => {
     async function runSequence() {
+      // Consume item at the start
+      if (user) {
+        try {
+          db.runSync(
+            `UPDATE inventory SET quantity = MAX(0, quantity - 1), updated_at = CURRENT_TIMESTAMP 
+             WHERE user_id = ? AND item_id = ?`,
+            [user.id, item.id]
+          );
+        } catch (error) {
+          console.error("Failed to consume item:", error);
+        }
+      }
+
       const baseCatchRate = SPECIES[enemy.speciesId]?.capture_rate || 50;
       const ballModifier = item.catchRate || 1;
 

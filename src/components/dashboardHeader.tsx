@@ -116,9 +116,6 @@ export default function DashboardHeader({
               />
             </Text>
           </TouchableOpacity>
-          <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
-            Ready for your next battle?
-          </Text>
         </View>
 
         <View style={styles.headerRight}>
@@ -218,7 +215,7 @@ export default function DashboardHeader({
             <View style={styles.bannerItem}>
               <Image source={item.image} style={styles.bannerImage} />
               <LinearGradient
-                colors={["transparent", "rgba(0,0,0,0.4)", "rgba(0,0,0,2)"]}
+                colors={["transparent", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.8)"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.bannerOverlay}
@@ -428,8 +425,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: colors.subtleNeonBlue,
     paddingHorizontal: 16,
     paddingVertical: 4,
   },
@@ -462,8 +457,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: "hidden",
     backgroundColor: "#111827",
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
     marginBottom: 8,
-    opacity: 0.7,
   },
   bannerItem: {
     width: SCREEN_WIDTH - 32, // Container margin
