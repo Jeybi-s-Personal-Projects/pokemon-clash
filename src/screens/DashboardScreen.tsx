@@ -1,7 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -40,6 +41,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [profileVisible, setProfileVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchTeam();
+      refetchTrainer();
+    }, [refetchTeam, refetchTrainer]),
+  );
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;

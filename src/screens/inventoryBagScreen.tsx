@@ -11,9 +11,9 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { InventoryItem, useInventory } from "../hooks/useInventory";
 import { colors } from "../theme/color";
 import { InventoryBagScreenProps } from "../types/navigation";
-import { useInventory, InventoryItem } from "../hooks/useInventory";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -45,11 +45,16 @@ export default function InventoryBagScreen({
 
   const getItemSprite = (id: string) => {
     switch (id) {
-      case "poke-ball": return require("../../assets/items/pokeball.png");
-      case "great-ball": return require("../../assets/items/greatball.png");
-      case "ultra-ball": return require("../../assets/items/ultraball.png");
-      case "master-ball": return require("../../assets/items/masterball.png");
-      default: return require("../../assets/items/pokeball.png");
+      case "poke-ball":
+        return require("../../assets/items/pokeball.png");
+      case "great-ball":
+        return require("../../assets/items/greatball.png");
+      case "ultra-ball":
+        return require("../../assets/items/ultraball.png");
+      case "master-ball":
+        return require("../../assets/items/masterball.png");
+      default:
+        return require("../../assets/items/pokeball.png");
     }
   };
 
@@ -64,15 +69,17 @@ export default function InventoryBagScreen({
 
   const data = useMemo(() => {
     if (category === "pokeballs") {
-      return inventory.filter(i => i.category.category === "pokeball");
+      return inventory.filter((i) => i.category.category === "pokeball");
     }
     if (category === "items") {
-      return inventory.filter(i => 
-        ["medicine", "evolution-stone", "berry", "held-item"].includes(i.category.category)
+      return inventory.filter((i) =>
+        ["medicine", "evolution-stone", "berry", "held-item"].includes(
+          i.category.category,
+        ),
       );
     }
     if (category === "battle") {
-       return inventory.filter(i => i.category.category === "battle-item");
+      return inventory.filter((i) => i.category.category === "battle-item");
     }
     return [];
   }, [category, inventory]);
@@ -85,18 +92,18 @@ export default function InventoryBagScreen({
     }
 
     if (item.category.category === "pokeball") {
-        // Replace the Bag screen with the dedicated Catching Screen
-        navigation.replace("CatchingScreen", {
-          player: playerObj,
-          team: team,
-          enemy: pokemon,
-          item: { id: item.id, name: item.name, catchRate: getCatchRate(item) },
-          fromScreen: fromScreen,
-          onCatchFailed: route.params.onCatchFailed,
-          revertMegaInTeam: route.params.revertMegaInTeam,
-        });
+      // Replace the Bag screen with the dedicated Catching Screen
+      navigation.replace("CatchingScreen", {
+        player: playerObj,
+        team: team,
+        enemy: pokemon,
+        item: { id: item.id, name: item.name, catchRate: getCatchRate(item) },
+        fromScreen: fromScreen,
+        onCatchFailed: route.params.onCatchFailed,
+        revertMegaInTeam: route.params.revertMegaInTeam,
+      });
     } else {
-        Alert.alert("Info", `${item.name} cannot be used here.`);
+      Alert.alert("Info", `${item.name} cannot be used here.`);
     }
   };
 
@@ -135,7 +142,9 @@ export default function InventoryBagScreen({
         contentContainerStyle={{ padding: 12, gap: 12 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No items found in this category.</Text>
+            <Text style={styles.emptyText}>
+              No items found in this category.
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -154,7 +163,9 @@ export default function InventoryBagScreen({
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemQuantity}>x{item.quantity}</Text>
               </View>
-              <Text style={styles.itemDesc}>{item.description || "No description available."}</Text>
+              <Text style={styles.itemDesc}>
+                {item.description || "No description available."}
+              </Text>
 
               {item.category.category === "pokeball" && (
                 <Text style={styles.catchPreview}>
@@ -181,7 +192,7 @@ function formatCatchRate(rate: number) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackgroundPrimary,
   },
   tabRow: {
     flexDirection: "row",
@@ -190,9 +201,9 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.modalBorderSubtle,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: "center",
@@ -212,10 +223,10 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.modalBorderSubtle,
     padding: 14,
     gap: 12,
   },
