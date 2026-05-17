@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.modalBorderSubtle,
     top: 10,
     alignSelf: "center",
   },
@@ -779,8 +779,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    borderBottomColor: colors.borderSubtle,
+    borderTopColor: colors.modalBorderSubtle,
+    borderBottomColor: colors.modalBorderSubtle,
   },
   name: {
     fontSize: 36,
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.modalBorderSubtle,
   },
   smallMovesetButtonText: {
     color: "white",

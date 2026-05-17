@@ -38,10 +38,7 @@ export default function PokemonTeamScreen({
 }: PokemonTeamScreenProps) {
   const { onSave } = route.params;
   const { user } = useAuth();
-  const {
-    team: dbTeam,
-    refetch,
-  } = useTeam(user?.id ?? "");
+  const { team: dbTeam, refetch } = useTeam(user?.id ?? "");
   const [team, setTeam] = useState<Pokemon[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
@@ -270,7 +267,7 @@ export default function PokemonTeamScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.modalBackground },
   list: { padding: 20, gap: 16 },
   card: {
     backgroundColor: "#111827",

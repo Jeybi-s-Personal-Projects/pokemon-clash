@@ -1,3 +1,4 @@
+import { colors } from "@/src/theme/color";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
@@ -9,10 +10,10 @@ import DashboardScreen from "@/src/screens/DashboardScreen";
 import { EncounterFlow } from "@/src/screens/EncounterFlow";
 import InventoryBagScreen from "@/src/screens/inventoryBagScreen";
 import LoginScreen from "@/src/screens/LoginScreen";
+import PokemartScreen from "@/src/screens/PokemartScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
 import PokemonStatsScreen from "@/src/screens/PokemonStatsScreen";
 import PokemonTeamScreen from "@/src/screens/PokemonTeamScreen";
-import PokemartScreen from "@/src/screens/PokemartScreen";
 import RegionSelectScreen from "@/src/screens/RegionSelectScreen";
 import SelectFromPCScreen from "@/src/screens/SelectFromPCScreen";
 import SelectPokemonScreen from "@/src/screens/SelectPokemonScreen";
@@ -153,7 +154,7 @@ export default function AppNavigator() {
             component={PokemartScreen}
             options={{
               title: "POKÉMART",
-              headerStyle: { backgroundColor: "#111827" },
+              headerStyle: { backgroundColor: colors.modalBackgroundPrimary },
               headerTintColor: "#F9FAFB",
               headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
             }}

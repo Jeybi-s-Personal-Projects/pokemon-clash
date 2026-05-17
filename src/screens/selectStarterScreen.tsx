@@ -10,12 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon } from "../hooks/savePokemon";
-import { getPokemon } from "../hooks/usePokemon";
 import { grantStarterItems } from "../hooks/useInventory";
+import { getPokemon } from "../hooks/usePokemon";
 import { colors } from "../theme/color";
 import { SelectStarterScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
@@ -170,7 +169,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackground,
   },
   loadingText: {
     color: "#9CA3AF",

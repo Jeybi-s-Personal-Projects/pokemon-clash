@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     margin: 40,
     borderWidth: 2,
     borderColor: colors.neonBlue,
-    backgroundColor: colors.bgButtonStandard,
+    backgroundColor: colors.modalBackgroundPrimary,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,

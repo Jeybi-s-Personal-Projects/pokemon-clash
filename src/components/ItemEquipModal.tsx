@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from "react";
 import {
-  FlatList, Image, Modal,
+  FlatList,
+  Image,
+  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { ITEMS } from "../data/items/items";
 import { colors } from "../theme/color";
@@ -180,7 +182,7 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalBackground,
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: "center",
