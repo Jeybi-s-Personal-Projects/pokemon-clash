@@ -11,6 +11,7 @@ import { WeatherIndicator } from "../components/battle/WeatherIndicator";
 import BattleActions from "../components/battleActions";
 import EvolutionModal from "../components/evolutionModal";
 import StatusModal from "../components/statusModal";
+import ConfirmationModal from "../components/UI/ConfirmationModal";
 import { useBattle } from "../hooks/useBattle";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
@@ -78,6 +79,7 @@ export function Battle({
   const { state, currentMessage } = battle;
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
+  const [runConfirmVisible, setRunConfirmVisible] = useState(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
@@ -93,6 +95,15 @@ export function Battle({
       return () => clearTimeout(timer);
     }
   }, [catchFailed]);
+
+  const handleRunPress = () => {
+    setRunConfirmVisible(true);
+  };
+
+  const confirmRun = () => {
+    setRunConfirmVisible(false);
+    onRun?.(battle.revertMegaInTeam(state.team));
+  };
 
   return (
     <View style={styles.container}>
@@ -147,7 +158,7 @@ export function Battle({
             battle.revertMegaInTeam,
           )
         }
-        onRun={() => onRun?.(battle.revertMegaInTeam(state.team))}
+        onRun={handleRunPress}
         onMegaEvolve={battle.handleMegaEvolution}
         canMegaEvolve={battle.canMegaEvolve}
         disabled={
@@ -165,6 +176,16 @@ export function Battle({
       />
 
       {/* 3. Utility Modals */}
+      <ConfirmationModal
+        visible={runConfirmVisible}
+        title="Forfeit encounter run?"
+        message="Are you sure you want to run? You will forfeit this battle."
+        onConfirm={confirmRun}
+        onCancel={() => setRunConfirmVisible(false)}
+        confirmText="Run"
+        cancelText="Back"
+      />
+
       <StatusModal
         visible={battle.statusVisible}
         message={battle.statusMessage}

@@ -270,11 +270,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.modalBackground },
   list: { padding: 20, gap: 16 },
   card: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalContent,
     borderRadius: 20,
-    padding: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorderSubtle,
   },
   replacingCard: {
     borderColor: colors.accent,
