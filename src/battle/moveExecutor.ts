@@ -404,11 +404,15 @@ export const executeMove = async (
                 );
                 await delay(1200);
               }
-            } else if (!fallbackDefenderStatus) {
+            } else if (!fallbackDefenderStatus || fallbackDefenderStatus !== statusEffect.status) {
               if (isImmuneToStatus(defender, statusEffect.status)) {
                 setCurrentMessage(`${defender.name.toUpperCase()}'s ${getAbilityDisplayName(defender.ability!)} prevents ${statusEffect.status}!`);
                 await delay(1200);
               } else {
+                if (fallbackDefenderStatus) {
+                   setCurrentMessage(`${defender.name.toUpperCase()} was cured of its previous status!`);
+                   await delay(1200);
+                }
                 fallbackDefenderStatus = statusEffect.status;
                 fallbackDefenderStatusTurns = getStatusDuration(
                   statusEffect.status,

@@ -46,7 +46,9 @@ export const SwitchModal = ({
             <View>
               <Text style={styles.title}>Choose a Pokémon:</Text>
               {!canCancel && (
-                <Text style={styles.subtitle}>Your Pokémon fainted! Switch now.</Text>
+                <Text style={styles.subtitle}>
+                  Your Pokémon fainted! Switch now.
+                </Text>
               )}
             </View>
             {canCancel && (
@@ -75,14 +77,18 @@ export const SwitchModal = ({
                   ]}
                 >
                   <Image
-                    source={{ uri: getPokemonIcon(item.speciesId, item.isShiny) }}
+                    source={{
+                      uri: getPokemonIcon(item.speciesId, item.isShiny),
+                    }}
                     style={styles.pokemonIcon}
                     resizeMode="contain"
                   />
                   <View style={{ flex: 1 }}>
                     <View style={styles.nameRow}>
                       <Text style={styles.name}>{item.name}</Text>
-                      {isCurrent && <Text style={styles.onFieldLabel}>ON FIELD</Text>}
+                      {isCurrent && (
+                        <Text style={styles.onFieldLabel}>ON FIELD</Text>
+                      )}
                     </View>
                     <View style={styles.statsRow}>
                       <Text style={styles.level}>Lv. {item.level}</Text>
@@ -130,7 +136,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.7)",
   },
   container: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalBackground,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     maxHeight: "85%",
@@ -167,12 +173,12 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   item: {
-    backgroundColor: "#1F2937",
+    backgroundColor: colors.modalContent,
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorderSubtle,
     borderRadius: 16,
     marginBottom: 12,
   },
@@ -246,10 +252,13 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: 8,
+    marginBottom: 8,
     alignItems: "center",
     paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: "#1F2937",
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
   },
   cancelText: {
     color: "#D1D5DB",

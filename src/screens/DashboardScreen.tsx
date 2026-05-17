@@ -187,14 +187,14 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.modalBackgroundPrimary,
+    backgroundColor: colors.modalBackground,
     paddingVertical: 40,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.modalBackgroundPrimary,
+    backgroundColor: colors.modalBackground,
   },
   contentArea: {
     flex: 1,
