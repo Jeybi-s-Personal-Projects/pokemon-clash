@@ -48,6 +48,7 @@ export const initDatabase = () => {
       move_name TEXT NOT NULL,
       move_power INTEGER DEFAULT 0,
       move_pp INTEGER DEFAULT 0,
+      move_max_pp INTEGER DEFAULT 0,
       move_type TEXT DEFAULT 'normal',
       move_damageClass TEXT DEFAULT 'status',
       move_accuracy INTEGER DEFAULT 100,
@@ -57,6 +58,13 @@ export const initDatabase = () => {
       FOREIGN KEY (pokemon_id) REFERENCES pokemon (id) ON DELETE CASCADE
     );
   `);
+
+  // Migration: Add move_max_pp if it doesn't exist
+  try {
+    db.execSync(`ALTER TABLE pokemon_moves ADD COLUMN move_max_pp INTEGER DEFAULT 0;`);
+  } catch (e) {
+    // Column might already exist
+  }
 
   // Create Trainer Stats Table
   db.execSync(`

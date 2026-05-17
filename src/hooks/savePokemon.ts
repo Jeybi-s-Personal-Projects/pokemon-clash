@@ -63,16 +63,17 @@ export async function savePokemon(
     const moveId = Crypto.randomUUID();
     db.runSync(
       `INSERT INTO pokemon_moves (
-        id, pokemon_id, move_name, move_power, move_pp, 
+        id, pokemon_id, move_name, move_power, move_pp, move_max_pp,
         move_type, move_damageClass, move_accuracy, 
         move_statChanges, move_description, move_priority
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         moveId,
         pkId,
         move.name,
         move.power ?? 0,
         move.pp ?? 0,
+        move.maxPp ?? move.pp ?? 0,
         move.type ?? "normal",
         move.damageClass ?? "status",
         move.accuracy ?? 100,
@@ -192,23 +193,24 @@ export async function syncAllProgress(
         const moveId = Crypto.randomUUID();
         db.runSync(
           `INSERT INTO pokemon_moves (
-            id, pokemon_id, move_name, move_power, move_pp, 
+            id, pokemon_id, move_name, move_power, move_pp, move_max_pp,
             move_type, move_damageClass, move_accuracy, 
             move_statChanges, move_description, move_priority
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             moveId,
             p.id,
             m.name,
             m.power ?? 0,
             shouldHeal ? (m.maxPp ?? m.pp) : m.pp,
+            m.maxPp ?? m.pp,
             m.type ?? "normal",
             m.damageClass ?? "status",
             m.accuracy ?? 100,
             JSON.stringify(m.statChanges || []),
-            m.description ?? "",
+            m.description || "",
             m.priority ?? 0,
-          ]
+          ],
         );
       }
     }

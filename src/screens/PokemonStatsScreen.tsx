@@ -86,7 +86,7 @@ export default function PokemonStatsScreen({
         if (isReplacement) {
           db.runSync(
             `UPDATE pokemon_moves SET 
-              move_name = ?, move_power = ?, move_pp = ?, move_type = ?,
+              move_name = ?, move_power = ?, move_pp = ?, move_max_pp = ?, move_type = ?,
               move_damageClass = ?, move_accuracy = ?, move_statChanges = ?,
               move_description = ?, move_priority = ?
             WHERE id = ?`,
@@ -94,6 +94,7 @@ export default function PokemonStatsScreen({
               updatedMove.name,
               updatedMove.power,
               updatedMove.pp,
+              updatedMove.maxPp || updatedMove.pp,
               updatedMove.type ?? "normal",
               updatedMove.damageClass,
               updatedMove.accuracy,
@@ -107,16 +108,17 @@ export default function PokemonStatsScreen({
           // Addition
           db.runSync(
             `INSERT INTO pokemon_moves (
-              id, pokemon_id, move_name, move_power, move_pp, 
+              id, pokemon_id, move_name, move_power, move_pp, move_max_pp,
               move_type, move_damageClass, move_accuracy, 
               move_statChanges, move_description, move_priority
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               Crypto.randomUUID(),
               pokemonState.id,
               updatedMove.name,
               updatedMove.power,
               updatedMove.pp,
+              updatedMove.maxPp || updatedMove.pp,
               updatedMove.type ?? "normal",
               updatedMove.damageClass,
               updatedMove.accuracy,
@@ -135,13 +137,14 @@ export default function PokemonStatsScreen({
       );
 
       const finalMoves = moveRows.map((m) => {
-        const detail = MOVES[m.move_name.toLowerCase()] || {};
+        const slug = m.move_name.toLowerCase().replace(/[\s]/g, "-");
+        const detail = MOVES[slug] || {};
         return {
           id: m.id,
           name: m.move_name,
           power: m.move_power,
           pp: m.move_pp,
-          maxPp: detail.pp || m.move_pp,
+          maxPp: m.move_max_pp || detail.pp || m.move_pp,
           type: m.move_type,
           damageClass: m.move_damageClass,
           accuracy: m.move_accuracy,
@@ -302,13 +305,14 @@ export default function PokemonStatsScreen({
         [pokemonState.id],
       );
       const finalMoves = moveRows.map((m) => {
-        const detail = MOVES[m.move_name.toLowerCase()] || {};
+        const slug = m.move_name.toLowerCase().replace(/[\s]/g, "-");
+        const detail = MOVES[slug] || {};
         return {
           id: m.id,
           name: m.move_name,
           power: m.move_power,
           pp: m.move_pp,
-          maxPp: detail.pp || m.move_pp,
+          maxPp: m.move_max_pp || detail.pp || m.move_pp,
           type: m.move_type,
           damageClass: m.move_damageClass,
           accuracy: m.move_accuracy,
