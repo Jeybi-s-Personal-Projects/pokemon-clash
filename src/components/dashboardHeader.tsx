@@ -9,10 +9,10 @@ type Props = {
   userName: string;
   team: Pokemon[];
   pokecoins: number;
-  onLogout: () => void;
   onRefresh: () => void;
   onEditTeam: () => void;
   onViewList: () => void;
+  onProfilePress: () => void;
 };
 
 const BADGES = [
@@ -33,20 +33,22 @@ export default function DashboardHeader({
   userName,
   team,
   pokecoins,
-  onLogout,
   onRefresh,
   onEditTeam,
   onViewList,
+  onProfilePress,
 }: Props) {
   return (
     <>
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.username}>
-            {userName}{" "}
-            <MaterialCommunityIcons name="pokeball" size={25} color="#818CF8" />
-          </Text>
+          <TouchableOpacity onPress={onProfilePress} activeOpacity={0.7}>
+            <Text style={styles.username}>
+              {userName}{" "}
+              <MaterialCommunityIcons name="pokeball" size={25} color="#818CF8" />
+            </Text>
+          </TouchableOpacity>
           <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
             Ready for your next battle?
           </Text>
@@ -62,10 +64,6 @@ export default function DashboardHeader({
               {pokecoins.toLocaleString()}
             </Text>
           </View>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-            <Ionicons name="log-out-outline" size={30} color="#EF4444" />
-          </TouchableOpacity>
         </View>
       </View>
 
