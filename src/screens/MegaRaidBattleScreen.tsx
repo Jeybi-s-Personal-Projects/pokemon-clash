@@ -1,3 +1,4 @@
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
 import { useEffect, useState } from "react";
 import {
   Image,
@@ -18,6 +19,19 @@ import { Pokemon } from "../types/pokemon";
 import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
 import { Battle } from "./BattleScreen";
 
+const music1 = require("../../assets/sounds/music/mega-raid/mega-battle-music-1.mp3");
+const music2 = require("../../assets/sounds/music/mega-raid/mega-battle-music-2.mp3");
+const milestoneSound = require("../../assets/sounds/milestone.mp3");
+
+/**
+ * MegaRaidBattleScreen Logic:
+ * This screen acts as a wrapper for the core 'Battle' component.
+ * It provides the specific 'context' for a Mega Raid:
+ * 1. Generates a Level 60 Mega Boss.
+ * 2. Manages Raid-specific rewards (Mega Stones).
+ * 3. Handles unique background music (alternating loop).
+ * 4. Displays a custom Victory Modal.
+ */
 export default function MegaRaidBattleScreen({
   navigation,
   route,
@@ -29,6 +43,42 @@ export default function MegaRaidBattleScreen({
   const { addItem } = useInventory(userId);
   const [victoryModalVisible, setVictoryModalVisible] = useState(false);
   const [enemyPokemon, setEnemyPokemon] = useState<Pokemon | null>(null);
+
+  // Audio setup
+  const [currentTrack, setCurrentTrack] = useState(Math.random() < 0.5 ? 1 : 2);
+  const player1 = useAudioPlayer(music1);
+  const player2 = useAudioPlayer(music2);
+  const milestonePlayer = useAudioPlayer(milestoneSound);
+
+  const status1 = useAudioPlayerStatus(player1);
+  const status2 = useAudioPlayerStatus(player2);
+
+  // Initialize Audio Mode and Start Playback
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true });
+    
+    // Explicitly play on mount
+    if (currentTrack === 1) {
+      player1.loop = true; // Use simple loop for now to ensure it plays
+      player1.play();
+    } else {
+      player2.loop = true;
+      player2.play();
+    }
+
+    return () => {
+      player1.pause();
+      player2.pause();
+    };
+  }, []);
+
+  // Handle Track Playback and pausing during victory
+  useEffect(() => {
+    if (victoryModalVisible) {
+      player1.pause();
+      player2.pause();
+    }
+  }, [victoryModalVisible]);
 
   useEffect(() => {
     const initRaid = async () => {
@@ -46,8 +96,6 @@ export default function MegaRaidBattleScreen({
       const megaBoss = await applyMegaEvolution(megaPokemonData);
 
       // Force sprite to Showdown animation URL (Front)
-      // mega-venusaur -> venusaur-mega
-      // mega-charizard-x -> charizard-megax
       const megaForm = megaStone.category.megaForm;
       const parts = megaForm.split("-");
       const baseName = parts[1];
@@ -80,9 +128,12 @@ export default function MegaRaidBattleScreen({
         player={team[0]} // Use active Pokémon
         team={team}
         enemy={enemyPokemon}
+        onRun={() => navigation.goBack()}
         onBattleEnd={(winner) => {
           if (winner === "player") {
             addItem(megaStone.id, 1);
+            milestonePlayer.seekTo(0);
+            milestonePlayer.play();
             setVictoryModalVisible(true);
           } else {
             navigation.goBack();

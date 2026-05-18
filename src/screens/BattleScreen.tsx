@@ -191,6 +191,16 @@ export function Battle({
         onItemUsed={handleItemUsed}
       />
 
+      <ConfirmationModal
+        visible={runConfirmVisible}
+        title="Forfeit encounter run?"
+        message="Are you sure you want to run? You will forfeit this battle."
+        onConfirm={confirmRun}
+        onCancel={() => setRunConfirmVisible(false)}
+        confirmText="Run"
+        cancelText="Back"
+      />
+
       <StatusModal
         visible={battle.statusVisible}
         message={battle.statusMessage}
