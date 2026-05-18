@@ -71,7 +71,13 @@ export type RootStackParamList = {
     isMega?: boolean;
   };
   Pokemart: undefined;
+  MegaRaid: undefined;
 };
+
+export type MegaRaidScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "MegaRaid"
+>;
 
 export type PokemartScreenProps = NativeStackScreenProps<
   RootStackParamList,

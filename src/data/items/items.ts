@@ -1407,8 +1407,8 @@ export const ITEMS: Item[] = [
     gen: 6,
     category: {
       category: "mega-stone",
-      megaOf: "skarmorite",
-      megaForm: "mega-skarmorite",
+      megaOf: "skarmory",
+      megaForm: "mega-skarmory",
       effect: "Allows Mega Evolution of Skarmory.",
     },
   },
@@ -1418,7 +1418,7 @@ export const ITEMS: Item[] = [
     gen: 6,
     category: {
       category: "mega-stone",
-      megaOf: "feraligatrite",
+      megaOf: "feraligatr",
       megaForm: "mega-feraligatr",
       effect: "Allows Mega Evolution of Feraligatrite.",
     },

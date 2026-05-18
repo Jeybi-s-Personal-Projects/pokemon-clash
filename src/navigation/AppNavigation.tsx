@@ -9,6 +9,7 @@ import CatchingScreen from "@/src/screens/CatchingScreen";
 import DashboardScreen from "@/src/screens/DashboardScreen";
 import { EncounterFlow } from "@/src/screens/EncounterFlow";
 import LoginScreen from "@/src/screens/LoginScreen";
+import MegaRaidScreen from "@/src/screens/MegaRaidScreen";
 import PokemartScreen from "@/src/screens/PokemartScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
 import PokemonStatsScreen from "@/src/screens/PokemonStatsScreen";
@@ -147,6 +148,11 @@ export default function AppNavigator() {
               headerTintColor: "#F9FAFB",
               headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
             }}
+          />
+          <Stack.Screen
+            name="MegaRaid"
+            component={MegaRaidScreen}
+            options={{ headerShown: false }}
           />
         </>
       )}

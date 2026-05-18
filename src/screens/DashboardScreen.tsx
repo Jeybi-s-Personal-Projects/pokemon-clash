@@ -104,6 +104,10 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           playClick();
           navigation.navigate("Pokemart");
         }}
+        onMegaRaidPress={() => {
+          playClick();
+          navigation.navigate("MegaRaid");
+        }}
       />
 
       {/* Profile Modal */}

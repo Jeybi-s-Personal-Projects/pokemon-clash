@@ -24,6 +24,7 @@ type Props = {
   onViewList: () => void;
   onProfilePress: () => void;
   onPokemartPress: () => void;
+  onMegaRaidPress: () => void;
 };
 
 const BADGES = [
@@ -84,6 +85,7 @@ export default function DashboardHeader({
   onViewList,
   onProfilePress,
   onPokemartPress,
+  onMegaRaidPress,
 }: Props) {
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -96,7 +98,7 @@ export default function DashboardHeader({
       details: "Take down Mega Evolved bosses!",
       icon: "sword-cross",
       buttonText: "Battle",
-      onPress: () => console.log("Mega Raid Battle"),
+      onPress: onMegaRaidPress,
     },
     {
       image: dynamaxRaidBanner,
