@@ -12,7 +12,8 @@ import { getMoveId, CHARGE_MESSAGES } from "./battleConstants";
 import { MOVE_STATUS_MAP, getStatusDuration } from "../utils/statusUtils";
 import { MOVE_WEATHER_MAP, getWeatherStartMessage } from "../utils/weatherUtils";
 import { ChargeState } from "../types/moveBattle";
-import { getAbilityDisplayName, isImmuneToStatus, processContactAbility } from "./abilityHandler";
+import { getAbilityDisplayName, isImmuneToStatus, processContactAbility, getAbilityDamageModifier } from "./abilityHandler";
+import { getTypeMultiplier } from "./typeChart";
 
 export type ExecutionContext = {
   setCurrentMessage: (msg: string | null) => void;
@@ -245,27 +246,64 @@ export const executeMove = async (
         attackingSide: null,
       }));
 
-      const { damage, isCrit } = dealDamage(
-        attacker,
-        attackerStages,
+      // ── Ability Modifiers (Defensive) ──
+      const abilityModifier = getAbilityDamageModifier(
         defender,
-        defenderStages,
-        move,
-        currentState.weather,
+        move.type || "normal",
+        (move.damageClass as "physical" | "special" | "status") || "physical",
+        false,
+        currentState,
+        isPlayerAttacking ? "enemy" : "player",
       );
 
-      if (isCrit) critHappened = true;
-      currentHitDamage = damage;
-      totalDamageDealt += damage;
-
-      if (isPlayerAttacking) {
-        nextEnemyHp = Math.max(0, nextEnemyHp - damage);
+      // ── Handle Absorption/Immunity ──
+      if (abilityModifier.absorbed || abilityModifier.multiplier === 0) {
+        for (const msg of abilityModifier.messages) {
+          setCurrentMessage(msg);
+          await delay(1200);
+        }
+        if (abilityModifier.absorbed) {
+          // If absorbed, heal the defender (e.g., Volt Absorb)
+          const heal = Math.floor(defender.maxHp / 4);
+          if (isPlayerAttacking) {
+            nextPlayerHp = Math.min(currentState.player.maxHp, nextPlayerHp + heal);
+          } else {
+            nextEnemyHp = Math.min(currentState.enemy.maxHp, nextEnemyHp + heal);
+          }
+        }
+        // Skip damage
+        currentHitDamage = 0;
       } else {
-        nextPlayerHp = Math.max(0, nextPlayerHp - damage);
+        // ── Apply Damage ──
+        const { damage, isCrit } = dealDamage(
+          attacker,
+          attackerStages,
+          defender,
+          defenderStages,
+          move,
+          currentState.weather,
+        );
+
+        // Apply ability multiplier (e.g., Thick Fat, Multiscale)
+        currentHitDamage = Math.floor(damage * abilityModifier.multiplier);
+        
+        if (isCrit) critHappened = true;
+        totalDamageDealt += currentHitDamage;
+
+        if (isPlayerAttacking) {
+          nextEnemyHp = Math.max(0, nextEnemyHp - currentHitDamage);
+        } else {
+          nextPlayerHp = Math.max(0, nextPlayerHp - currentHitDamage);
+        }
+
+        for (const msg of abilityModifier.messages) {
+          setCurrentMessage(msg);
+          await delay(1200);
+        }
       }
 
       // ── Contact Ability Check ──
-      if (damage > 0 && move.damageClass === "physical") {
+      if (currentHitDamage > 0 && move.damageClass === "physical") {
         const contactResult = await processContactAbility(attackerSide, currentState);
         if (contactResult.messages.length > 0) {
           for (const msg of contactResult.messages) {

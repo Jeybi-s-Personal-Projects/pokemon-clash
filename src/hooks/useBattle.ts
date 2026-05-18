@@ -9,7 +9,7 @@ import { getWeatherContinueMessage } from "../utils/weatherUtils";
 
 // Modularized components
 import { useAudioPlayer } from "expo-audio";
-import { processEndTurnAbilities, processSwitchInAbilities } from "../battle/abilityHandler";
+import { processEndTurnAbilities, processSwitchInAbilities, getAbilityDamageModifier, isMagicGuardActive } from "../battle/abilityHandler";
 import { initialStages } from "../battle/battleConstants";
 import { executeMove, ExecutionContext } from "../battle/moveExecutor";
 import {
@@ -433,6 +433,11 @@ export function useBattle({
         for (const side of ["player", "enemy"] as const) {
           const p = side === "player" ? finalState.player : finalState.enemy;
           if (p.hp <= 0) continue;
+          
+          // Ability Check
+          const modifier = getAbilityDamageModifier(p, finalState.weather || "none", "status", true, finalState, side);
+          if (modifier.multiplier === 0) continue;
+
           let isImmune = false;
           if (finalState.weather === "sandstorm")
             isImmune = p.type.some((t) =>
@@ -479,7 +484,7 @@ export function useBattle({
       const trap = finalState[trapKey] as TrapState | undefined;
       if (!trap) continue;
       const p = side === "player" ? finalState.player : finalState.enemy;
-      if (p.hp <= 0) continue;
+      if (p.hp <= 0 || isMagicGuardActive(p)) continue;
       const damage = Math.max(1, Math.floor(p.maxHp * trap.damagePerTurn));
       const nextHp = Math.max(0, p.hp - damage);
       setCurrentMessage(
@@ -522,7 +527,7 @@ export function useBattle({
     // 3. Status damage (Poison/Burn)
     for (const side of ["player", "enemy"] as const) {
       const p = side === "player" ? finalState.player : finalState.enemy;
-      if (p.hp <= 0 || (p.status !== "poison" && p.status !== "burn")) continue;
+      if (p.hp <= 0 || (p.status !== "poison" && p.status !== "burn") || isMagicGuardActive(p)) continue;
       const isBadPoison =
         side === "player"
           ? finalState.playerBadPoison
