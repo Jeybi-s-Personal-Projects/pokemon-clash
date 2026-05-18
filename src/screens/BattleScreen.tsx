@@ -272,6 +272,8 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
           pokemon: e,
           fromScreen: "Battle",
           onCatchFailed,
+          onItemUsed: (updatedTeam: Pokemon[], message: string) => 
+            battle.useItemInBattle(updatedTeam, message),
           revertMegaInTeam: revertMega,
         } as any)
       }

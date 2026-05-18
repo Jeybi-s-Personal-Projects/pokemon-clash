@@ -10,10 +10,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { PokemonSelectionModal } from "../components/battle/PokemonSelectionModal";
 import { useAuth } from "../context/AuthContext";
 import { InventoryItem, useInventory } from "../hooks/useInventory";
 import { colors } from "../theme/color";
 import { InventoryBagScreenProps } from "../types/navigation";
+import { Pokemon } from "../types/pokemon";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -30,10 +32,13 @@ export default function InventoryBagScreen({
   navigation,
   route,
 }: InventoryBagScreenProps) {
-  const { pokemon, fromScreen, player: playerObj, team } = route.params as any;
+  const { pokemon, fromScreen, player: playerObj, team, onItemUsed } = route.params as any;
   const [category, setCategory] = useState<BagCategory>("pokeballs");
   const { user } = useAuth();
-  const { inventory, loading } = useInventory(user?.id);
+  const { inventory, loading, consumeItem } = useInventory(user?.id);
+
+  const [selectionModalVisible, setSelectionModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   const player = useAudioPlayer(clickSound);
   player.volume = 1.0;
@@ -92,6 +97,10 @@ export default function InventoryBagScreen({
     }
 
     if (item.category.category === "pokeball") {
+      if (fromScreen !== "Battle" && fromScreen !== "EncounterFlow") {
+         Alert.alert("Info", "Poké Balls can only be used during an encounter.");
+         return;
+      }
       // Replace the Bag screen with the dedicated Catching Screen
       navigation.replace("CatchingScreen", {
         player: playerObj,
@@ -102,8 +111,102 @@ export default function InventoryBagScreen({
         onCatchFailed: route.params.onCatchFailed,
         revertMegaInTeam: route.params.revertMegaInTeam,
       });
+    } else if (item.category.category === "medicine") {
+      setSelectedItem(item);
+      setSelectionModalVisible(true);
     } else {
       Alert.alert("Info", `${item.name} cannot be used here.`);
+    }
+  };
+
+  const applyItemEffect = async (targetIndex: number) => {
+    if (!selectedItem || !team) return;
+    const target = team[targetIndex];
+    let updatedTeam = [...team];
+    let message = "";
+    let success = false;
+
+    switch (selectedItem.id) {
+      case "potion":
+        if (target.hp > 0 && target.hp < target.maxHp) {
+          const newHp = Math.min(target.maxHp, target.hp + 20);
+          updatedTeam[targetIndex] = { ...target, hp: newHp };
+          message = `${target.name} recovered 20 HP!`;
+          success = true;
+        } else if (target.hp <= 0) {
+          Alert.alert("Wait!", "You can't use a Potion on a fainted Pokémon. Use a Revive!");
+        } else {
+          Alert.alert("Wait!", `${target.name} is already at full health.`);
+        }
+        break;
+      case "super-potion":
+        if (target.hp > 0 && target.hp < target.maxHp) {
+          const newHp = Math.min(target.maxHp, target.hp + 50);
+          updatedTeam[targetIndex] = { ...target, hp: newHp };
+          message = `${target.name} recovered 50 HP!`;
+          success = true;
+        } else if (target.hp <= 0) {
+           Alert.alert("Wait!", "Use a Revive for fainted Pokémon!");
+        } else {
+          Alert.alert("Wait!", `${target.name} is healthy.`);
+        }
+        break;
+      case "hyper-potion":
+        if (target.hp > 0 && target.hp < target.maxHp) {
+          const newHp = Math.min(target.maxHp, target.hp + 200);
+          updatedTeam[targetIndex] = { ...target, hp: newHp };
+          message = `${target.name} recovered 200 HP!`;
+          success = true;
+        } else if (target.hp <= 0) {
+           Alert.alert("Wait!", "Use a Revive!");
+        } else {
+           Alert.alert("Wait!", `${target.name} is healthy.`);
+        }
+        break;
+      case "max-potion":
+        if (target.hp > 0 && target.hp < target.maxHp) {
+          updatedTeam[targetIndex] = { ...target, hp: target.maxHp };
+          message = `${target.name} was fully healed!`;
+          success = true;
+        } else if (target.hp <= 0) {
+           Alert.alert("Wait!", "Use a Revive!");
+        } else {
+           Alert.alert("Wait!", `${target.name} is healthy.`);
+        }
+        break;
+      case "revive":
+        if (target.hp <= 0) {
+          updatedTeam[targetIndex] = { ...target, hp: Math.floor(target.maxHp / 2), status: null };
+          message = `${target.name} was revived!`;
+          success = true;
+        } else {
+          Alert.alert("Wait!", `${target.name} is not fainted.`);
+        }
+        break;
+      case "max-revive":
+        if (target.hp <= 0) {
+          updatedTeam[targetIndex] = { ...target, hp: target.maxHp, status: null };
+          message = `${target.name} was fully revived!`;
+          success = true;
+        } else {
+          Alert.alert("Wait!", `${target.name} is not fainted.`);
+        }
+        break;
+    }
+
+    if (success) {
+      consumeItem(selectedItem.id, 1);
+      setSelectionModalVisible(false);
+      
+      if (fromScreen === "Battle" && onItemUsed) {
+        navigation.goBack();
+        // Give battle engine time to receive the team before triggering penalty
+        setTimeout(() => {
+           onItemUsed(updatedTeam, message);
+        }, 100);
+      } else {
+        Alert.alert("Success", message);
+      }
     }
   };
 
@@ -178,6 +281,22 @@ export default function InventoryBagScreen({
           </TouchableOpacity>
         )}
       />
+
+      {selectedItem && (
+        <PokemonSelectionModal
+          visible={selectionModalVisible}
+          title={`Use ${selectedItem.name}`}
+          subtitle="Select a Pokémon to apply this item."
+          team={team}
+          onSelect={applyItemEffect}
+          onClose={() => setSelectionModalVisible(false)}
+          canCancel={true}
+          filter={(p) => {
+            if (selectedItem.id.includes("revive")) return p.hp <= 0;
+            return p.hp > 0;
+          }}
+        />
+      )}
     </View>
   );
 }

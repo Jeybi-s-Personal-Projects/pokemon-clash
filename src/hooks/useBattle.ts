@@ -607,6 +607,30 @@ export function useBattle({
     setProcessing(false);
   };
 
+  const useItemInBattle = async (updatedTeam: Pokemon[], message: string) => {
+    if (isProcessing.current || state.winner) return;
+    setProcessing(true);
+
+    // 1. Show message
+    setCurrentMessage(message);
+    await delay(1500);
+
+    // 2. Update team and active player
+    const activeIdx = state.activePlayerIndex;
+    const nextPlayer = updatedTeam[activeIdx];
+    
+    setState(prev => ({
+      ...prev,
+      team: updatedTeam,
+      player: nextPlayer,
+    }));
+
+    // 3. Trigger turn penalty (opponent attacks)
+    await delay(500);
+    setProcessing(false); // release lock so processTurnPenalty can run
+    await processTurnPenalty();
+  };
+
   const processTurnPenalty = async () => {
     if (isProcessing.current || state.winner || currentMessage) return;
     setProcessing(true);
@@ -668,5 +692,6 @@ export function useBattle({
     handleMegaEvolution: mega.handleMegaEvolution,
     isMegaEvolving: mega.isMegaEvolving,
     revertMegaInTeam: mega.revertMegaInTeam,
+    useItemInBattle,
   };
 }

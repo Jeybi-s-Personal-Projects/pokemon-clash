@@ -275,31 +275,44 @@ export const executeMove = async (
         currentHitDamage = 0;
       } else {
         // ── Apply Damage ──
-        const { damage, isCrit } = dealDamage(
-          attacker,
-          attackerStages,
-          defender,
-          defenderStages,
-          move,
-          currentState.weather,
-        );
+      const { damage, isCrit } = dealDamage(
+        attacker,
+        attackerStages,
+        defender,
+        defenderStages,
+        move,
+        currentState.weather,
+      );
 
-        // Apply ability multiplier (e.g., Thick Fat, Multiscale)
-        currentHitDamage = Math.floor(damage * abilityModifier.multiplier);
-        
-        if (isCrit) critHappened = true;
-        totalDamageDealt += currentHitDamage;
+      // Apply ability multiplier (e.g., Thick Fat, Multiscale)
+      currentHitDamage = Math.floor(damage * abilityModifier.multiplier);
+      
+      if (isCrit) critHappened = true;
+      totalDamageDealt += currentHitDamage;
 
+      if (isPlayerAttacking) {
+        nextEnemyHp = Math.max(0, nextEnemyHp - currentHitDamage);
+      } else {
+        nextPlayerHp = Math.max(0, nextPlayerHp - currentHitDamage);
+      }
+
+      // ── Handle Drain Moves ──
+      if (currentHitDamage > 0 && enhancedMove?.category === "damage+drain") {
+        const drainRatio = 0.5; // Standard 50% drain
+        const heal = Math.floor(currentHitDamage * drainRatio);
         if (isPlayerAttacking) {
-          nextEnemyHp = Math.max(0, nextEnemyHp - currentHitDamage);
+          nextPlayerHp = Math.min(currentState.player.maxHp, nextPlayerHp + heal);
         } else {
-          nextPlayerHp = Math.max(0, nextPlayerHp - currentHitDamage);
+          nextEnemyHp = Math.min(currentState.enemy.maxHp, nextEnemyHp + heal);
         }
+        setCurrentMessage(`${attacker.name.toUpperCase()} drained energy!`);
+        await delay(1200);
+      }
 
-        for (const msg of abilityModifier.messages) {
-          setCurrentMessage(msg);
-          await delay(1200);
-        }
+      for (const msg of abilityModifier.messages) {
+        setCurrentMessage(msg);
+        await delay(1200);
+      }
       }
 
       // ── Contact Ability Check ──
