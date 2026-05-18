@@ -518,7 +518,7 @@ export function useBattle({
       }
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, currentState, getWinContext(currentState));
+        winHandler(winner, finalState, getWinContext(finalState));
         setProcessing(false);
         return;
       }
@@ -566,7 +566,7 @@ export function useBattle({
       setState((s) => ({ ...s, hitSide: null }));
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, currentState, getWinContext(currentState));
+        winHandler(winner, finalState, getWinContext(finalState));
         setProcessing(false);
         return;
       }
@@ -583,7 +583,7 @@ export function useBattle({
       setState(finalState);
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, currentState, getWinContext(currentState));
+        winHandler(winner, finalState, getWinContext(finalState));
         setProcessing(false);
         return;
       }
