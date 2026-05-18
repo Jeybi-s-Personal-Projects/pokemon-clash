@@ -235,14 +235,6 @@ export function EncounterFlow({ route, navigation }: EncounterFlowProps) {
         onBattleEnd={handleBattleEnd}
         onCheckpoint={checkpointProgress}
         onRun={handleExit}
-        onBagPress={(p, t, e) =>
-          navigation.navigate("InventoryBag", {
-            player: p,
-            team: t,
-            pokemon: e,
-            fromScreen: "EncounterFlow",
-          } as any)
-        }
         catchPending={route.params.catchPending}
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={setIsAutoBattle}

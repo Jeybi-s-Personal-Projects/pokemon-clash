@@ -8,7 +8,6 @@ import BattleScreen from "@/src/screens/BattleScreen";
 import CatchingScreen from "@/src/screens/CatchingScreen";
 import DashboardScreen from "@/src/screens/DashboardScreen";
 import { EncounterFlow } from "@/src/screens/EncounterFlow";
-import InventoryBagScreen from "@/src/screens/inventoryBagScreen";
 import LoginScreen from "@/src/screens/LoginScreen";
 import PokemartScreen from "@/src/screens/PokemartScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
@@ -133,16 +132,6 @@ export default function AppNavigator() {
             name="AreaSelect"
             component={AreaSelectScreen}
             options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="InventoryBag"
-            component={InventoryBagScreen}
-            options={{
-              title: "BAG",
-              headerStyle: { backgroundColor: "#111827" },
-              headerTintColor: "#F9FAFB",
-              headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
-            }}
           />
           <Stack.Screen
             name="CatchingScreen"

@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { OpponentInfoModal } from "@/src/components/battle/OpponentInfoModal";
 import { PokemonStatsModal } from "@/src/components/PokemonStatsModal";
 import { MegaEvolutionOverlay } from "@/src/components/battle/MegaEvolutionOverlay";
+import { InventoryBagModal } from "@/src/components/battle/InventoryBagModal";
 import { BattleField } from "../components/battle/BattleField";
 import { MoveLearningModal } from "../components/battle/MoveLearningModal";
 import { SwitchModal } from "../components/battle/SwitchModal";
@@ -17,6 +18,7 @@ import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 
 import { setAudioModeAsync } from "expo-audio";
+import { useNavigation } from "@react-navigation/native";
 
 // ─── Inner Battle component ──────────────────────────────────────────────────
 
@@ -32,13 +34,6 @@ interface BattleProps {
   ) => void;
   onCheckpoint?: (finalTeam: Pokemon[]) => void;
   onRun?: (finalTeam: Pokemon[]) => void;
-  onBagPress?: (
-    player: Pokemon,
-    team: Pokemon[],
-    currentEnemy: Pokemon,
-    onCatchFailed: () => void,
-    revertMega?: (team: Pokemon[]) => Pokemon[],
-  ) => void;
   catchPending?: { item: { id: string; name: string; catchRate: number } };
   onSave?: () => void;
   isAutoBattle?: boolean;
@@ -55,7 +50,6 @@ export function Battle({
   onBattleEnd,
   onCheckpoint,
   onRun,
-  onBagPress,
   catchPending,
   onSave,
   isAutoBattle = false,
@@ -64,6 +58,7 @@ export function Battle({
   onClearCatchFailed,
   defeatCount = 0,
 }: BattleProps) {
+  const navigation = useNavigation<any>();
   const battle = useBattle({
     player,
     team,
@@ -80,6 +75,7 @@ export function Battle({
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [runConfirmVisible, setRunConfirmVisible] = useState(false);
+  const [bagModalVisible, setBagModalVisible] = useState(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
@@ -103,6 +99,24 @@ export function Battle({
   const confirmRun = () => {
     setRunConfirmVisible(false);
     onRun?.(battle.revertMegaInTeam(state.team));
+  };
+
+  const handleCatchAttempt = (item: { id: string; name: string; catchRate: number }) => {
+    setBagModalVisible(false);
+    navigation.replace("CatchingScreen", {
+      player: state.player,
+      team: state.team,
+      enemy: state.enemy,
+      item,
+      fromScreen: "Battle",
+      onCatchFailed: () => battle.processTurnPenalty(),
+      revertMegaInTeam: battle.revertMegaInTeam,
+    });
+  };
+
+  const handleItemUsed = (updatedTeam: Pokemon[], message: string) => {
+    setBagModalVisible(false);
+    battle.useItemInBattle(updatedTeam, message);
   };
 
   return (
@@ -149,15 +163,7 @@ export function Battle({
         enemyTypes={state.enemy.type}
         onMovePress={battle.attack}
         onPokemonPress={() => battle.setSwitchModalVisible(true)}
-        onBagPress={() =>
-          onBagPress?.(
-            state.player,
-            state.team,
-            state.enemy,
-            () => battle.processTurnPenalty(),
-            battle.revertMegaInTeam,
-          )
-        }
+        onBagPress={() => setBagModalVisible(true)}
         onRun={handleRunPress}
         onMegaEvolve={battle.handleMegaEvolution}
         canMegaEvolve={battle.canMegaEvolve}
@@ -176,14 +182,13 @@ export function Battle({
       />
 
       {/* 3. Utility Modals */}
-      <ConfirmationModal
-        visible={runConfirmVisible}
-        title="Forfeit encounter run?"
-        message="Are you sure you want to run? You will forfeit this battle."
-        onConfirm={confirmRun}
-        onCancel={() => setRunConfirmVisible(false)}
-        confirmText="Run"
-        cancelText="Back"
+      <InventoryBagModal
+        visible={bagModalVisible}
+        onClose={() => setBagModalVisible(false)}
+        team={state.team}
+        enemy={state.enemy}
+        onCatchAttempt={handleCatchAttempt}
+        onItemUsed={handleItemUsed}
       />
 
       <StatusModal
@@ -265,19 +270,6 @@ export default function BattleScreen({ route, navigation }: BattleScreenProps) {
         if (onRun) onRun(finalTeam);
         else navigation.goBack();
       }}
-      onBagPress={(p, t, e, onCatchFailed, revertMega) =>
-        navigation.navigate("InventoryBag", {
-          player: p,
-          team: t,
-          pokemon: e,
-          fromScreen: "Battle",
-          onCatchFailed,
-          onItemUsed: (updatedTeam: Pokemon[], message: string) => 
-            battle.useItemInBattle(updatedTeam, message),
-          revertMegaInTeam: revertMega,
-        } as any)
-      }
-
       isAutoBattle={isAutoBattle}
       onToggleAutoBattle={onToggleAutoBattle}
       catchFailed={catchFailed}
