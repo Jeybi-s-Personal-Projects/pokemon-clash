@@ -95,7 +95,7 @@ export default function MegaRaidScreen({ navigation }: MegaRaidScreenProps) {
 
                 <View style={styles.stoneRow}>
                   <MaterialCommunityIcons
-                    name="diamond"
+                    name="diamond-stone"
                     size={16}
                     color={colors.accent}
                   />
@@ -105,7 +105,10 @@ export default function MegaRaidScreen({ navigation }: MegaRaidScreenProps) {
                 <Text style={styles.effectText}>{item.category.effect}</Text>
               </View>
 
-              <TouchableOpacity style={styles.battleButton}>
+              <TouchableOpacity 
+                style={styles.battleButton}
+                onPress={() => navigation.navigate("MegaRaidBattle", { megaStone: item })}
+              >
                 <Text style={styles.battleButtonText}>BATTLE</Text>
               </TouchableOpacity>
             </TouchableOpacity>

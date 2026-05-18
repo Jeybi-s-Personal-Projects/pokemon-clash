@@ -72,7 +72,15 @@ export type RootStackParamList = {
   };
   Pokemart: undefined;
   MegaRaid: undefined;
+  MegaRaidBattle: {
+    megaStone: any; // Using 'any' for now to match the existing loose typing in other routes
+  };
 };
+
+export type MegaRaidBattleScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "MegaRaidBattle"
+>;
 
 export type MegaRaidScreenProps = NativeStackScreenProps<
   RootStackParamList,
