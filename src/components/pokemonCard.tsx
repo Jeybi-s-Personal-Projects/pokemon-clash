@@ -121,8 +121,8 @@ export default function PokemonCard({
   maxExp,
   floatingDamage,
 }: Props) {
-  const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
   const isMega = pokemon.name.toLowerCase().includes("mega");
+  const imageSource = isBack ? pokemon.backImage : (pokemon.frontImage ?? pokemon.frontImage);
 
   // Animation values
   const moveAnim = useRef(new Animated.Value(0)).current;

@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { Item, MegaStoneCategory } from "../data/items/items";
 import { useInventory } from "../hooks/useInventory";
@@ -8,6 +15,7 @@ import { useTeam } from "../hooks/useTeam";
 import { colors } from "../theme/color";
 import { MegaRaidBattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
+import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
 import { Battle } from "./BattleScreen";
 
 export default function MegaRaidBattleScreen({
@@ -19,6 +27,7 @@ export default function MegaRaidBattleScreen({
   const userId = user?.id || "";
   const { team, loading: teamLoading } = useTeam(userId);
   const { addItem } = useInventory(userId);
+  const [victoryModalVisible, setVictoryModalVisible] = useState(false);
   const [enemyPokemon, setEnemyPokemon] = useState<Pokemon | null>(null);
 
   useEffect(() => {
@@ -28,12 +37,30 @@ export default function MegaRaidBattleScreen({
 
       const megaPokemon = await getPokemon(megaOf, 60);
 
-      setEnemyPokemon({
+      // Apply Mega stats
+      const megaPokemonData: Pokemon = {
         ...megaPokemon,
-        name: `Mega ${megaOf.toUpperCase()}`,
+        heldItem: megaStone.id, // Set the stone as held item to trigger applyMegaEvolution
+      };
+
+      const megaBoss = await applyMegaEvolution(megaPokemonData);
+
+      // Force sprite to Showdown animation URL (Front)
+      // mega-venusaur -> venusaur-mega
+      // mega-charizard-x -> charizard-megax
+      const megaForm = megaStone.category.megaForm;
+      const parts = megaForm.split("-");
+      const baseName = parts[1];
+      const suffix = parts[2] ? `mega${parts[2]}` : "mega";
+      const spriteId = `${baseName}-${suffix}`;
+      const frontImage = `https://play.pokemonshowdown.com/sprites/xyani/${spriteId}.gif`;
+
+      setEnemyPokemon({
+        ...megaBoss,
         level: 60,
-        hp: megaPokemon.maxHp,
-        maxHp: megaPokemon.maxHp,
+        hp: megaBoss.maxHp,
+        maxHp: megaBoss.maxHp,
+        frontImage: frontImage,
       });
     };
     initRaid();
@@ -53,16 +80,38 @@ export default function MegaRaidBattleScreen({
         player={team[0]} // Use active Pokémon
         team={team}
         enemy={enemyPokemon}
-        onBattleEnd={(winner, updatedTeam) => {
+        onBattleEnd={(winner) => {
           if (winner === "player") {
             addItem(megaStone.id, 1);
-            Alert.alert("Victory!", `You obtained the ${megaStone.name}!`);
-            navigation.goBack();
+            setVictoryModalVisible(true);
           } else {
             navigation.goBack();
           }
         }}
       />
+
+      <Modal transparent visible={victoryModalVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.victoryTitle}>VICTORY!</Text>
+            <Text style={styles.victoryText}>
+              You obtained the {megaStone.name}!
+            </Text>
+            <Image
+              source={{
+                uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${megaStone.id}.png`,
+              }}
+              style={styles.rewardImage}
+            />
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.closeBtnText}>CLAIM</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -77,5 +126,48 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modalBackground,
     justifyContent: "center",
     alignItems: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "85%",
+    backgroundColor: colors.modalBackgroundPrimary,
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+    alignItems: "center",
+  },
+  victoryTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: colors.success,
+    marginBottom: 12,
+  },
+  victoryText: {
+    fontSize: 16,
+    color: "white",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  rewardImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 24,
+  },
+  closeBtn: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  closeBtnText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
