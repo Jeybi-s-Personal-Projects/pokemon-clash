@@ -36,20 +36,19 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Expo Prebuild
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android --clean --no-install
 
-      #  Added: fixes "permission denied" on Linux runners
       - name: Make Gradlew executable
         working-directory: android
         run: chmod +x gradlew
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 7
