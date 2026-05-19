@@ -19,12 +19,21 @@ import db from "../lib/db";
 import { colors } from "../theme/color";
 import { PokemartScreenProps } from "../types/navigation";
 
+type MartCategory = "balls" | "healing" | "items";
+
+const TABS: { key: MartCategory; label: string; icon: string }[] = [
+  { key: "balls", label: "Balls", icon: "pokeball" },
+  { key: "healing", label: "Healing", icon: "pill" },
+  { key: "items", label: "Items", icon: "bag-personal" },
+];
+
 export default function PokemartScreen({ navigation }: PokemartScreenProps) {
   const { user } = useAuth();
   const { stats, refetch: refetchTrainer } = useTrainer(user?.id);
   const { refetch: refetchInventory } = useInventory(user?.id);
 
   const [buying, setBuying] = useState(false);
+  const [category, setCategory] = useState<MartCategory>("balls");
   const [quantities, setQuantities] = useState<Record<string, number>>(
     MART_ITEMS.reduce((acc, item) => ({ ...acc, [item.id]: 1 }), {}),
   );
@@ -36,6 +45,14 @@ export default function PokemartScreen({ navigation }: PokemartScreenProps) {
   const playClick = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
+
+  const filteredItems = React.useMemo(() => {
+    return MART_ITEMS.filter((item) => {
+      if (category === "balls") return item.category === "pokeball";
+      if (category === "healing") return item.category === "medicine";
+      return false; // "items" tab is currently empty
+    });
+  }, [category]);
 
   const getItemSprite = (id: string) => {
     return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${id}.png`;
@@ -116,8 +133,38 @@ export default function PokemartScreen({ navigation }: PokemartScreenProps) {
         </View>
       </View>
 
+      <View style={styles.tabRow}>
+        {TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[
+              styles.tabButton,
+              category === tab.key && styles.tabButtonActive,
+            ]}
+            onPress={() => {
+              playClick();
+              setCategory(tab.key);
+            }}
+          >
+            <MaterialCommunityIcons
+              name={tab.icon as any}
+              size={18}
+              color={category === tab.key ? colors.accent : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                category === tab.key && styles.tabTextActive,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <FlatList
-        data={MART_ITEMS}
+        data={filteredItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
@@ -491,6 +538,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 8,
+    marginTop: 10,
   },
   tabButton: {
     flex: 1,
