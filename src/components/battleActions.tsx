@@ -27,7 +27,9 @@ type Props = {
   isAutoBattle?: boolean;
   onToggleAutoBattle?: (value: boolean) => void;
   onMegaEvolve?: () => void;
+  onTeraEvolve?: () => void;
   canMegaEvolve?: boolean;
+  canTerastalize?: boolean;
   isEnemyShiny?: boolean;
   defeatCount?: number;
   isMegaRaid?: boolean;
@@ -58,6 +60,7 @@ const ACTION_CONFIG = [
   },
 ];
 
+// After — add the two missing props
 export default function BattleActions({
   moves,
   playerTypes,
@@ -71,7 +74,9 @@ export default function BattleActions({
   isAutoBattle = false,
   onToggleAutoBattle,
   onMegaEvolve,
+  onTeraEvolve, // ← add this
   canMegaEvolve,
+  canTerastalize, // ← add this
   isEnemyShiny,
   defeatCount,
   isMegaRaid = false,
@@ -203,6 +208,39 @@ export default function BattleActions({
               />
               <Text style={styles.toggleText}>
                 {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {canTerastalize && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onTeraEvolve}
+              disabled={disabled}
+              style={[
+                styles.toggleButton,
+                {
+                  borderColor: isAutoBattle
+                    ? colors.neonOrange
+                    : colors.neonBlue,
+                  opacity: disabled ? 0.5 : 1,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="crystal-ball"
+                size={14}
+                color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  {
+                    color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                    opacity: disabled ? 0.5 : 1,
+                  },
+                ]}
+              >
+                TERA
               </Text>
             </TouchableOpacity>
           )}

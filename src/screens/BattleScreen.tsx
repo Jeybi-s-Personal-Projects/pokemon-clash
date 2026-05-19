@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { OpponentInfoModal } from "@/src/components/battle/OpponentInfoModal";
 import { PokemonStatsModal } from "@/src/components/PokemonStatsModal";
 import { MegaEvolutionOverlay } from "@/src/components/battle/MegaEvolutionOverlay";
 import { InventoryBagModal } from "@/src/components/battle/InventoryBagModal";
+import { TeraSelectionModal } from "@/src/components/battle/TeraSelectionModal";
 import { BattleField } from "../components/battle/BattleField";
 import { MoveLearningModal } from "../components/battle/MoveLearningModal";
 import { SwitchModal } from "../components/battle/SwitchModal";
@@ -14,6 +15,9 @@ import EvolutionModal from "../components/evolutionModal";
 import StatusModal from "../components/statusModal";
 import ConfirmationModal from "../components/UI/ConfirmationModal";
 import { useBattle } from "../hooks/useBattle";
+import { useTerastalization } from "../hooks/battle/useTerastalization";
+import { useInventory } from "../hooks/useInventory";
+import { useAuth } from "../context/AuthContext";
 import { BattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 
@@ -61,6 +65,8 @@ export function Battle({
   isMegaRaid = false,
 }: BattleProps) {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const { inventory } = useInventory(user?.id);
   const battle = useBattle({
     player,
     team,
@@ -78,6 +84,22 @@ export function Battle({
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [runConfirmVisible, setRunConfirmVisible] = useState(false);
   const [bagModalVisible, setBagModalVisible] = useState(false);
+
+  const tera = useTerastalization(
+    state.player,
+    state.activePlayerIndex,
+    state.team,
+    battle.setState,
+    battle.setCurrentMessage,
+  );
+
+  const hasTeraOrb = useMemo(() => {
+    return inventory.some(i => i.id === "tera-orb" && i.quantity > 0);
+  }, [inventory]);
+
+  const canTera = useMemo(() => {
+    return tera.canTerastalize(state.player, state.isTeraUsed ?? false) && hasTeraOrb;
+  }, [tera, state.player, state.isTeraUsed, hasTeraOrb]);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
@@ -100,7 +122,7 @@ export function Battle({
 
   const confirmRun = () => {
     setRunConfirmVisible(false);
-    onRun?.(battle.revertMegaInTeam(state.team));
+    onRun?.(tera.revertTeraInTeam(battle.revertMegaInTeam(state.team)));
   };
 
   const handleCatchAttempt = (item: { id: string; name: string; catchRate: number }) => {
@@ -112,7 +134,7 @@ export function Battle({
       item,
       fromScreen: "Battle",
       onCatchFailed: () => battle.processTurnPenalty(),
-      revertMegaInTeam: battle.revertMegaInTeam,
+      revertMegaInTeam: (team: Pokemon[]) => tera.revertTeraInTeam(battle.revertMegaInTeam(team)),
     });
   };
 
@@ -168,15 +190,17 @@ export function Battle({
         onBagPress={() => setBagModalVisible(true)}
         onRun={handleRunPress}
         onMegaEvolve={battle.handleMegaEvolution}
+        onTeraEvolve={() => tera.setTeraModalVisible(true)}
         canMegaEvolve={battle.canMegaEvolve}
+        canTerastalize={canTera}
         disabled={
           battle.isBusy ||
           !!state.attackingSide ||
           !!state.dancingSide ||
           !!state.winner ||
-          !!currentMessage
+          !!battle.currentMessage
         }
-        currentLog={currentMessage}
+        currentLog={battle.currentMessage}
         isAutoBattle={isAutoBattle}
         onToggleAutoBattle={onToggleAutoBattle}
         isEnemyShiny={state.enemy.isShiny}
@@ -193,6 +217,12 @@ export function Battle({
         onCatchAttempt={handleCatchAttempt}
         onItemUsed={handleItemUsed}
         isMegaRaid={isMegaRaid}
+      />
+      
+      <TeraSelectionModal
+        visible={tera.isTeraModalVisible}
+        onClose={() => tera.setTeraModalVisible(false)}
+        onSelect={tera.handleTerastalize}
       />
 
       <ConfirmationModal

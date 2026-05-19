@@ -91,6 +91,7 @@ export function useBattle({
     enemyProtected: false,
     playerBadPoison: false,
     enemyBadPoison: false,
+    isTeraUsed: false,
   });
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
@@ -679,6 +680,7 @@ export function useBattle({
   return {
     state,
     currentMessage,
+    setCurrentMessage,
     isBusy,
     isPlayerEntering,
     learningPokemon: learning.learningPokemon,
@@ -706,5 +708,6 @@ export function useBattle({
     isMegaEvolving: mega.isMegaEvolving,
     revertMegaInTeam: mega.revertMegaInTeam,
     useItemInBattle,
+    setState,
   };
 }

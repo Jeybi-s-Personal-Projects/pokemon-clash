@@ -54,4 +54,7 @@ export type Pokemon = {
   // pokemon.ts — add to Pokemon type:
   flinched?: boolean; // cleared each turn start
   badPoisonTurns?: number; // escalating toxic counter
+  originalTypes?: string[]; // stored types before Terastalization
+  isTerastalized?: boolean;
+  teraType?: string; // the chosen type after Terastalization
 };

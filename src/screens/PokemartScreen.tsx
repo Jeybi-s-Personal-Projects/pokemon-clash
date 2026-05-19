@@ -50,7 +50,8 @@ export default function PokemartScreen({ navigation }: PokemartScreenProps) {
     return MART_ITEMS.filter((item) => {
       if (category === "balls") return item.category === "pokeball";
       if (category === "healing") return item.category === "medicine";
-      return false; // "items" tab is currently empty
+      if (category === "items") return item.category === "other";
+      return false;
     });
   }, [category]);
 

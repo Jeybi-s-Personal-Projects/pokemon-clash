@@ -5,6 +5,7 @@ import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
 import ExpBar from "./expBar";
 import HpBar from "./hpBar";
+import { TypeBadge, TYPE_COLORS } from "./TypeBadge";
 
 type Props = {
   pokemon: Pokemon;
@@ -122,7 +123,11 @@ export default function PokemonCard({
   floatingDamage,
 }: Props) {
   const isMega = pokemon.name.toLowerCase().includes("mega");
+  const isTera = pokemon.isTerastalized;
   const imageSource = isBack ? pokemon.backImage : (pokemon.frontImage ?? pokemon.frontImage);
+
+  // Border color logic: Use Tera type color if terastalized, otherwise default
+  const borderColor = isTera && pokemon.teraType ? TYPE_COLORS[pokemon.teraType.toLowerCase()] : "#ffffff73";
 
   // Animation values
   const moveAnim = useRef(new Animated.Value(0)).current;
@@ -313,8 +318,8 @@ export default function PokemonCard({
           paddingHorizontal: 20,
           borderTopEndRadius: 20,
           borderBottomStartRadius: 20,
-          borderWidth: 1,
-          borderColor: "#ffffff73",
+          borderWidth: 2,
+          borderColor: borderColor,
         }}
       >
         <View
