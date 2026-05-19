@@ -1,5 +1,10 @@
-import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
-import { useEffect, useState, useRef } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from "expo-audio";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -19,7 +24,6 @@ import { MegaRaidBattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
 import { Battle } from "./BattleScreen";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const music1 = require("../../assets/sounds/music/mega-raid/mega-battle-music-1.mp3");
 const music2 = require("../../assets/sounds/music/mega-raid/mega-battle-music-2.mp3");
@@ -115,7 +119,7 @@ export default function MegaRaidBattleScreen({
             duration: 800,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
 
       // 3. Phase cycles
@@ -142,9 +146,13 @@ export default function MegaRaidBattleScreen({
 
       const megaPokemon = await getPokemon(megaOf, 60);
 
+      // 1/4 chance to be shiny
+      const isShiny = Math.random() < 0.25;
+
       // Apply Mega stats
       const megaPokemonData: Pokemon = {
         ...megaPokemon,
+        isShiny,
         heldItem: megaStone.id, // Set the stone as held item to trigger applyMegaEvolution
       };
       const megaBoss = await applyMegaEvolution(megaPokemonData);
@@ -191,34 +199,42 @@ export default function MegaRaidBattleScreen({
   if (!enemyPokemon || teamLoading || team.length === 0) {
     return (
       <View style={styles.loading}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 40 }}>
+        <Animated.View
+          style={{ transform: [{ scale: pulseAnim }], marginBottom: 40 }}
+        >
           <Image
             source={require("@/assets/icons/mega-evolution-icon.png")}
             style={{ width: 80, height: 80 }}
           />
         </Animated.View>
-        
+
         <View style={styles.loadingTextContainer}>
           <Text style={styles.loadingTitle}>MEGA RAID</Text>
-          <Text style={styles.loadingPhase}>{LOADING_PHASES[loadingPhase]}</Text>
+          <Text style={styles.loadingPhase}>
+            {LOADING_PHASES[loadingPhase]}
+          </Text>
         </View>
 
         <View style={styles.progressBarBg}>
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.progressBarFill, 
-              { 
+              styles.progressBarFill,
+              {
                 width: progressAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["0%", "100%"]
-                })
-              }
-            ]} 
+                  outputRange: ["0%", "100%"],
+                }),
+              },
+            ]}
           />
         </View>
 
         <View style={styles.loadingFooter}>
-          <MaterialCommunityIcons name="broadcast" size={16} color={colors.accent} />
+          <MaterialCommunityIcons
+            name="broadcast"
+            size={16}
+            color={colors.accent}
+          />
           <Text style={styles.footerText}>Syncing Keystone Data...</Text>
         </View>
       </View>
@@ -302,8 +318,8 @@ const styles = StyleSheet.create({
     height: 20,
   },
   progressBarBg: {
-    width: "100%",
-    height: 6,
+    width: "80%",
+    height: 10,
     backgroundColor: "#1F2937",
     borderRadius: 3,
     overflow: "hidden",
@@ -374,4 +390,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
