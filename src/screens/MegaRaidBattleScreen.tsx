@@ -32,11 +32,16 @@ const milestoneSound = require("../../assets/sounds/milestone.mp3");
  * 3. Handles unique background music (alternating loop).
  * 4. Displays a custom Victory Modal.
  */
+type RaidParams = {
+  megaStone: Item<MegaStoneCategory>;
+};
+
 export default function MegaRaidBattleScreen({
   navigation,
   route,
 }: MegaRaidBattleScreenProps) {
-  const megaStone = route.params.megaStone as Item<MegaStoneCategory>;
+  const params = route.params as RaidParams;
+  const megaStone = params.megaStone;
   const { user } = useAuth();
   const userId = user?.id || "";
   const { team, loading: teamLoading } = useTeam(userId);
@@ -92,16 +97,30 @@ export default function MegaRaidBattleScreen({
         ...megaPokemon,
         heldItem: megaStone.id, // Set the stone as held item to trigger applyMegaEvolution
       };
+const megaBoss = await applyMegaEvolution(megaPokemonData);
 
-      const megaBoss = await applyMegaEvolution(megaPokemonData);
+// Force sprite to Showdown animation URL (Front)
+const megaForm = megaStone.category.megaForm;
+const parts = megaForm.split("-");
+const baseName = parts[1];
+const suffix = parts[2] ? `mega${parts[2]}` : "mega";
+const spriteId = `${baseName}-${suffix}`;
 
-      // Force sprite to Showdown animation URL (Front)
-      const megaForm = megaStone.category.megaForm;
-      const parts = megaForm.split("-");
-      const baseName = parts[1];
-      const suffix = parts[2] ? `mega${parts[2]}` : "mega";
-      const spriteId = `${baseName}-${suffix}`;
-      const frontImage = `https://play.pokemonshowdown.com/sprites/xyani/${spriteId}.gif`;
+let folder = "xyani";
+if (megaStone.category.megaForm.includes("clefable") || 
+    megaStone.category.megaForm.includes("starmie") ||
+    megaStone.category.megaForm.includes("dragonite") ||
+    megaStone.category.megaForm.includes("meganium") ||
+    megaStone.category.megaForm.includes("feraligatr") ||
+    megaStone.category.megaForm.includes("skarmory")) {
+  folder = "ani";
+}
+
+if (megaBoss.isShiny) {
+  folder += "-shiny";
+}
+
+const frontImage = `https://play.pokemonshowdown.com/sprites/${folder}/${spriteId}.gif`;
 
       setEnemyPokemon({
         ...megaBoss,

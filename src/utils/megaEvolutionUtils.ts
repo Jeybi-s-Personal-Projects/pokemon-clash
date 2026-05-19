@@ -25,13 +25,38 @@ export async function applyMegaEvolution(pokemon: Pokemon): Promise<Pokemon> {
   const hpPercent = pokemon.hp / pokemon.maxHp;
   const newMaxHp = calculateHp(megaData.baseStats.hp, pokemon.level);
 
+  // Derived Sprites (Handle Shiny and Direction)
+  let backImage = megaData.spriteUrl;
+  let frontImage = megaData.spriteUrl;
+
+  // Pattern detection and replacement
+  if (backImage.includes("xyani-back")) {
+    frontImage = backImage.replace("xyani-back", "xyani");
+    if (pokemon.isShiny) {
+      backImage = backImage.replace("xyani-back", "xyani-back-shiny");
+      frontImage = frontImage.replace("xyani", "xyani-shiny");
+    }
+  } else if (backImage.includes("ani-back")) {
+    frontImage = backImage.replace("ani-back", "ani");
+    if (pokemon.isShiny) {
+      backImage = backImage.replace("ani-back", "ani-back-shiny");
+      frontImage = frontImage.replace("ani", "ani-shiny");
+    }
+  } else if (backImage.includes("-back")) {
+    frontImage = backImage.replace("-back", "");
+    if (pokemon.isShiny) {
+      backImage = backImage.replace("-back", "-back-shiny");
+      frontImage = frontImage.replace("/sprites/", "/sprites/shiny/"); // Fallback for simple folders
+    }
+  }
+
   return {
     ...pokemon,
     name: `Mega ${pokemon.name}`,
     type: megaData.types,
     ability: megaData.ability,
-    frontImage: megaData.spriteUrl,
-    backImage: megaData.spriteUrl, // Simplified: using same sprite for back
+    frontImage: frontImage,
+    backImage: backImage,
     hp: Math.floor(newMaxHp * hpPercent),
     maxHp: newMaxHp,
     attack: calculateStat(megaData.baseStats.attack, pokemon.level),
