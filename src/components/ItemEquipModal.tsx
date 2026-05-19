@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ITEMS } from "../data/items/items";
+import { useAuth } from "../context/AuthContext";
+import { useInventory } from "../hooks/useInventory";
 import { colors } from "../theme/color";
 import { isMegaStoneCompatible } from "../utils/megaStoneCompatibility";
 
@@ -34,11 +35,13 @@ export function ItemEquipModal({
   onSelect,
   onClose,
 }: ItemEquipModalProps) {
+  const { user } = useAuth();
+  const { inventory } = useInventory(user?.id);
   const [category, setCategory] = useState<ItemCategory>("held-item");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredItems = useMemo(() => {
-    return ITEMS.filter((item) => {
+    return inventory.filter((item) => {
       const matchesCategory = item.category.category === category;
       const matchesSearch = item.name
         .toLowerCase()
@@ -47,9 +50,9 @@ export function ItemEquipModal({
       const isCompatible =
         category !== "mega-stone" || isMegaStoneCompatible(item.id, speciesId);
 
-      return matchesCategory && matchesSearch && isCompatible;
+      return matchesCategory && matchesSearch && isCompatible && item.quantity > 0;
     });
-  }, [category, searchQuery, speciesId]);
+  }, [category, searchQuery, speciesId, inventory]);
 
   const getItemDescription = (item: any) => {
     return (
@@ -117,7 +120,10 @@ export function ItemEquipModal({
                     style={styles.itemImage}
                   />
                   <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.name}</Text>
+                    <View style={styles.itemNameRow}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemQuantity}>x{item.quantity}</Text>
+                    </View>
                     <Text style={styles.itemDesc}>
                       {getItemDescription(item)}
                     </Text>
@@ -125,6 +131,11 @@ export function ItemEquipModal({
                 </View>
               </TouchableOpacity>
             )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No {category.replace("-", " ")}s found in inventory.</Text>
+              </View>
+            }
           />
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -221,10 +232,20 @@ const styles = StyleSheet.create({
   itemInfo: {
     flex: 1,
   },
+  itemNameRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   itemName: {
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  itemQuantity: {
+    color: colors.accent,
+    fontWeight: "bold",
+    fontSize: 14,
   },
   itemDesc: {
     color: "#9CA3AF",
@@ -255,10 +276,18 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
-
   closeButtonText: {
     color: "white",
     fontWeight: "bold",
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 14,
     textAlign: "center",
   },
 });
