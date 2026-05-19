@@ -4,8 +4,7 @@ import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { formatMoveDescription } from "../utils/battleUtils";
-import { TypeBadge, TYPE_COLORS } from "./TypeBadge";
-
+import { TYPE_COLORS, TypeBadge } from "./TypeBadge";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -40,7 +39,8 @@ export default function BattleButton({
   const accentColor = typeColor ?? (variant === "back" ? "#ffffff" : "#4299b7");
 
   const getEffectivenessLabel = () => {
-    if (effectiveness === 0) return { text: "X", icon: "close", color: "#9E9E9E" };
+    if (effectiveness === 0)
+      return { text: "X", icon: "close", color: "#9E9E9E" };
     if (effectiveness === 0.25)
       return { text: "0.25X", icon: "chevron-double-down", color: "#4469ef" };
     if (effectiveness === 0.5)
@@ -91,7 +91,11 @@ export default function BattleButton({
           <Text style={[styles.effText, { color: "white" }]}>
             {effLabel.text}
           </Text>
-          <MaterialCommunityIcons name={effLabel.icon as any} size={10} color="white" />
+          <MaterialCommunityIcons
+            name={effLabel.icon as any}
+            size={10}
+            color="white"
+          />
         </View>
       )}
       {/* Type badge */}
@@ -126,6 +130,9 @@ export default function BattleButton({
               marginTop: moveType ? 12 : 0,
             },
           ]}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          numberOfLines={2}
         >
           {label.toUpperCase()}
         </Text>

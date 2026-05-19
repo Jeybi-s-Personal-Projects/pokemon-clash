@@ -147,6 +147,7 @@ const frontImage = `https://play.pokemonshowdown.com/sprites/${folder}/${spriteI
         player={team[0]} // Use active Pokémon
         team={team}
         enemy={enemyPokemon}
+        isMegaRaid={true}
         onRun={() => navigation.goBack()}
         onBattleEnd={(winner) => {
           if (winner === "player") {

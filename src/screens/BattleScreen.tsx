@@ -41,6 +41,7 @@ interface BattleProps {
   catchFailed?: boolean;
   onClearCatchFailed?: () => void;
   defeatCount?: number;
+  isMegaRaid?: boolean;
 }
 
 export function Battle({
@@ -57,6 +58,7 @@ export function Battle({
   catchFailed,
   onClearCatchFailed,
   defeatCount = 0,
+  isMegaRaid = false,
 }: BattleProps) {
   const navigation = useNavigation<any>();
   const battle = useBattle({
@@ -179,6 +181,7 @@ export function Battle({
         onToggleAutoBattle={onToggleAutoBattle}
         isEnemyShiny={state.enemy.isShiny}
         defeatCount={defeatCount}
+        isMegaRaid={isMegaRaid}
       />
 
       {/* 3. Utility Modals */}
