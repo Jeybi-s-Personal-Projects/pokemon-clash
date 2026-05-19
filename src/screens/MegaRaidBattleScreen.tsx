@@ -1,12 +1,13 @@
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
+  Animated,
   Image,
   Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { Item, MegaStoneCategory } from "../data/items/items";
@@ -18,10 +19,19 @@ import { MegaRaidBattleScreenProps } from "../types/navigation";
 import { Pokemon } from "../types/pokemon";
 import { applyMegaEvolution } from "../utils/megaEvolutionUtils";
 import { Battle } from "./BattleScreen";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const music1 = require("../../assets/sounds/music/mega-raid/mega-battle-music-1.mp3");
 const music2 = require("../../assets/sounds/music/mega-raid/mega-battle-music-2.mp3");
 const milestoneSound = require("../../assets/sounds/milestone.mp3");
+
+const LOADING_PHASES = [
+  "Detecting Mega Energy spike...",
+  "Calibrating Keystone resonance...",
+  "Identifying Boss signature...",
+  "Stabilizing Battle Field...",
+  "Ready for Raid Encounter!",
+];
 
 /**
  * MegaRaidBattleScreen Logic:
@@ -49,6 +59,11 @@ export default function MegaRaidBattleScreen({
   const [victoryModalVisible, setVictoryModalVisible] = useState(false);
   const [enemyPokemon, setEnemyPokemon] = useState<Pokemon | null>(null);
 
+  // Loading animation state
+  const [loadingPhase, setLoadingPhase] = useState(0);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
   // Audio setup
   const [currentTrack, setCurrentTrack] = useState(Math.random() < 0.5 ? 1 : 2);
   const player1 = useAudioPlayer(music1);
@@ -61,7 +76,7 @@ export default function MegaRaidBattleScreen({
   // Initialize Audio Mode and Start Playback
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true });
-    
+
     // Explicitly play on mount
     if (currentTrack === 1) {
       player1.loop = true;
@@ -76,6 +91,41 @@ export default function MegaRaidBattleScreen({
       // expo-audio players created with useAudioPlayer clean up automatically
     };
   }, []);
+
+  // Loading animations
+  useEffect(() => {
+    if (!enemyPokemon) {
+      // 1. Progress Bar
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: false,
+      }).start();
+
+      // 2. Pulse Icon
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // 3. Phase cycles
+      const interval = setInterval(() => {
+        setLoadingPhase((p) => (p < LOADING_PHASES.length - 1 ? p + 1 : p));
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [enemyPokemon]);
 
   // Handle Track Playback and pausing during victory
   useEffect(() => {
@@ -97,30 +147,35 @@ export default function MegaRaidBattleScreen({
         ...megaPokemon,
         heldItem: megaStone.id, // Set the stone as held item to trigger applyMegaEvolution
       };
-const megaBoss = await applyMegaEvolution(megaPokemonData);
+      const megaBoss = await applyMegaEvolution(megaPokemonData);
 
-// Force sprite to Showdown animation URL (Front)
-const megaForm = megaStone.category.megaForm;
-const parts = megaForm.split("-");
-const baseName = parts[1];
-const suffix = parts[2] ? `mega${parts[2]}` : "mega";
-const spriteId = `${baseName}-${suffix}`;
+      // Force sprite to Showdown animation URL (Front)
+      const megaForm = megaStone.category.megaForm;
+      const parts = megaForm.split("-");
+      const baseName = parts[1];
+      const suffix = parts[2] ? `mega${parts[2]}` : "mega";
+      const spriteId = `${baseName}-${suffix}`;
 
-let folder = "xyani";
-if (megaStone.category.megaForm.includes("clefable") || 
-    megaStone.category.megaForm.includes("starmie") ||
-    megaStone.category.megaForm.includes("dragonite") ||
-    megaStone.category.megaForm.includes("meganium") ||
-    megaStone.category.megaForm.includes("feraligatr") ||
-    megaStone.category.megaForm.includes("skarmory")) {
-  folder = "ani";
-}
+      let folder = "xyani";
+      if (
+        megaStone.category.megaForm.includes("clefable") ||
+        megaStone.category.megaForm.includes("starmie") ||
+        megaStone.category.megaForm.includes("dragonite") ||
+        megaStone.category.megaForm.includes("meganium") ||
+        megaStone.category.megaForm.includes("feraligatr") ||
+        megaStone.category.megaForm.includes("skarmory")
+      ) {
+        folder = "ani";
+      }
 
-if (megaBoss.isShiny) {
-  folder += "-shiny";
-}
+      if (megaBoss.isShiny) {
+        folder += "-shiny";
+      }
 
-const frontImage = `https://play.pokemonshowdown.com/sprites/${folder}/${spriteId}.gif`;
+      const frontImage = `https://play.pokemonshowdown.com/sprites/${folder}/${spriteId}.gif`;
+
+      // Artificial delay to show loading bar
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       setEnemyPokemon({
         ...megaBoss,
@@ -136,7 +191,36 @@ const frontImage = `https://play.pokemonshowdown.com/sprites/${folder}/${spriteI
   if (!enemyPokemon || teamLoading || team.length === 0) {
     return (
       <View style={styles.loading}>
-        <Text style={{ color: "white" }}>Preparing Mega Raid...</Text>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 40 }}>
+          <Image
+            source={require("@/assets/icons/mega-evolution-icon.png")}
+            style={{ width: 80, height: 80 }}
+          />
+        </Animated.View>
+        
+        <View style={styles.loadingTextContainer}>
+          <Text style={styles.loadingTitle}>MEGA RAID</Text>
+          <Text style={styles.loadingPhase}>{LOADING_PHASES[loadingPhase]}</Text>
+        </View>
+
+        <View style={styles.progressBarBg}>
+          <Animated.View 
+            style={[
+              styles.progressBarFill, 
+              { 
+                width: progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0%", "100%"]
+                })
+              }
+            ]} 
+          />
+        </View>
+
+        <View style={styles.loadingFooter}>
+          <MaterialCommunityIcons name="broadcast" size={16} color={colors.accent} />
+          <Text style={styles.footerText}>Syncing Keystone Data...</Text>
+        </View>
       </View>
     );
   }
@@ -194,9 +278,57 @@ const styles = StyleSheet.create({
   },
   loading: {
     flex: 1,
-    backgroundColor: colors.modalBackground,
+    backgroundColor: "#080B14",
     justifyContent: "center",
     alignItems: "center",
+    padding: 30,
+  },
+  loadingTextContainer: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  loadingTitle: {
+    color: "white",
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 4,
+    marginBottom: 8,
+  },
+  loadingPhase: {
+    color: colors.accent,
+    fontSize: 14,
+    fontFamily: "monospace",
+    textAlign: "center",
+    height: 20,
+  },
+  progressBarBg: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#1F2937",
+    borderRadius: 3,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#374151",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+  },
+  loadingFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 24,
+    gap: 8,
+    opacity: 0.6,
+  },
+  footerText: {
+    color: "white",
+    fontSize: 12,
+    fontFamily: "monospace",
   },
   modalOverlay: {
     flex: 1,
@@ -242,3 +374,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
