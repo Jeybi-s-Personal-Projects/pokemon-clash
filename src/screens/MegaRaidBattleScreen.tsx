@@ -59,7 +59,7 @@ export default function MegaRaidBattleScreen({
     
     // Explicitly play on mount
     if (currentTrack === 1) {
-      player1.loop = true; // Use simple loop for now to ensure it plays
+      player1.loop = true;
       player1.play();
     } else {
       player2.loop = true;
@@ -67,18 +67,18 @@ export default function MegaRaidBattleScreen({
     }
 
     return () => {
-      player1.pause();
-      player2.pause();
+      // Don't call pause here to avoid "already released" errors
+      // expo-audio players created with useAudioPlayer clean up automatically
     };
   }, []);
 
   // Handle Track Playback and pausing during victory
   useEffect(() => {
     if (victoryModalVisible) {
-      player1.pause();
-      player2.pause();
+      if (player1) player1.pause();
+      if (player2) player2.pause();
     }
-  }, [victoryModalVisible]);
+  }, [victoryModalVisible, player1, player2]);
 
   useEffect(() => {
     const initRaid = async () => {
