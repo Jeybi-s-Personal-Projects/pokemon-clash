@@ -40,6 +40,7 @@ interface InventoryBagModalProps {
     catchRate: number;
   }) => void;
   onItemUsed: (updatedTeam: Pokemon[], message: string) => void;
+  isMegaRaid?: boolean;
 }
 
 export function InventoryBagModal({
@@ -49,11 +50,12 @@ export function InventoryBagModal({
   enemy,
   onCatchAttempt,
   onItemUsed,
+  isMegaRaid = false,
 }: InventoryBagModalProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { inventory, consumeItem } = useInventory(user?.id);
-  const [category, setCategory] = useState<BagCategory>("pokeballs");
+  const [category, setCategory] = useState<BagCategory>(isMegaRaid ? "items" : "pokeballs");
 
   const [selectionModalVisible, setSelectionModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -81,6 +83,7 @@ export function InventoryBagModal({
 
   const data = useMemo(() => {
     if (category === "pokeballs") {
+      if (isMegaRaid) return [];
       return inventory.filter((i) => i.category.category === "pokeball");
     }
     if (category === "items") {
@@ -94,7 +97,11 @@ export function InventoryBagModal({
       return inventory.filter((i) => i.category.category === "battle-item");
     }
     return [];
-  }, [category, inventory]);
+  }, [category, inventory, isMegaRaid]);
+
+  const tabs = useMemo(() => {
+    return TABS.filter(tab => !(isMegaRaid && tab.key === "pokeballs"));
+  }, [isMegaRaid]);
 
   const handleUseItem = (item: InventoryItem) => {
     playClick();
@@ -236,7 +243,7 @@ export function InventoryBagModal({
 
           {/* Tabs */}
           <View style={styles.tabRow}>
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <TouchableOpacity
                 key={tab.key}
                 style={[
@@ -251,9 +258,7 @@ export function InventoryBagModal({
                 <MaterialCommunityIcons
                   name={tab.icon as any}
                   size={20}
-                  color={
-                    category === tab.key ? colors.accent : colors.textMuted
-                  }
+                  color={category === tab.key ? colors.accent : colors.textMuted}
                 />
                 <Text
                   style={[

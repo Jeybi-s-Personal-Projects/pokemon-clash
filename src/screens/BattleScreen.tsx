@@ -192,6 +192,7 @@ export function Battle({
         enemy={state.enemy}
         onCatchAttempt={handleCatchAttempt}
         onItemUsed={handleItemUsed}
+        isMegaRaid={isMegaRaid}
       />
 
       <ConfirmationModal
