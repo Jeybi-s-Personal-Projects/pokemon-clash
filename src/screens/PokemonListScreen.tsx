@@ -10,7 +10,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { gen1Pokemon } from "../data/gen1Pokemon";
@@ -474,12 +474,12 @@ export default function PokemonListScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.modalBackground },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackground,
   },
 
   regionRow: {
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   regionFilterButton: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   filterButton: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
 
   dropdown: {
     marginHorizontal: 16,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
 
   card: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   },
   pageButton: {
     flex: 1,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalContent,
     borderWidth: 1,
     borderColor: colors.accent,
     paddingVertical: 12,
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     paddingBottom: 70,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackground,
   },
   addButton: {
     backgroundColor: colors.accent,

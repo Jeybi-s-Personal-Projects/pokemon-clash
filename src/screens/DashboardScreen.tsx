@@ -1,10 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
@@ -17,6 +19,7 @@ import DashboardHeader from "../components/dashboardHeader";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { useTeam } from "../hooks/useTeam";
+import { useTrainer } from "../hooks/useTrainer";
 import { colors } from "../theme/color";
 import { DashboardScreenProps } from "../types/navigation";
 
@@ -24,10 +27,27 @@ const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, signOut } = useAuth();
-  const { team, loading, refetch } = useTeam(user?.id ?? "");
+  const {
+    team,
+    loading: teamLoading,
+    refetch: refetchTeam,
+  } = useTeam(user?.id ?? "");
+  const {
+    stats,
+    loading: trainerLoading,
+    refetch: refetchTrainer,
+  } = useTrainer(user?.id);
   const insets = useSafeAreaInsets();
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [profileVisible, setProfileVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchTeam();
+      refetchTrainer();
+    }, [refetchTeam, refetchTrainer]),
+  );
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -43,7 +63,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     player.play();
   };
 
-  if (loading)
+  const handleRefresh = () => {
+    playClick();
+    refetchTeam();
+    refetchTrainer();
+  };
+
+  if (teamLoading || trainerLoading)
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator color="#818CF8" size="large" />
@@ -55,20 +81,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       <DashboardHeader
         userName={user?.name ?? "Trainer"}
         team={team}
-        onLogout={() => {
-          playClick();
-          signOut();
-          navigation.replace("Login");
-        }}
-        onRefresh={() => {
-          playClick();
-          refetch();
-        }}
+        pokecoins={stats?.pokecoins || 0}
+        onRefresh={handleRefresh}
         onEditTeam={() => {
           playClick();
           navigation.navigate("PokemonTeam", {
             initialTeam: team,
-            onSave: refetch,
+            onSave: refetchTeam,
           });
         }}
         onViewList={() => {
@@ -77,7 +96,89 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
             mode: "view",
           });
         }}
+        onProfilePress={() => {
+          playClick();
+          setProfileVisible(true);
+        }}
+        onPokemartPress={() => {
+          playClick();
+          navigation.navigate("Pokemart");
+        }}
+        onMegaRaidPress={() => {
+          playClick();
+          navigation.navigate("MegaRaid");
+        }}
       />
+
+      {/* Profile Modal */}
+      <Modal
+        visible={profileVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProfileVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.profileModal}>
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>
+                  {(user?.name || "T").charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.profileName}>{user?.name}</Text>
+              <Text style={styles.profileUsername}>@{user?.username}</Text>
+            </View>
+
+            <View style={styles.profileStats}>
+              <View style={styles.profileStatItem}>
+                <Text style={styles.profileStatValue}>
+                  {stats?.total_battles || 0}
+                </Text>
+                <Text style={styles.profileStatLabel}>Battles</Text>
+              </View>
+              <View style={styles.profileStatDivider} />
+              <View style={styles.profileStatItem}>
+                <Text style={styles.profileStatValue}>
+                  {stats?.total_wins || 0}
+                </Text>
+                <Text style={styles.profileStatLabel}>Wins</Text>
+              </View>
+              <View style={styles.profileStatDivider} />
+              <View style={styles.profileStatItem}>
+                <Text style={styles.profileStatValue}>
+                  {stats?.highest_streak || 0}
+                </Text>
+                <Text style={styles.profileStatLabel}>Best Streak</Text>
+              </View>
+            </View>
+
+            <View style={styles.profileActions}>
+              <TouchableOpacity
+                style={styles.logoutProfileButton}
+                onPress={() => {
+                  playClick();
+                  setProfileVisible(false);
+                  signOut();
+                  navigation.replace("Login");
+                }}
+              >
+                <Ionicons name="log-out-outline" size={20} color="#FCA5A5" />
+                <Text style={styles.logoutProfileButtonText}>Logout</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.closeProfileButton}
+                onPress={() => {
+                  playClick();
+                  setProfileVisible(false);
+                }}
+              >
+                <Text style={styles.closeProfileButtonText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.contentArea}>
         {team.length === 0 ? (
@@ -114,7 +215,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
                       playClick();
                       navigation.navigate("PokemonStats", {
                         pokemon: item,
-                        onRelease: refetch,
+                        onRelease: refetchTeam,
                       });
                     }}
                   />
@@ -171,17 +272,20 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingVertical: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.modalBackgroundPrimary,
+    paddingVertical: 40,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#030712",
+    backgroundColor: colors.modalBackground,
   },
   contentArea: {
     flex: 1,
     justifyContent: "center",
-    paddingBottom: 20,
   },
   emptyContainer: {
     alignItems: "center",
@@ -211,9 +315,8 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     paddingTop: 10,
     paddingHorizontal: 10,
-    backgroundColor: "#030712",
     borderTopWidth: 1,
-    borderTopColor: "#1F2937",
+    backgroundColor: "#030303",
   },
   battleButton: {
     flex: 1,
@@ -249,7 +352,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   carouselContainer: {
-    height: 220,
+    height: 210,
     paddingHorizontal: 10,
   },
   carouselContent: {
@@ -261,7 +364,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   pagination: {
-    marginTop: 5,
+    marginTop: 10,
+    paddingVertical: 5,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -271,5 +375,114 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  profileModal: {
+    width: "100%",
+    backgroundColor: "#111827",
+    borderRadius: 24,
+    padding: 30,
+    borderWidth: 1,
+    borderColor: "#374151",
+    alignItems: "center",
+  },
+  profileHeader: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#818CF8",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+    borderWidth: 3,
+    borderColor: "#374151",
+  },
+  avatarInitial: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "white",
+  },
+  profileName: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
+  },
+  profileUsername: {
+    fontSize: 16,
+    color: "#9CA3AF",
+    marginTop: 4,
+  },
+  profileStats: {
+    flexDirection: "row",
+    backgroundColor: "#1F2937",
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    justifyContent: "space-between",
+    marginBottom: 30,
+  },
+  profileStatItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  profileStatValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "white",
+  },
+  profileStatLabel: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: 4,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  profileStatDivider: {
+    width: 1,
+    height: "100%",
+    backgroundColor: "#374151",
+  },
+  profileActions: {
+    width: "100%",
+    gap: 12,
+  },
+  logoutProfileButton: {
+    width: "100%",
+    backgroundColor: "#7F1D1D",
+    paddingVertical: 15,
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#991B1B",
+  },
+  logoutProfileButtonText: {
+    color: "#FCA5A5",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  closeProfileButton: {
+    width: "100%",
+    backgroundColor: "#374151",
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  closeProfileButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

@@ -1,17 +1,30 @@
 import { colors } from "@/src/theme/color";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Pokemon } from "../types/pokemon";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 type Props = {
   userName: string;
   team: Pokemon[];
-  onLogout: () => void;
+  pokecoins: number;
   onRefresh: () => void;
   onEditTeam: () => void;
   onViewList: () => void;
+  onProfilePress: () => void;
+  onPokemartPress: () => void;
+  onMegaRaidPress: () => void;
 };
 
 const BADGES = [
@@ -25,43 +38,130 @@ const BADGES = [
   require("../../assets/badges/bagde-water.png"),
 ];
 const banner = require("../../assets/banners/banner.jpg");
-const rank = require("../../assets/rank/rank-1.png");
+const dynamaxRaidBanner = require("../../assets/banners/banner-dynamax-raid.jpg");
+const pokestore = require("../../assets/banners/banner-pokestore.jpg");
+const pokecoin = require("../../assets/icons/pokecoin.png");
+
+const BANNER_CONTENT = [
+  {
+    image: banner,
+    title: "Mega Raid",
+    subtitle: "Ultra Trials",
+    details: "Take down Mega Evolved bosses!",
+    icon: "sword-cross",
+    buttonText: "Battle",
+    onPress: () => console.log("Mega Raid Battle"),
+    layout: "right",
+  },
+  {
+    image: dynamaxRaidBanner,
+    title: "Dynamax Raid",
+    subtitle: "Giant Challenges",
+    details: "Face off against towering Dynamax Pokémon!",
+    icon: "lightning-bolt",
+    buttonText: "Join Raid",
+    onPress: () => console.log("Dynamax Raid Battle"),
+    layout: "right",
+  },
+  {
+    image: pokestore,
+    title: "Pokemart",
+    subtitle: "Supplies & Gear",
+    details: "Restock Pokéballs and healing items.",
+    icon: "storefront",
+    buttonText: "Shop Now",
+    onPress: () => console.log("Pokemart Shop"),
+    layout: "right",
+  },
+];
 
 const obtained = 4;
 export default function DashboardHeader({
   userName,
   team,
-  onLogout,
+  pokecoins,
   onRefresh,
   onEditTeam,
   onViewList,
+  onProfilePress,
+  onPokemartPress,
+  onMegaRaidPress,
 }: Props) {
+  const flatListRef = useRef<FlatList>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const bannerContent = [
+    {
+      image: banner,
+      title: "Mega Raid",
+      subtitle: "Ultra Trials",
+      details: "Take down Mega Evolved bosses!",
+      icon: "sword-cross",
+      buttonText: "Battle",
+      onPress: onMegaRaidPress,
+    },
+    {
+      image: dynamaxRaidBanner,
+      title: "Dynamax Raid",
+      subtitle: "Giant Challenges",
+      details: "Face off against towering Dynamax Pokémon!",
+      icon: "lightning-bolt",
+      buttonText: "Join Raid",
+      onPress: () => console.log("Dynamax Raid Battle"),
+    },
+    {
+      image: pokestore,
+      title: "Pokemart",
+      subtitle: "Supplies & Gear",
+      details: "Restock Pokéballs and healing items.",
+      icon: "storefront",
+      buttonText: "Shop Now",
+      onPress: onPokemartPress,
+    },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % bannerContent.length;
+        flatListRef.current?.scrollToIndex({
+          index: next,
+          animated: true,
+        });
+        return next;
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <>
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.username}>
-            {userName}{" "}
-            <MaterialCommunityIcons name="pokeball" size={25} color="#818CF8" />
-          </Text>
-          <Text style={{ color: "#6B7280", fontSize: 12, marginTop: 2 }}>
-            Ready for your next battle?
-          </Text>
+          <TouchableOpacity onPress={onProfilePress} activeOpacity={0.7}>
+            <Text style={styles.username}>
+              {userName}{" "}
+              <MaterialCommunityIcons
+                name="pokeball"
+                size={25}
+                color="#818CF8"
+              />
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.headerRight}>
-          <View style={styles.trainerBadge}>
+          <View style={styles.coinBadge}>
             <Image
-              source={rank}
-              style={{ width: 30, height: 30, resizeMode: "cover" }}
+              source={pokecoin}
+              style={{ width: 22, height: 22, resizeMode: "contain" }}
             />
-            <Text style={styles.trainerBadgeText}>Elite Trainer</Text>
+            <Text style={styles.coinBadgeText}>
+              {pokecoins.toLocaleString()}
+            </Text>
           </View>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-            <Ionicons name="log-out-outline" size={30} color="#EF4444" />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -136,19 +236,54 @@ export default function DashboardHeader({
         </View>
       </View>
 
-      <View
-        style={{
-          height: 120,
-          overflow: "hidden",
-          paddingHorizontal: 10,
-          opacity: 0.5,
-        }}
-      >
-        <Image
-          source={banner}
-          style={{ width: "auto", height: "100%", resizeMode: "cover" }}
+      <View style={styles.carouselContainer}>
+        <FlatList
+          ref={flatListRef}
+          data={bannerContent}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(_, index) => index.toString()}
+          onScrollToIndexFailed={() => {}}
+          renderItem={({ item }) => (
+            <View style={styles.bannerItem}>
+              <Image source={item.image} style={styles.bannerImage} />
+              <LinearGradient
+                colors={["transparent", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.8)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.bannerOverlay}
+              >
+                <View style={styles.bannerContent}>
+                  <View style={styles.bannerHeader}>
+                    <MaterialCommunityIcons
+                      name={item.icon as any}
+                      size={28}
+                      color={colors.neonOrange}
+                    />
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={styles.bannerTitle}>{item.title}</Text>
+                      <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.bannerDetails}>{item.details}</Text>
+
+                  <TouchableOpacity
+                    style={styles.bannerButton}
+                    onPress={item.onPress}
+                  >
+                    <Text style={styles.bannerButtonText}>
+                      {item.buttonText}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
         />
       </View>
+
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>Pokémon Team</Text>
@@ -210,25 +345,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 5,
-    backgroundColor: "#030712",
+    backgroundColor: colors.modalBackgroundPrimary,
   },
   greeting: { fontSize: 13, color: "#6B7280", letterSpacing: 0.5 },
   username: { fontSize: 24, fontWeight: "800", color: "#F9FAFB" },
-  trainerBadge: {
+  coinBadge: {
     backgroundColor: "#1F2937",
     borderWidth: 1,
     borderColor: "#374151",
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 12,
     flexDirection: "row",
-    display: "flex",
     alignItems: "center",
-    justifyContent: "space-around",
+    gap: 6,
   },
-  trainerBadgeText: {
-    color: "#D1D5DB",
-    fontSize: 13,
+  coinBadgeText: {
+    color: "#FACC15",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   logoutButton: {
     backgroundColor: "#1F2937",
@@ -324,10 +459,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: colors.subtleNeonBlue,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#F9FAFB" },
   sectionSub: { fontSize: 12, color: "#6B7280", marginTop: 2 },
@@ -351,5 +484,81 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     resizeMode: "contain",
+  },
+  carouselContainer: {
+    height: 140,
+    marginHorizontal: 16,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#111827",
+    borderWidth: 1,
+    borderColor: colors.modalBorderSubtle,
+    marginBottom: 8,
+  },
+  bannerItem: {
+    width: SCREEN_WIDTH - 32, // Container margin
+    height: 140,
+    position: "relative",
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  bannerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "flex-end",
+    alignItems: "flex-end", // Enforce right alignment for the overlay content
+    padding: 16,
+  },
+  bannerContent: {
+    width: "100%",
+    gap: 4,
+    alignItems: "flex-end", // Enforce right alignment for content
+  },
+  bannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 2,
+  },
+  bannerTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "right", // Enforce right alignment for title
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  bannerSubtitle: {
+    color: colors.neonOrange, // Changed to a more visible color
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: -2,
+    textAlign: "right",
+  },
+  bannerDetails: {
+    color: "#E5E7EB",
+    fontSize: 11,
+    lineHeight: 14,
+    marginBottom: 8,
+    maxWidth: "80%",
+    textAlign: "right", // Enforce right alignment for details
+  },
+  bannerButton: {
+    backgroundColor: colors.neonOrange, // More visible background
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  bannerButtonText: {
+    color: "#111827", // Dark text on light background
+    fontWeight: "bold",
+    fontSize: 12,
   },
 });

@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.modalBorderSubtle,
     overflow: "hidden",
     backgroundColor: "#111826",
     shadowColor: "#000",

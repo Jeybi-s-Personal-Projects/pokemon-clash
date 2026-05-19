@@ -46,7 +46,9 @@ export const BattleField = ({
           isDancing={dancingSide === "enemy"}
           isHit={hitSide === "enemy"}
           isCaught={isEnemyCaught}
-          floatingDamage={floatingDamage?.side === "enemy" ? floatingDamage.amount : null}
+          floatingDamage={
+            floatingDamage?.side === "enemy" ? floatingDamage.amount : null
+          }
         />
       </TouchableOpacity>
       <View style={styles.spacer} />
@@ -59,7 +61,9 @@ export const BattleField = ({
           isDancing={dancingSide === "player"}
           isHit={hitSide === "player"}
           isEntering={isPlayerEntering}
-          floatingDamage={floatingDamage?.side === "player" ? floatingDamage.amount : null}
+          floatingDamage={
+            floatingDamage?.side === "player" ? floatingDamage.amount : null
+          }
           exp={
             player.experience -
             getExpForLevel(player.level, player.growthRate || "medium-fast")

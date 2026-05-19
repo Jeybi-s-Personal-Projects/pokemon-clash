@@ -10,10 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PokemonCard from "../components/pokemonRosterCard";
 import { useAuth } from "../context/AuthContext";
 import { savePokemon } from "../hooks/savePokemon";
+import { grantStarterItems } from "../hooks/useInventory";
 import { getPokemon } from "../hooks/usePokemon";
 import { colors } from "../theme/color";
 import { SelectStarterScreenProps } from "../types/navigation";
@@ -70,7 +70,12 @@ export default function SelectStarterScreen({
     setConfirmModal(null);
 
     try {
+      // 1. Save starter pokemon
       await savePokemon(confirmModal, user.id);
+
+      // 2. Grant starter items
+      grantStarterItems(user.id);
+
       navigation.reset({
         index: 0,
         routes: [{ name: "Dashboard" }],
@@ -164,7 +169,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackground,
   },
   loadingText: {
     color: "#9CA3AF",

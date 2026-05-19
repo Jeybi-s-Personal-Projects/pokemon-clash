@@ -70,7 +70,27 @@ export type RootStackParamList = {
     revertMegaInTeam?: (team: Pokemon[]) => Pokemon[];
     isMega?: boolean;
   };
+  Pokemart: undefined;
+  MegaRaid: undefined;
+  MegaRaidBattle: {
+    megaStone: any; // Using 'any' for now to match the existing loose typing in other routes
+  };
 };
+
+export type MegaRaidBattleScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "MegaRaidBattle"
+>;
+
+export type MegaRaidScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "MegaRaid"
+>;
+
+export type PokemartScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "Pokemart"
+>;
 
 export type SelectStarterScreenProps = NativeStackScreenProps<
   RootStackParamList,

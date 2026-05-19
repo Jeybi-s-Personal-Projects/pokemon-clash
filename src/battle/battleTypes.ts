@@ -72,4 +72,7 @@ export type BattleState = {
   // ── Bad poison (Toxic) tracking ───────────────────────
   playerBadPoison: boolean;
   enemyBadPoison: boolean;
+
+  // ── Terastalization ───────────────────────────────────
+  isTeraUsed: boolean;
 };

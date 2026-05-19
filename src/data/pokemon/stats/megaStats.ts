@@ -273,7 +273,7 @@ export const MEGA_STATS: Record<string, MegaStats> = {
     types: ["fairy", "flying"],
     ability: "magic-guard",
     spriteUrl:
-      "https://play.pokemonshowdown.com/sprites/-back/clefable-mega.gif",
+      "https://play.pokemonshowdown.com/sprites/ani-back/clefable-mega.gif",
   },
 
   // Mega Starmie (NEW in Z-A)

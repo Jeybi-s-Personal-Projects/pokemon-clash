@@ -27,9 +27,12 @@ type Props = {
   isAutoBattle?: boolean;
   onToggleAutoBattle?: (value: boolean) => void;
   onMegaEvolve?: () => void;
+  onTeraEvolve?: () => void;
   canMegaEvolve?: boolean;
+  canTerastalize?: boolean;
   isEnemyShiny?: boolean;
   defeatCount?: number;
+  isMegaRaid?: boolean;
 };
 
 const ACTION_CONFIG = [
@@ -57,6 +60,7 @@ const ACTION_CONFIG = [
   },
 ];
 
+// After — add the two missing props
 export default function BattleActions({
   moves,
   playerTypes,
@@ -70,9 +74,12 @@ export default function BattleActions({
   isAutoBattle = false,
   onToggleAutoBattle,
   onMegaEvolve,
+  onTeraEvolve, // ← add this
   canMegaEvolve,
+  canTerastalize, // ← add this
   isEnemyShiny,
   defeatCount,
+  isMegaRaid = false,
 }: Props) {
   const [menu, setMenu] = useState<"main" | "fight">("main");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -156,30 +163,38 @@ export default function BattleActions({
       ]}
     >
       <View style={styles.toggleRow}>
-        <View
-          style={{
-            height: 24,
-            paddingHorizontal: 10,
-            backgroundColor: "#080B14",
-            borderWidth: 1,
-            borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
-            borderTopLeftRadius: 10,
-            borderTopRightRadius: 10,
-            justifyContent: "center",
-          }}
-        >
-          <Text
+        {!isMegaRaid && (
+          <View
             style={{
-              color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
-              fontFamily: "monospace",
-              fontSize: 8,
-              fontWeight: "bold",
+              height: 24,
+              paddingHorizontal: 10,
+              backgroundColor: "#080B14",
+              borderWidth: 1,
+              borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+              borderTopLeftRadius: 10,
+              borderTopRightRadius: 10,
+              justifyContent: "center",
             }}
           >
-            STREAK: {defeatCount}
-          </Text>
-        </View>
-        <View style={{ flexDirection: "row", gap: 8 }}>
+            <Text
+              style={{
+                color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                fontFamily: "monospace",
+                fontSize: 8,
+                fontWeight: "bold",
+              }}
+            >
+              STREAK: {defeatCount}
+            </Text>
+          </View>
+        )}
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 8,
+            marginLeft: isMegaRaid ? "auto" : 0,
+          }}
+        >
           {menu === "fight" && !currentLog && (
             <TouchableOpacity
               activeOpacity={0.8}
@@ -193,6 +208,39 @@ export default function BattleActions({
               />
               <Text style={styles.toggleText}>
                 {isExpanded ? "HIDE DETAILS" : "SHOW DETAILS"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {canTerastalize && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onTeraEvolve}
+              disabled={disabled}
+              style={[
+                styles.toggleButton,
+                {
+                  borderColor: isAutoBattle
+                    ? colors.neonOrange
+                    : colors.neonBlue,
+                  opacity: disabled ? 0.5 : 1,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="crystal-ball"
+                size={14}
+                color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  {
+                    color: isAutoBattle ? colors.neonOrange : colors.neonBlue,
+                    opacity: disabled ? 0.5 : 1,
+                  },
+                ]}
+              >
+                TERA
               </Text>
             </TouchableOpacity>
           )}
@@ -228,30 +276,34 @@ export default function BattleActions({
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
-            style={[
-              styles.toggleButton,
-              {
-                borderColor: isAutoBattle ? colors.neonOrange : colors.neonBlue,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
-              size={12}
-              color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
-            />
-            <Text
+          {!isMegaRaid && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onToggleAutoBattle?.(!isAutoBattle)}
               style={[
-                styles.toggleText,
-                { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+                styles.toggleButton,
+                {
+                  borderColor: isAutoBattle
+                    ? colors.neonOrange
+                    : colors.neonBlue,
+                },
               ]}
             >
-              {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
-            </Text>
-          </TouchableOpacity>
+              <MaterialCommunityIcons
+                name={isAutoBattle ? "pause-circle" : "play-circle-outline"}
+                size={12}
+                color={isAutoBattle ? colors.neonOrange : colors.neonBlue}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  { color: isAutoBattle ? colors.neonOrange : colors.neonBlue },
+                ]}
+              >
+                {isAutoBattle ? "MANUAL BATTLE" : "AUTO BATTLE"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -395,7 +447,7 @@ const styles = StyleSheet.create({
     margin: 40,
     borderWidth: 2,
     borderColor: colors.neonBlue,
-    backgroundColor: colors.bgButtonStandard,
+    backgroundColor: colors.modalBackgroundPrimary,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,

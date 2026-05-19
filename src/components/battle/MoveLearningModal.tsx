@@ -12,6 +12,7 @@ import {
 import { MOVES } from "../../data/pokemon/moves/moves";
 import { BATTLE_MOVES } from "../../data/pokemon/moves/movesBattle";
 import { Move, Pokemon } from "../../types/pokemon";
+import { formatMoveDescription } from "../../utils/battleUtils";
 import { TYPE_COLORS, TypeBadge } from "../TypeBadge";
 
 interface MoveLearningModalProps {
@@ -132,7 +133,12 @@ export const MoveLearningModal = ({
               </Text>
               <Text style={styles.moveStat}>PP: {newMove.pp}</Text>
             </View>
-            <Text style={styles.description}>{newMove.description}</Text>
+            <Text style={styles.description}>
+              {formatMoveDescription(
+                newMove.description,
+                BATTLE_MOVES[newMove.name.toLowerCase()] || newMoveDetails,
+              )}
+            </Text>
           </View>
 
           <Text style={styles.subtitle}>Replace existing move:</Text>
@@ -181,9 +187,9 @@ export const MoveLearningModal = ({
                     </Text>
                   </View>
                   <Text style={styles.moveDesc}>
-                    {details?.description?.replace(
-                      /\$effect_chance/g,
-                      details.effectChance?.toString() || "",
+                    {formatMoveDescription(
+                      move.description || details?.description,
+                      BATTLE_MOVES[move.name.toLowerCase()] || details,
                     )}
                   </Text>
                 </TouchableOpacity>

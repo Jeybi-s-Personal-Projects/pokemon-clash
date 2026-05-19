@@ -1,3 +1,4 @@
+import { colors } from "@/src/theme/color";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
@@ -7,8 +8,10 @@ import BattleScreen from "@/src/screens/BattleScreen";
 import CatchingScreen from "@/src/screens/CatchingScreen";
 import DashboardScreen from "@/src/screens/DashboardScreen";
 import { EncounterFlow } from "@/src/screens/EncounterFlow";
-import InventoryBagScreen from "@/src/screens/inventoryBagScreen";
 import LoginScreen from "@/src/screens/LoginScreen";
+import MegaRaidBattleScreen from "@/src/screens/MegaRaidBattleScreen";
+import MegaRaidScreen from "@/src/screens/MegaRaidScreen";
+import PokemartScreen from "@/src/screens/PokemartScreen";
 import PokemonListScreen from "@/src/screens/PokemonListScreen";
 import PokemonStatsScreen from "@/src/screens/PokemonStatsScreen";
 import PokemonTeamScreen from "@/src/screens/PokemonTeamScreen";
@@ -133,18 +136,28 @@ export default function AppNavigator() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="InventoryBag"
-            component={InventoryBagScreen}
+            name="CatchingScreen"
+            component={CatchingScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Pokemart"
+            component={PokemartScreen}
             options={{
-              title: "BAG",
-              headerStyle: { backgroundColor: "#111827" },
+              title: "POKÉMART",
+              headerStyle: { backgroundColor: colors.modalBackgroundPrimary },
               headerTintColor: "#F9FAFB",
               headerTitleStyle: { fontWeight: "bold", fontSize: 18 },
             }}
           />
           <Stack.Screen
-            name="CatchingScreen"
-            component={CatchingScreen}
+            name="MegaRaid"
+            component={MegaRaidScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MegaRaidBattle"
+            component={MegaRaidBattleScreen}
             options={{ headerShown: false }}
           />
         </>

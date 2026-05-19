@@ -31,11 +31,6 @@ export function dealDamage(
   const ability = attacker.ability?.toLowerCase();
   const defAbility = defender.ability?.toLowerCase();
 
-  // ── Levitate Check ──
-  if (moveType === "ground" && defAbility === "levitate") {
-    return { damage: 0, isCrit: false };
-  }
-
   let typeMultiplier = getTypeMultiplier(moveType, defender.type as PokemonType[]);
 
   // STAB: Same Type Attack Bonus (1.5x)
@@ -85,10 +80,6 @@ export function dealDamage(
   let defenseMultiplier = 1;
   if (move.damageClass !== "special") {
     if (defAbility === "marvel-scale" && defender.status) defenseMultiplier *= 1.5;
-  }
-  
-  if (defAbility === "thick-fat" && (moveType === "fire" || moveType === "ice")) {
-    attackMultiplier *= 0.5;
   }
 
   // Determine which stats to use based on damage class

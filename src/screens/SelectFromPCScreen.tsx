@@ -12,10 +12,10 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import db from "../lib/db";
 import { colors } from "../theme/color";
 import { SelectFromPCScreenProps } from "../types/navigation";
 import { getPokemonIcon } from "../utils/pokemonImageUtils";
-import db from "../lib/db";
 
 const clickSound = require("../../assets/sounds/buttonClick.mp3");
 
@@ -71,13 +71,13 @@ export default function SelectFromPCScreen({
          FROM pokemon 
          WHERE user_id = ? AND pk_order IS NULL 
          ORDER BY created_at DESC`,
-        [user.id]
+        [user.id],
       );
 
-      const mapped = data.map(p => ({
+      const mapped = data.map((p) => ({
         ...p,
         pk_types: JSON.parse(p.pk_types),
-        pk_is_shiny: !!p.pk_is_shiny
+        pk_is_shiny: !!p.pk_is_shiny,
       }));
 
       setPcPokemon(mapped || []);
@@ -94,22 +94,26 @@ export default function SelectFromPCScreen({
     setIsProcessing(true);
 
     try {
-      if (replacedId && replacedOrder) {
-        db.runSync(
-          `UPDATE pokemon SET pk_order = NULL WHERE id = ?`,
-          [replacedId]
-        );
-        db.runSync(
-          `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
-          [replacedOrder, p.id]
-        );
-      } else {
-        const nextOrder = (teamLength || 0) + 1;
-        db.runSync(
-          `UPDATE pokemon SET pk_order = ? WHERE id = ?`,
-          [nextOrder, p.id]
-        );
-      }
+      db.withTransactionSync(() => {
+        if (replacedId && replacedOrder) {
+          // 1. Move old pokemon to PC (pk_order = NULL)
+          db.runSync(`UPDATE pokemon SET pk_order = NULL WHERE id = ?`, [
+            replacedId.toString(),
+          ]);
+          // 2. Move new pokemon to Team at the same order
+          db.runSync(`UPDATE pokemon SET pk_order = ? WHERE id = ?`, [
+            Number(replacedOrder),
+            p.id.toString(),
+          ]);
+        } else {
+          // Traditional Add
+          const nextOrder = (Number(teamLength) || 0) + 1;
+          db.runSync(`UPDATE pokemon SET pk_order = ? WHERE id = ?`, [
+            nextOrder,
+            p.id.toString(),
+          ]);
+        }
+      });
 
       navigation.goBack();
     } catch (e) {
@@ -206,7 +210,7 @@ export default function SelectFromPCScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackground,
   },
   header: {
     padding: 20,
@@ -228,7 +232,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.bg,
+    backgroundColor: colors.modalBackground,
   },
   list: {
     padding: 12,

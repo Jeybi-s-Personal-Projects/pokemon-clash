@@ -38,12 +38,10 @@ export default function PokemonTeamScreen({
 }: PokemonTeamScreenProps) {
   const { onSave } = route.params;
   const { user } = useAuth();
-  const {
-    team: dbTeam,
-    refetch,
-  } = useTeam(user?.id ?? "");
+  const { team: dbTeam, refetch } = useTeam(user?.id ?? "");
   const [team, setTeam] = useState<Pokemon[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReplacing, setIsReplacing] = useState(false);
   const [statusVisible, setStatusVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error">("success");
@@ -55,7 +53,8 @@ export default function PokemonTeamScreen({
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, []),
+      setIsReplacing(false);
+    }, [refetch]),
   );
 
   const player = useAudioPlayer(clickSound);
@@ -111,9 +110,18 @@ export default function PokemonTeamScreen({
     }
   };
 
+  const handleSelectForReplacement = (item: Pokemon, index: number) => {
+    playClick();
+    navigation.navigate("SelectFromPC", {
+      teamLength: team.length,
+      replacedId: item.id,
+      replacedOrder: index + 1,
+    } as any);
+  };
+
   const renderItem = ({ item, index }: { item: Pokemon; index: number }) => {
     return (
-      <View style={[styles.card]}>
+      <View style={[styles.card, isReplacing && styles.replacingCard]}>
         <View style={styles.cardHeader}>
           <Text style={styles.orderBadge}>#{index + 1}</Text>
           <Text style={styles.name}>{item.name}</Text>
@@ -126,9 +134,13 @@ export default function PokemonTeamScreen({
 
         <View style={styles.cardMain}>
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("PokemonStats", { pokemon: item })
-            }
+            onPress={() => {
+              if (isReplacing) {
+                handleSelectForReplacement(item, index);
+              } else {
+                navigation.navigate("PokemonStats", { pokemon: item });
+              }
+            }}
             style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
           >
             <Image
@@ -150,27 +162,39 @@ export default function PokemonTeamScreen({
                 {Math.ceil(item.hp)}/{item.maxHp} HP
               </Text>
             </View>
+            {isReplacing && (
+              <View style={styles.replaceOverlay}>
+                <MaterialCommunityIcons
+                  name="swap-horizontal"
+                  size={32}
+                  color={colors.accent}
+                />
+                <Text style={styles.replaceText}>TAP TO SWAP</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
-          <View style={styles.controls}>
-            <TouchableOpacity
-              disabled={index === 0}
-              onPress={() => moveItem(index, -1)}
-              style={[styles.arrowBtn, index === 0 && styles.disabled]}
-            >
-              <Ionicons name="chevron-up" size={24} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              disabled={index === team.length - 1}
-              onPress={() => moveItem(index, 1)}
-              style={[
-                styles.arrowBtn,
-                index === team.length - 1 && styles.disabled,
-              ]}
-            >
-              <Ionicons name="chevron-down" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+          {!isReplacing && (
+            <View style={styles.controls}>
+              <TouchableOpacity
+                disabled={index === 0}
+                onPress={() => moveItem(index, -1)}
+                style={[styles.arrowBtn, index === 0 && styles.disabled]}
+              >
+                <Ionicons name="chevron-up" size={24} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={index === team.length - 1}
+                onPress={() => moveItem(index, 1)}
+                style={[
+                  styles.arrowBtn,
+                  index === team.length - 1 && styles.disabled,
+                ]}
+              >
+                <Ionicons name="chevron-down" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -184,7 +208,7 @@ export default function PokemonTeamScreen({
         contentContainerStyle={styles.list}
         renderItem={renderItem}
         ListFooterComponent={
-          team.length < 6 ? (
+          team.length < 6 && !isReplacing ? (
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => {
@@ -203,25 +227,25 @@ export default function PokemonTeamScreen({
       <View style={styles.footer}>
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={styles.swapButton}
-            onPress={() =>
-              navigation.navigate("SelectFromPC", {
-                teamLength: team.length,
-                isReplacing: true,
-              } as any)
-            }
+            style={[styles.swapButton, isReplacing && styles.activeSwapButton]}
+            onPress={() => {
+              playClick();
+              setIsReplacing(!isReplacing);
+            }}
           >
             <MaterialCommunityIcons
-              name="swap-horizontal"
+              name={isReplacing ? "close-circle-outline" : "swap-horizontal"}
               size={20}
               color="white"
             />
-            <Text style={styles.saveButtonText}>Swap</Text>
+            <Text style={styles.saveButtonText}>
+              {isReplacing ? "Cancel" : "Swap"}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, isReplacing && styles.disabled]}
             onPress={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isReplacing}
           >
             <Text style={styles.saveButtonText}>
               {isSaving ? "Saving..." : "Save Order"}
@@ -243,14 +267,20 @@ export default function PokemonTeamScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.modalBackground },
   list: { padding: 20, gap: 16 },
   card: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.modalContent,
     borderRadius: 20,
-    padding: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: colors.modalBorderSubtle,
+  },
+  replacingCard: {
+    borderColor: colors.accent,
+    backgroundColor: "#1e1b4b",
+    borderWidth: 2,
   },
   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   orderBadge: {
@@ -268,6 +298,19 @@ const styles = StyleSheet.create({
   },
   typeBadges: { flexDirection: "row", gap: 8 },
   cardMain: { flexDirection: "row", alignItems: "center", gap: 16 },
+  replaceOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(30, 27, 75, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 12,
+  },
+  replaceText: {
+    color: colors.accent,
+    fontWeight: "900",
+    fontSize: 12,
+    marginTop: 4,
+  },
   sprite: { width: 70, height: 70 },
   statsColumn: { flex: 1, marginLeft: 20 },
   level: { color: "#9CA3AF", fontSize: 14, marginBottom: 6 },
@@ -319,6 +362,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
+  },
+  activeSwapButton: {
+    backgroundColor: "#EF4444",
   },
   saveButtonText: { color: "white", fontWeight: "900", fontSize: 16 },
 });

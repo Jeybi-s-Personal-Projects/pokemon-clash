@@ -5,6 +5,7 @@ import { StatStages } from "../battle/battleTypes";
 import { Pokemon } from "../types/pokemon";
 import ExpBar from "./expBar";
 import HpBar from "./hpBar";
+import { TypeBadge, TYPE_COLORS } from "./TypeBadge";
 
 type Props = {
   pokemon: Pokemon;
@@ -121,8 +122,12 @@ export default function PokemonCard({
   maxExp,
   floatingDamage,
 }: Props) {
-  const imageSource = isBack ? pokemon.backImage : pokemon.frontImage;
   const isMega = pokemon.name.toLowerCase().includes("mega");
+  const isTera = pokemon.isTerastalized;
+  const imageSource = isBack ? pokemon.backImage : (pokemon.frontImage ?? pokemon.frontImage);
+
+  // Border color logic: Use Tera type color if terastalized, otherwise default
+  const borderColor = isTera && pokemon.teraType ? TYPE_COLORS[pokemon.teraType.toLowerCase()] : "#ffffff73";
 
   // Animation values
   const moveAnim = useRef(new Animated.Value(0)).current;
@@ -244,7 +249,7 @@ export default function PokemonCard({
       if (isFading.current) return;
       isFading.current = true;
 
-      const delay = setTimeout(() => {
+      const timeout = setTimeout(() => {
         Animated.timing(opacityAnim, {
           toValue: 0,
           duration: 1000,
@@ -254,13 +259,16 @@ export default function PokemonCard({
         });
       }, 600);
 
-      return () => clearTimeout(delay);
-    } else {
-      if (!isFading.current && !isEntering) {
+      return () => clearTimeout(timeout);
+    } else if (pokemon.hp > 0) {
+      // Cancel any ongoing faint fade if HP is restored
+      opacityAnim.stopAnimation();
+      isFading.current = false;
+      if (!isEntering) {
         opacityAnim.setValue(1);
       }
     }
-  }, [pokemon.hp, isEntering]);
+  }, [pokemon.hp, isEntering, isCaught]);
 
   return (
     <View
@@ -310,8 +318,8 @@ export default function PokemonCard({
           paddingHorizontal: 20,
           borderTopEndRadius: 20,
           borderBottomStartRadius: 20,
-          borderWidth: 1,
-          borderColor: "#ffffff73",
+          borderWidth: 2,
+          borderColor: borderColor,
         }}
       >
         <View
@@ -338,8 +346,9 @@ export default function PokemonCard({
               <Text
                 style={{
                   fontWeight: "bold",
-                  fontSize: 14,
+                  fontSize: 12,
                   color: "white",
+                  flex: 1,
                 }}
                 adjustsFontSizeToFit
                 numberOfLines={1}
@@ -352,7 +361,7 @@ export default function PokemonCard({
                   name="star"
                   size={12}
                   color="#facc15"
-                  style={{ marginLeft: 4 }}
+                  style={{ marginLeft: 4, marginRight: 8 }}
                 />
               )}
             </View>

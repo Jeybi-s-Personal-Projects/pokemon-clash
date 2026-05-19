@@ -1,8 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Pokemon } from "../types/pokemon";
-import { TypeBadge } from "./TypeBadge";
-import { TYPE_COLORS } from "./TypeBadge";
+import { TYPE_COLORS, TypeBadge } from "./TypeBadge";
 
 type Props = {
   pokemon: Pokemon;
@@ -20,7 +19,7 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
       style={[styles.card, { borderColor: accentColor + "95" }]}
     >
       {/* Glow background circle */}
-      <View style={[styles.glow, { backgroundColor: accentColor + "22" }]} />
+      <View style={[styles.glow, { backgroundColor: accentColor + "35" }]} />
 
       <View
         style={{
@@ -49,7 +48,6 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
       />
 
       <Text style={styles.name}>{pokemon.name}</Text>
-
       {/* HP Bar */}
       <View style={styles.hpBarBg}>
         <View
@@ -81,11 +79,7 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
             alignContent: "center",
           }}
         >
-          <MaterialCommunityIcons
-            name="heart-outline"
-            size={12}
-            color="#a81b1b"
-          />
+          <MaterialCommunityIcons name="heart" size={12} color="#a81b1b" />
           <Text style={styles.hpText}>
             HP {pokemon.hp}/{pokemon.maxHp}
           </Text>
@@ -99,22 +93,27 @@ export default function PokemonRosterCard({ pokemon, onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    width: 160, // Added a specific width
-    height: 200,
+    width: 160,
+    height: 180,
     backgroundColor: "#111827",
-    borderRadius: 20,
+    borderRadius: 10,
     borderWidth: 1.5,
     padding: 8,
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
   },
+  svgBackground: {
+    width: 160,
+    height: 180,
+    position: "absolute",
+  },
   glow: {
     position: "absolute",
     width: "90%",
-    height: 90,
+    height: 80,
     borderRadius: 10,
-    top: "20%",
+    top: "21%",
     alignSelf: "center",
   },
   typeBadges: {
@@ -123,10 +122,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   sprite: {
-    width: 100,
-    height: 100,
+    marginTop: 10,
+    width: 70,
+    height: 70,
   },
   name: {
+    marginTop: 5,
     color: "white",
     fontWeight: "bold",
     fontSize: 20,
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
   hpBarBg: {
     marginTop: 5,
     width: "90%",
-    height: 6,
+    height: 8,
     backgroundColor: "#374151",
     borderRadius: 2,
     borderWidth: 1,

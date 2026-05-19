@@ -9,7 +9,7 @@ import { getWeatherContinueMessage } from "../utils/weatherUtils";
 
 // Modularized components
 import { useAudioPlayer } from "expo-audio";
-import { processEndTurnAbilities, processSwitchInAbilities } from "../battle/abilityHandler";
+import { processEndTurnAbilities, processSwitchInAbilities, getAbilityDamageModifier, isMagicGuardActive } from "../battle/abilityHandler";
 import { initialStages } from "../battle/battleConstants";
 import { executeMove, ExecutionContext } from "../battle/moveExecutor";
 import {
@@ -91,6 +91,7 @@ export function useBattle({
     enemyProtected: false,
     playerBadPoison: false,
     enemyBadPoison: false,
+    isTeraUsed: false,
   });
 
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
@@ -133,6 +134,7 @@ export function useBattle({
       milestonePlayer.seekTo(0);
       milestonePlayer.play();
     },
+    userId: user?.id,
   });
 
   const teamMgmt = useTeamManagement(
@@ -432,6 +434,11 @@ export function useBattle({
         for (const side of ["player", "enemy"] as const) {
           const p = side === "player" ? finalState.player : finalState.enemy;
           if (p.hp <= 0) continue;
+          
+          // Ability Check
+          const modifier = getAbilityDamageModifier(p, finalState.weather || "none", "status", true, finalState, side);
+          if (modifier.multiplier === 0) continue;
+
           let isImmune = false;
           if (finalState.weather === "sandstorm")
             isImmune = p.type.some((t) =>
@@ -478,7 +485,7 @@ export function useBattle({
       const trap = finalState[trapKey] as TrapState | undefined;
       if (!trap) continue;
       const p = side === "player" ? finalState.player : finalState.enemy;
-      if (p.hp <= 0) continue;
+      if (p.hp <= 0 || isMagicGuardActive(p)) continue;
       const damage = Math.max(1, Math.floor(p.maxHp * trap.damagePerTurn));
       const nextHp = Math.max(0, p.hp - damage);
       setCurrentMessage(
@@ -512,7 +519,7 @@ export function useBattle({
       }
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, currentState, getWinContext(currentState));
+        winHandler(winner, finalState, getWinContext(finalState));
         setProcessing(false);
         return;
       }
@@ -521,7 +528,7 @@ export function useBattle({
     // 3. Status damage (Poison/Burn)
     for (const side of ["player", "enemy"] as const) {
       const p = side === "player" ? finalState.player : finalState.enemy;
-      if (p.hp <= 0 || (p.status !== "poison" && p.status !== "burn")) continue;
+      if (p.hp <= 0 || (p.status !== "poison" && p.status !== "burn") || isMagicGuardActive(p)) continue;
       const isBadPoison =
         side === "player"
           ? finalState.playerBadPoison
@@ -560,7 +567,7 @@ export function useBattle({
       setState((s) => ({ ...s, hitSide: null }));
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, currentState, getWinContext(currentState));
+        winHandler(winner, finalState, getWinContext(finalState));
         setProcessing(false);
         return;
       }
@@ -577,7 +584,7 @@ export function useBattle({
       setState(finalState);
       const winner = isGameOver(finalState);
       if (winner) {
-        winHandler(winner, currentState, getWinContext(currentState));
+        winHandler(winner, finalState, getWinContext(finalState));
         setProcessing(false);
         return;
       }
@@ -601,23 +608,60 @@ export function useBattle({
     setProcessing(false);
   };
 
-  const processTurnPenalty = async () => {
-    if (isProcessing.current || state.winner || currentMessage) return;
+  const useItemInBattle = async (updatedTeam: Pokemon[], message: string) => {
+    if (isProcessing.current || state.winner) return;
+    setProcessing(true);
+
+    // 1. Show message
+    setCurrentMessage(message);
+    await delay(1500);
+
+    // 2. Update team and active player
+    const activeIdx = state.activePlayerIndex;
+    const nextPlayer = updatedTeam[activeIdx];
+
+    const nextState = {
+      ...state,
+      team: updatedTeam,
+      player: nextPlayer,
+    };
+
+    setState(nextState);
+    if (nextPlayer.hp > 0) {
+      teamMgmt.setSwitchModalVisible(false);
+    }
+
+    // 3. Trigger turn penalty (opponent attacks)
+    await delay(500);
+    setProcessing(false); // release lock so processTurnPenalty can run
+    await processTurnPenalty(nextState, nextPlayer);
+  };
+
+  const processTurnPenalty = async (
+    overrideState?: BattleState,
+    overridePlayer?: Pokemon,
+  ) => {
+    const currentState = overrideState || state;
+    const currentPlayer = overridePlayer || currentState.player;
+
+    if (isProcessing.current || currentState.winner || currentMessage) return;
     setProcessing(true);
     setCurrentMessage(null);
     await delay(300);
-    const enemyMove = getAIMove(state.enemy, state.player);
+
+    const enemyMove = getAIMove(currentState.enemy, currentPlayer);
     const afterEnemyState = await executeMove(
       enemyMove,
       "enemy",
       {
-        ...state,
+        ...currentState,
         playerProtected: false,
         enemyProtected: false,
       },
       execContext,
     );
     setState(afterEnemyState);
+
     const winner = isGameOver(afterEnemyState);
     if (winner) {
       winHandler(winner, afterEnemyState, getWinContext(afterEnemyState));
@@ -636,6 +680,7 @@ export function useBattle({
   return {
     state,
     currentMessage,
+    setCurrentMessage,
     isBusy,
     isPlayerEntering,
     learningPokemon: learning.learningPokemon,
@@ -662,5 +707,7 @@ export function useBattle({
     handleMegaEvolution: mega.handleMegaEvolution,
     isMegaEvolving: mega.isMegaEvolving,
     revertMegaInTeam: mega.revertMegaInTeam,
+    useItemInBattle,
+    setState,
   };
 }

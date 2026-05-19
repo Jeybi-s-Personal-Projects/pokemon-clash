@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   },
   modal: {
     width: "80%",
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.modalBackgroundPrimary,
     padding: 24,
     borderRadius: 20,
     alignItems: "center",

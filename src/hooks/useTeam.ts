@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MOVES } from "../data/pokemon/moves/moves";
 import db from "../lib/db";
 import { Pokemon } from "../types/pokemon";
@@ -8,15 +8,7 @@ export function useTeam(userId: string) {
   const [team, setTeam] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    fetchTeam();
-  }, [userId]);
-
-  const fetchTeam = async () => {
+  const fetchTeam = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -60,13 +52,14 @@ export function useTeam(userId: string) {
           isShiny: !!p.pk_is_shiny,
           cry: p.pk_cry,
           moves: moveRows.map((m: any) => {
-            const detail = MOVES[m.move_name] || {};
+            const slug = m.move_name.toLowerCase().replace(/[\s]/g, "-");
+            const detail = MOVES[slug] || {};
             return {
               id: m.id,
               name: m.move_name,
               power: m.move_power ?? detail.power ?? 0,
               pp: m.move_pp ?? detail.pp ?? 0,
-              maxPp: detail.pp ?? 0,
+              maxPp: m.move_max_pp || detail.pp || m.move_pp || 0,
               type: m.move_type || detail.type,
               damageClass: m.move_damageClass || detail.damageClass,
               accuracy: m.move_accuracy ?? detail.accuracy,
@@ -84,7 +77,15 @@ export function useTeam(userId: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    fetchTeam();
+  }, [userId, fetchTeam]);
 
   return { team, loading, refetch: fetchTeam };
 }

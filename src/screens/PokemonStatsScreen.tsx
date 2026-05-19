@@ -27,8 +27,10 @@ import { ABILITIES } from "@/src/data/pokemon/abilities/abilities";
 import { gen1Pokemon } from "../data/gen1Pokemon";
 import { gen2Pokemon } from "../data/gen2Pokemon";
 import { MOVES } from "../data/pokemon/moves/moves";
+import { BATTLE_MOVES } from "../data/pokemon/moves/movesBattle";
 import { SPECIES } from "../data/pokemon/species/species";
 import { PokemonStatsScreenProps } from "../types/navigation";
+import { formatMoveDescription } from "../utils/battleUtils";
 import { calculateHp, calculateStat } from "../utils/statCalculator";
 
 const ALL_LOCAL = [...gen1Pokemon, ...gen2Pokemon];
@@ -86,7 +88,7 @@ export default function PokemonStatsScreen({
         if (isReplacement) {
           db.runSync(
             `UPDATE pokemon_moves SET 
-              move_name = ?, move_power = ?, move_pp = ?, move_type = ?,
+              move_name = ?, move_power = ?, move_pp = ?, move_max_pp = ?, move_type = ?,
               move_damageClass = ?, move_accuracy = ?, move_statChanges = ?,
               move_description = ?, move_priority = ?
             WHERE id = ?`,
@@ -94,6 +96,7 @@ export default function PokemonStatsScreen({
               updatedMove.name,
               updatedMove.power,
               updatedMove.pp,
+              updatedMove.maxPp || updatedMove.pp,
               updatedMove.type ?? "normal",
               updatedMove.damageClass,
               updatedMove.accuracy,
@@ -107,16 +110,17 @@ export default function PokemonStatsScreen({
           // Addition
           db.runSync(
             `INSERT INTO pokemon_moves (
-              id, pokemon_id, move_name, move_power, move_pp, 
+              id, pokemon_id, move_name, move_power, move_pp, move_max_pp,
               move_type, move_damageClass, move_accuracy, 
               move_statChanges, move_description, move_priority
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               Crypto.randomUUID(),
               pokemonState.id,
               updatedMove.name,
               updatedMove.power,
               updatedMove.pp,
+              updatedMove.maxPp || updatedMove.pp,
               updatedMove.type ?? "normal",
               updatedMove.damageClass,
               updatedMove.accuracy,
@@ -135,13 +139,14 @@ export default function PokemonStatsScreen({
       );
 
       const finalMoves = moveRows.map((m) => {
-        const detail = MOVES[m.move_name.toLowerCase()] || {};
+        const slug = m.move_name.toLowerCase().replace(/[\s]/g, "-");
+        const detail = MOVES[slug] || {};
         return {
           id: m.id,
           name: m.move_name,
           power: m.move_power,
           pp: m.move_pp,
-          maxPp: detail.pp || m.move_pp,
+          maxPp: m.move_max_pp || detail.pp || m.move_pp,
           type: m.move_type,
           damageClass: m.move_damageClass,
           accuracy: m.move_accuracy,
@@ -302,13 +307,14 @@ export default function PokemonStatsScreen({
         [pokemonState.id],
       );
       const finalMoves = moveRows.map((m) => {
-        const detail = MOVES[m.move_name.toLowerCase()] || {};
+        const slug = m.move_name.toLowerCase().replace(/[\s]/g, "-");
+        const detail = MOVES[slug] || {};
         return {
           id: m.id,
           name: m.move_name,
           power: m.move_power,
           pp: m.move_pp,
-          maxPp: detail.pp || m.move_pp,
+          maxPp: m.move_max_pp || detail.pp || m.move_pp,
           type: m.move_type,
           damageClass: m.move_damageClass,
           accuracy: m.move_accuracy,
@@ -565,9 +571,9 @@ export default function PokemonStatsScreen({
                   </View>
                   {details?.description && (
                     <Text style={styles.moveDescription}>
-                      {details.description.replace(
-                        /\$effect_chance/g,
-                        details.effectChance?.toString() || "",
+                      {formatMoveDescription(
+                        details.description,
+                        BATTLE_MOVES[move.name.toLowerCase()] || details,
                       )}
                     </Text>
                   )}
@@ -760,7 +766,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.modalBorderSubtle,
     top: 10,
     alignSelf: "center",
   },
@@ -775,8 +781,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    borderBottomColor: colors.borderSubtle,
+    borderTopColor: colors.modalBorderSubtle,
+    borderBottomColor: colors.modalBorderSubtle,
   },
   name: {
     fontSize: 36,
@@ -996,7 +1002,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.modalBorderSubtle,
   },
   smallMovesetButtonText: {
     color: "white",

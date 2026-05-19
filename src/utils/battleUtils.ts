@@ -12,6 +12,25 @@ export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Formats a move description by replacing placeholders like $effect_chance.
+ */
+export const formatMoveDescription = (
+  description: string | null | undefined,
+  moveData: any,
+): string => {
+  if (!description) return "";
+
+  // Extract effect chance from BattleMove structure or static MoveDetail structure
+  const effectChance =
+    moveData?.effects?.find((e: any) => e.chance > 0 && e.chance < 100)
+      ?.chance ||
+    moveData?.effects?.[0]?.chance ||
+    moveData?.effectChance;
+
+  return description.replace(/\$effect_chance/g, effectChance?.toString() || "");
+};
+
+/**
  * Checks if a move's prerequisites are met.
  */
 export const checkMovePrerequisites = (
