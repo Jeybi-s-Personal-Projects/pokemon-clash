@@ -618,36 +618,49 @@ export function useBattle({
     // 2. Update team and active player
     const activeIdx = state.activePlayerIndex;
     const nextPlayer = updatedTeam[activeIdx];
-    
-    setState(prev => ({
-      ...prev,
+
+    const nextState = {
+      ...state,
       team: updatedTeam,
       player: nextPlayer,
-    }));
+    };
+
+    setState(nextState);
+    if (nextPlayer.hp > 0) {
+      teamMgmt.setSwitchModalVisible(false);
+    }
 
     // 3. Trigger turn penalty (opponent attacks)
     await delay(500);
     setProcessing(false); // release lock so processTurnPenalty can run
-    await processTurnPenalty();
+    await processTurnPenalty(nextState, nextPlayer);
   };
 
-  const processTurnPenalty = async () => {
-    if (isProcessing.current || state.winner || currentMessage) return;
+  const processTurnPenalty = async (
+    overrideState?: BattleState,
+    overridePlayer?: Pokemon,
+  ) => {
+    const currentState = overrideState || state;
+    const currentPlayer = overridePlayer || currentState.player;
+
+    if (isProcessing.current || currentState.winner || currentMessage) return;
     setProcessing(true);
     setCurrentMessage(null);
     await delay(300);
-    const enemyMove = getAIMove(state.enemy, state.player);
+
+    const enemyMove = getAIMove(currentState.enemy, currentPlayer);
     const afterEnemyState = await executeMove(
       enemyMove,
       "enemy",
       {
-        ...state,
+        ...currentState,
         playerProtected: false,
         enemyProtected: false,
       },
       execContext,
     );
     setState(afterEnemyState);
+
     const winner = isGameOver(afterEnemyState);
     if (winner) {
       winHandler(winner, afterEnemyState, getWinContext(afterEnemyState));

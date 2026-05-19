@@ -244,7 +244,7 @@ export default function PokemonCard({
       if (isFading.current) return;
       isFading.current = true;
 
-      const delay = setTimeout(() => {
+      const timeout = setTimeout(() => {
         Animated.timing(opacityAnim, {
           toValue: 0,
           duration: 1000,
@@ -254,13 +254,16 @@ export default function PokemonCard({
         });
       }, 600);
 
-      return () => clearTimeout(delay);
-    } else {
-      if (!isFading.current && !isEntering) {
+      return () => clearTimeout(timeout);
+    } else if (pokemon.hp > 0) {
+      // Cancel any ongoing faint fade if HP is restored
+      opacityAnim.stopAnimation();
+      isFading.current = false;
+      if (!isEntering) {
         opacityAnim.setValue(1);
       }
     }
-  }, [pokemon.hp, isEntering]);
+  }, [pokemon.hp, isEntering, isCaught]);
 
   return (
     <View
