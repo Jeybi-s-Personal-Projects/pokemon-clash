@@ -486,4 +486,31 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  tabRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 8,
+  },
+  tabButton: {
+    flex: 1,
+    backgroundColor: colors.modalContent,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  tabButtonActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + "22",
+  },
+  tabText: {
+    color: colors.textMuted,
+    fontWeight: "bold",
+    fontSize: 12,
+  },
+  tabTextActive: {
+    color: colors.accent,
+  },
 });
